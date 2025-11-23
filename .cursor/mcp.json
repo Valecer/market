@@ -1,0 +1,35 @@
+{
+    "mcpServers": {
+      "@21st-dev/magic": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@21st-dev/magic@latest",
+          "API_KEY=\"d7b53d25e409fbeb7710e6d9403aa2b624a010c0c8d0751896b1b9f411b57dcc\""
+        ]
+      },
+      "context7": {
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp"],
+        "env": {
+          "CONTEXT7_API_KEY": "ctx7sk-d586b25f-6b77-45b7-8347-f701af63d619"
+        }
+      },
+      "shadcn": {
+        "command": "npx",
+        "args": ["shadcn@latest", "mcp"]
+      },
+      "Framelink MCP for Figma": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "figma-developer-mcp",
+          "--figma-api-key=figd_EN7O7ANwk2qpeRUbNItmdXg3-r_sk3w09442r9AD",
+          "--stdio"
+        ]
+      },
+      "Playwright": {
+        "command": "npx @playwright/mcp@latest"
+      }
+    }
+  }

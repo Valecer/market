@@ -1,251 +1,693 @@
----
+# Task List: [FEATURE_NAME]
 
-description: "Task list template for feature implementation"
----
+**Epic/Feature:** [Link to plan or spec]
 
-# Tasks: [FEATURE NAME]
+**Sprint/Milestone:** [Sprint number or milestone name]
 
-**Input**: Design documents from `/specs/[###-feature-name]/`
-**Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
-
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
-
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
-
-## Format: `[ID] [P?] [Story] Description`
-
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
-- Include exact file paths in descriptions
-
-## Path Conventions
-
-- **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
-- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
-
-<!-- 
-  ============================================================================
-  IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
-  
-  The /speckit.tasks command MUST replace these with actual tasks based on:
-  - User stories from spec.md (with their priorities P1, P2, P3...)
-  - Feature requirements from plan.md
-  - Entities from data-model.md
-  - Endpoints from contracts/
-  
-  Tasks MUST be organized by user story so each story can be:
-  - Implemented independently
-  - Tested independently
-  - Delivered as an MVP increment
-  
-  DO NOT keep these sample tasks in the generated tasks.md file.
-  ============================================================================
--->
-
-## Phase 1: Setup (Shared Infrastructure)
-
-**Purpose**: Project initialization and basic structure
-
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+**Owner:** [Team member responsible]
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites)
+## Task Categories
 
-**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
-
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
-
-Examples of foundational tasks (adjust based on your project):
-
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
-
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+Tasks are organized by constitutional principle alignment and technical domain.
 
 ---
 
-## Phase 3: User Story 1 - [Title] (Priority: P1) 🎯 MVP
+## Setup & Infrastructure
 
-**Goal**: [Brief description of what this story delivers]
+### TASK-001: Environment Setup
 
-**Independent Test**: [How to verify this story works on its own]
+**Category:** Infrastructure
+**Priority:** Critical
+**Estimate:** [X hours]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+**Description:**
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+Set up development environment and dependencies.
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+**Subtasks:**
 
-### Implementation for User Story 1
+- [ ] Update Docker Compose with new service configurations
+- [ ] Add environment variables to `.env.example`
+- [ ] Document setup steps in README
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+**Acceptance Criteria:**
 
-**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
+- [ ] All services start successfully via `docker-compose up`
+- [ ] Environment variables documented
 
----
-
-## Phase 4: User Story 2 - [Title] (Priority: P2)
-
-**Goal**: [Brief description of what this story delivers]
-
-**Independent Test**: [How to verify this story works on its own]
-
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
-
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
-
-### Implementation for User Story 2
-
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
-
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
+**Dependencies:** None
 
 ---
 
-## Phase 5: User Story 3 - [Title] (Priority: P3)
+## Database Layer (Single Responsibility)
 
-**Goal**: [Brief description of what this story delivers]
+### TASK-002: Database Schema Design
 
-**Independent Test**: [How to verify this story works on its own]
+**Category:** Database / Single Responsibility
+**Priority:** High
+**Estimate:** [X hours]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+**Description:**
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+Design and implement database schema following single responsibility principle.
 
-### Implementation for User Story 3
+**Subtasks:**
 
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T027 [US3] Implement [Service] in src/services/[service].py
-- [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] Create ERD diagram
+- [ ] Write migration SQL
+- [ ] Add indexes for query performance
+- [ ] Create rollback migration
 
-**Checkpoint**: All user stories should now be independently functional
+**Acceptance Criteria:**
 
----
+- [ ] Schema reflects normalized data structure
+- [ ] Migrations apply and rollback cleanly
+- [ ] Indexes created for all foreign keys and query patterns
 
-[Add more user story phases as needed, following the same pattern]
+**Dependencies:** TASK-001
 
----
+### TASK-003: TypeScript Database Models
 
-## Phase N: Polish & Cross-Cutting Concerns
+**Category:** Database / Strong Typing
+**Priority:** High
+**Estimate:** [X hours]
 
-**Purpose**: Improvements that affect multiple user stories
+**Description:**
 
-- [ ] TXXX [P] Documentation updates in docs/
-- [ ] TXXX Code cleanup and refactoring
-- [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
-- [ ] TXXX Security hardening
-- [ ] TXXX Run quickstart.md validation
+Create TypeScript type definitions for database models.
 
----
+**Subtasks:**
 
-## Dependencies & Execution Order
+- [ ] Define interfaces matching database schema
+- [ ] Add utility types (Partial, Pick, Omit as needed)
+- [ ] Export types from barrel file
 
-### Phase Dependencies
+**Acceptance Criteria:**
 
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3+)**: All depend on Foundational phase completion
-  - User stories can then proceed in parallel (if staffed)
-  - Or sequentially in priority order (P1 → P2 → P3)
-- **Polish (Final Phase)**: Depends on all desired user stories being complete
+- [ ] All database columns have type definitions
+- [ ] Type definitions match SQL schema exactly
+- [ ] No `any` types used
 
-### User Story Dependencies
+**Dependencies:** TASK-002
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
-- **User Story 2 (P2)**: Can start after Foundational (Phase 2) - May integrate with US1 but should be independently testable
-- **User Story 3 (P3)**: Can start after Foundational (Phase 2) - May integrate with US1/US2 but should be independently testable
+### TASK-004: Python Database Models
 
-### Within Each User Story
+**Category:** Database / Strong Typing
+**Priority:** High
+**Estimate:** [X hours]
 
-- Tests (if included) MUST be written and FAIL before implementation
-- Models before services
-- Services before endpoints
-- Core implementation before integration
-- Story complete before moving to next priority
+**Description:**
 
-### Parallel Opportunities
+Create Pydantic models for data validation and SQLAlchemy models for ORM.
 
-- All Setup tasks marked [P] can run in parallel
-- All Foundational tasks marked [P] can run in parallel (within Phase 2)
-- Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
-- All tests for a user story marked [P] can run in parallel
-- Models within a story marked [P] can run in parallel
-- Different user stories can be worked on in parallel by different team members
+**Subtasks:**
 
----
+- [ ] Create SQLAlchemy models with type hints
+- [ ] Create Pydantic models for validation
+- [ ] Add custom validators where needed
+- [ ] Run mypy to verify type correctness
 
-## Parallel Example: User Story 1
+**Acceptance Criteria:**
 
-```bash
-# Launch all tests for User Story 1 together (if tests requested):
-Task: "Contract test for [endpoint] in tests/contract/test_[name].py"
-Task: "Integration test for [user journey] in tests/integration/test_[name].py"
+- [ ] All fields have type hints
+- [ ] Pydantic validation covers all edge cases
+- [ ] Mypy passes with --strict flag
 
-# Launch all models for User Story 1 together:
-Task: "Create [Entity1] model in src/models/[entity1].py"
-Task: "Create [Entity2] model in src/models/[entity2].py"
-```
+**Dependencies:** TASK-002
 
 ---
 
-## Implementation Strategy
+## Backend API Layer (Bun Service)
 
-### MVP First (User Story 1 Only)
+### TASK-005: API Endpoint Implementation
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test User Story 1 independently
-5. Deploy/demo if ready
+**Category:** API / Separation of Concerns
+**Priority:** High
+**Estimate:** [X hours]
 
-### Incremental Delivery
+**Description:**
 
-1. Complete Setup + Foundational → Foundation ready
-2. Add User Story 1 → Test independently → Deploy/Demo (MVP!)
-3. Add User Story 2 → Test independently → Deploy/Demo
-4. Add User Story 3 → Test independently → Deploy/Demo
-5. Each story adds value without breaking previous stories
+Implement API endpoint in Bun service following separation of concerns.
 
-### Parallel Team Strategy
+**Subtasks:**
 
-With multiple developers:
+- [ ] Create route handler (HTTP only)
+- [ ] Add request validation schema (Zod/TypeBox)
+- [ ] Implement service layer for business logic
+- [ ] Add error handling
 
-1. Team completes Setup + Foundational together
-2. Once Foundational is done:
-   - Developer A: User Story 1
-   - Developer B: User Story 2
-   - Developer C: User Story 3
-3. Stories complete and integrate independently
+**Acceptance Criteria:**
+
+- [ ] Route handler contains no business logic
+- [ ] Request/response validated with schemas
+- [ ] Error responses follow standard format
+
+**Dependencies:** TASK-003
+
+### TASK-006: Service Layer Logic
+
+**Category:** Business Logic / Single Responsibility
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Implement business logic in service layer, separate from HTTP concerns.
+
+**Subtasks:**
+
+- [ ] Create service class/module
+- [ ] Implement core business logic
+- [ ] Add input validation
+- [ ] Return domain objects (not HTTP responses)
+
+**Acceptance Criteria:**
+
+- [ ] Service layer has no HTTP dependencies
+- [ ] Business rules enforced correctly
+- [ ] Unit tests for all business logic paths
+
+**Dependencies:** TASK-005
+
+### TASK-007: Redis Queue Integration
+
+**Category:** Integration / Separation of Concerns
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Enqueue jobs to Redis for Python service processing.
+
+**Subtasks:**
+
+- [ ] Create queue client abstraction
+- [ ] Define message schema (TypeScript types)
+- [ ] Implement enqueue logic
+- [ ] Add error handling and retries
+
+**Acceptance Criteria:**
+
+- [ ] Messages enqueued with proper schema
+- [ ] Retry logic handles transient failures
+- [ ] Queue client interface abstracts Redis details
+
+**Dependencies:** TASK-006
+
+---
+
+## Data Processing Layer (Python Service)
+
+### TASK-008: Queue Consumer Setup
+
+**Category:** Integration / Separation of Concerns
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Set up Python worker to consume Redis queue messages.
+
+**Subtasks:**
+
+- [ ] Create queue consumer class
+- [ ] Define message schema (Pydantic model matching TypeScript)
+- [ ] Implement message validation
+- [ ] Add error handling and dead letter queue
+
+**Acceptance Criteria:**
+
+- [ ] Worker consumes messages from correct queue
+- [ ] Invalid messages moved to DLQ
+- [ ] Graceful shutdown on SIGTERM
+
+**Dependencies:** TASK-007
+
+### TASK-009: Data Processing Logic
+
+**Category:** Data Processing / KISS
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Implement data processing algorithm following KISS principle.
+
+**Subtasks:**
+
+- [ ] Implement simple algorithm (e.g., Levenshtein distance)
+- [ ] Add input validation
+- [ ] Handle edge cases
+- [ ] Add logging for observability
+
+**Acceptance Criteria:**
+
+- [ ] Algorithm produces correct results
+- [ ] Edge cases handled gracefully
+- [ ] Performance meets requirements (<[X]ms)
+
+**Dependencies:** TASK-008
+
+### TASK-010: Result Persistence
+
+**Category:** Database / Single Responsibility
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Write processing results to PostgreSQL.
+
+**Subtasks:**
+
+- [ ] Create repository abstraction
+- [ ] Implement save/update methods
+- [ ] Add transaction handling
+- [ ] Handle database errors
+
+**Acceptance Criteria:**
+
+- [ ] Results persisted correctly
+- [ ] Transactions ensure atomicity
+- [ ] Database errors logged and reported
+
+**Dependencies:** TASK-009
+
+---
+
+## Frontend Layer (React + Vite + Tailwind)
+
+### TASK-011: UI Component Design
+
+**Category:** Frontend / Design System
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Design UI components using design system.
+
+**Subtasks:**
+
+- [ ] Query `mcp 21st-dev/magic` for design elements
+- [ ] Create component mockups
+- [ ] Get design approval
+- [ ] Document component API
+
+**Acceptance Criteria:**
+
+- [ ] Components match design system
+- [ ] Accessibility requirements met (semantic HTML, ARIA)
+- [ ] Design approved by stakeholders
+
+**Dependencies:** None
+
+### TASK-012: Component Implementation
+
+**Category:** Frontend / Single Responsibility
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Implement React components with single responsibility.
+
+**Subtasks:**
+
+- [ ] Create component files
+- [ ] Implement component logic (no business logic)
+- [ ] Style with Tailwind CSS v4.1 (CSS-first, @theme blocks)
+- [ ] Add prop type definitions
+
+**Acceptance Criteria:**
+
+- [ ] Components render correctly
+- [ ] Props are strongly typed
+- [ ] No business logic in components
+
+**Dependencies:** TASK-011
+
+### TASK-013: API Integration
+
+**Category:** Frontend / Integration
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Integrate frontend with Bun API.
+
+**Subtasks:**
+
+- [ ] Create API client hooks
+- [ ] Add request/response type definitions
+- [ ] Implement error handling
+- [ ] Add loading states
+
+**Acceptance Criteria:**
+
+- [ ] API calls succeed with proper types
+- [ ] Errors displayed to user
+- [ ] Loading states improve UX
+
+**Dependencies:** TASK-012, TASK-005
+
+### TASK-014: State Management
+
+**Category:** Frontend / Single Responsibility
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Implement state management separate from components.
+
+**Subtasks:**
+
+- [ ] Choose state solution (Context/Zustand/etc.)
+- [ ] Create state stores
+- [ ] Connect components to state
+- [ ] Add state persistence if needed
+
+**Acceptance Criteria:**
+
+- [ ] State updates correctly
+- [ ] Components decoupled from state implementation
+- [ ] State logic testable independently
+
+**Dependencies:** TASK-013
+
+---
+
+## Testing (Code Quality)
+
+### TASK-015: Unit Tests - Backend
+
+**Category:** Testing / Code Quality
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Write unit tests for Bun service logic.
+
+**Subtasks:**
+
+- [ ] Test service layer methods
+- [ ] Test validation schemas
+- [ ] Mock external dependencies (DB, Redis)
+- [ ] Achieve ≥80% coverage
+
+**Acceptance Criteria:**
+
+- [ ] All business logic paths tested
+- [ ] Coverage ≥80%
+- [ ] Tests pass reliably
+
+**Dependencies:** TASK-006
+
+### TASK-016: Unit Tests - Data Processing
+
+**Category:** Testing / Code Quality
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Write unit tests for Python processing logic.
+
+**Subtasks:**
+
+- [ ] Test processing algorithms
+- [ ] Test Pydantic model validation
+- [ ] Test edge cases
+- [ ] Achieve ≥80% coverage
+
+**Acceptance Criteria:**
+
+- [ ] All processing logic tested
+- [ ] Coverage ≥80%
+- [ ] Tests pass with pytest
+
+**Dependencies:** TASK-009
+
+### TASK-017: Unit Tests - Frontend
+
+**Category:** Testing / Code Quality
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Write unit tests for React components.
+
+**Subtasks:**
+
+- [ ] Test component rendering
+- [ ] Test user interactions
+- [ ] Test hooks logic
+- [ ] Achieve ≥80% coverage
+
+**Acceptance Criteria:**
+
+- [ ] All components tested
+- [ ] User interactions covered
+- [ ] Coverage ≥80%
+
+**Dependencies:** TASK-012
+
+### TASK-018: Integration Tests
+
+**Category:** Testing / Code Quality
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Write integration tests for service interactions.
+
+**Subtasks:**
+
+- [ ] Test API → Redis → Python flow
+- [ ] Test database interactions
+- [ ] Test error scenarios
+- [ ] Set up test fixtures
+
+**Acceptance Criteria:**
+
+- [ ] Full data flow tested
+- [ ] Error handling verified
+- [ ] Tests run in CI/CD
+
+**Dependencies:** TASK-010
+
+### TASK-019: E2E Tests
+
+**Category:** Testing / Code Quality
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Write end-to-end tests for user flows.
+
+**Subtasks:**
+
+- [ ] Set up E2E testing framework (Playwright/Cypress)
+- [ ] Write critical user flow tests
+- [ ] Test error scenarios from user perspective
+- [ ] Run in CI/CD
+
+**Acceptance Criteria:**
+
+- [ ] Critical paths tested E2E
+- [ ] Tests run reliably in CI
+- [ ] Screenshots/videos on failure
+
+**Dependencies:** TASK-014
+
+---
+
+## Documentation (DRY / Knowledge Sharing)
+
+### TASK-020: API Documentation
+
+**Category:** Documentation / DRY
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Generate API documentation from OpenAPI schema.
+
+**Subtasks:**
+
+- [ ] Generate OpenAPI spec from code
+- [ ] Host Swagger UI
+- [ ] Add usage examples
+- [ ] Document authentication
+
+**Acceptance Criteria:**
+
+- [ ] All endpoints documented
+- [ ] Examples provided
+- [ ] Swagger UI accessible
+
+**Dependencies:** TASK-005
+
+### TASK-021: README Updates
+
+**Category:** Documentation
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Update README with feature documentation.
+
+**Subtasks:**
+
+- [ ] Add feature overview
+- [ ] Update setup instructions
+- [ ] Add usage examples
+- [ ] Update architecture diagram
+
+**Acceptance Criteria:**
+
+- [ ] README reflects new feature
+- [ ] Setup instructions accurate
+- [ ] Architecture diagram updated
+
+**Dependencies:** TASK-020
+
+### TASK-022: Architecture Decision Record
+
+**Category:** Documentation
+**Priority:** Low
+**Estimate:** [X hours]
+
+**Description:**
+
+Create ADR for significant architectural decisions.
+
+**Subtasks:**
+
+- [ ] Document decision context
+- [ ] List alternatives considered
+- [ ] Explain chosen approach
+- [ ] Note consequences
+
+**Acceptance Criteria:**
+
+- [ ] ADR follows template
+- [ ] Decision rationale clear
+- [ ] Stored in `/docs/adr/`
+
+**Dependencies:** TASK-021
+
+---
+
+## Deployment & Operations
+
+### TASK-023: Docker Configuration
+
+**Category:** Infrastructure
+**Priority:** High
+**Estimate:** [X hours]
+
+**Description:**
+
+Update Docker Compose for new services.
+
+**Subtasks:**
+
+- [ ] Add/update service definitions
+- [ ] Configure health checks
+- [ ] Set up volumes and networks
+- [ ] Add environment variable templates
+
+**Acceptance Criteria:**
+
+- [ ] All services start correctly
+- [ ] Health checks passing
+- [ ] Development workflow smooth
+
+**Dependencies:** TASK-001
+
+### TASK-024: CI/CD Pipeline
+
+**Category:** Operations / Code Quality
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Update CI/CD pipeline for new feature.
+
+**Subtasks:**
+
+- [ ] Add linting steps (tsc, mypy)
+- [ ] Add test execution
+- [ ] Add build steps
+- [ ] Configure deployment triggers
+
+**Acceptance Criteria:**
+
+- [ ] All checks run on PR
+- [ ] Tests must pass to merge
+- [ ] Deployment automated
+
+**Dependencies:** TASK-019
+
+---
+
+## Constitutional Compliance Review
+
+### TASK-025: Final Compliance Audit
+
+**Category:** Governance
+**Priority:** Medium
+**Estimate:** [X hours]
+
+**Description:**
+
+Verify feature adheres to all constitutional principles.
+
+**Subtasks:**
+
+- [ ] Review SOLID principle compliance
+- [ ] Verify separation of concerns (Bun vs Python)
+- [ ] Check strong typing (no `any`, mypy strict)
+- [ ] Confirm KISS and DRY adherence
+- [ ] Validate Tailwind v4.1 CSS-first approach
+
+**Acceptance Criteria:**
+
+- [ ] All principles satisfied
+- [ ] Deviations documented with justification
+- [ ] Compliance statement added to PR
+
+**Dependencies:** All implementation tasks
+
+---
+
+## Task Summary
+
+- **Total Tasks:** 25
+- **Critical:** [Count]
+- **High:** [Count]
+- **Medium:** [Count]
+- **Low:** [Count]
+
+**Estimated Total Effort:** [Sum of estimates]
 
 ---
 
 ## Notes
 
-- [P] tasks = different files, no dependencies
-- [Story] label maps task to specific user story for traceability
-- Each user story should be independently completable and testable
-- Verify tests fail before implementing
-- Commit after each task or logical group
-- Stop at any checkpoint to validate story independently
-- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
+- Tasks can be parallelized where dependencies allow
+- Daily standups to track progress and blockers
+- Update task status in project management tool
+- Tag completed tasks with PR links

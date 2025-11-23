@@ -1,104 +1,216 @@
-# Implementation Plan: [FEATURE]
+# Feature Plan: [FEATURE_NAME]
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Date:** [YYYY-MM-DD]
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Status:** [Draft | In Progress | Completed]
 
-## Summary
+**Owner:** [TEAM_MEMBER_NAME]
 
-[Extract from feature spec: primary requirement + technical approach from research]
+---
 
-## Technical Context
+## Overview
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+Brief description of what this feature accomplishes and why it's needed.
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+---
 
-## Constitution Check
+## Constitutional Compliance Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+This feature aligns with the following constitutional principles:
 
-[Gates determined based on constitution file]
+- **[Principle Name]:** [How this feature upholds or relates to the principle]
+- **[Principle Name]:** [How this feature upholds or relates to the principle]
 
-## Project Structure
+**Violations/Exceptions:** [None | List any justified deviations with rationale]
 
-### Documentation (this feature)
+---
 
-```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+## Goals
+
+- [ ] Goal 1
+- [ ] Goal 2
+- [ ] Goal 3
+
+---
+
+## Non-Goals
+
+Explicitly list what this feature will NOT accomplish to maintain scope discipline.
+
+- Non-goal 1
+- Non-goal 2
+
+---
+
+## Success Metrics
+
+How will we measure success?
+
+- **Metric 1:** [Description and target value]
+- **Metric 2:** [Description and target value]
+
+---
+
+## User Stories
+
+### Story 1: [Title]
+
+**As a** [user type]
+**I want** [goal]
+**So that** [benefit]
+
+**Acceptance Criteria:**
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+
+### Story 2: [Title]
+
+[Repeat pattern above]
+
+---
+
+## Technical Approach
+
+### Architecture
+
+High-level architecture decisions and service interactions.
+
+**Bun Service (API/User Logic):**
+
+- Responsibilities:
+- Endpoints:
+- Data flow:
+
+**Python Service (Data Processing):**
+
+- Responsibilities:
+- Processing logic:
+- Data flow:
+
+**Redis Queue Communication:**
+
+- Queue names:
+- Message formats (reference Pydantic models):
+- Error handling:
+
+**PostgreSQL Schema:**
+
+- Tables affected:
+- Migration plan:
+
+**Frontend (React + Vite + Tailwind v4.1):**
+
+- Components:
+- State management:
+- API integration:
+
+### Design System
+
+- [ ] Consulted `mcp 21st-dev/magic` for UI design elements
+- [ ] Collected documentation via `mcp context7`
+- [ ] Tailwind v4.1 CSS-first approach confirmed (no `tailwind.config.js`)
+
+### Algorithm Choice
+
+Following KISS principle, start with simplest solution:
+
+- **Initial Implementation:** [e.g., Levenshtein distance for matching]
+- **Scalability Path:** [e.g., future embeddings-based matching when scale requires]
+
+### Data Flow
+
+```
+[User] → [Bun API] → [Redis Queue] → [Python Worker] → [PostgreSQL]
+           ↓                                               ↓
+    [API Response]                                  [Result Storage]
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+---
 
-```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+## Type Safety
 
-tests/
-├── contract/
-├── integration/
-└── unit/
+### TypeScript Types
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+```typescript
+// Define API request/response types
+interface FeatureRequest {
+  // ...
+}
 
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+interface FeatureResponse {
+  // ...
+}
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+### Python Types
 
-## Complexity Tracking
+```python
+from pydantic import BaseModel
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
+class QueueMessage(BaseModel):
+    # Define queue message structure
+    pass
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+class ProcessedResult(BaseModel):
+    # Define result structure
+    pass
+```
+
+---
+
+## Testing Strategy
+
+- **Unit Tests:** [What will be unit tested]
+- **Integration Tests:** [What service interactions will be tested]
+- **E2E Tests:** [What user flows will be tested]
+- **Coverage Target:** ≥80% for business logic
+
+---
+
+## Risks & Mitigations
+
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| [Risk description] | High/Med/Low | High/Med/Low | [Mitigation strategy] |
+
+---
+
+## Dependencies
+
+- **Bun Packages:** [List npm packages needed]
+- **Python Packages:** [List pip packages needed]
+- **External Services:** [List any external APIs or services]
+- **Infrastructure:** [Docker changes, env vars, etc.]
+
+---
+
+## Timeline
+
+| Phase | Tasks | Duration | Target Date |
+|-------|-------|----------|-------------|
+| Phase 1 | [Task list] | [X days] | [YYYY-MM-DD] |
+| Phase 2 | [Task list] | [X days] | [YYYY-MM-DD] |
+
+---
+
+## Open Questions
+
+- [ ] Question 1
+- [ ] Question 2
+
+---
+
+## References
+
+- [Link to related ADR]
+- [Link to design docs]
+- [Link to external documentation]
+
+---
+
+**Approval Signatures:**
+
+- [ ] Technical Lead
+- [ ] Product Owner
+- [ ] Architecture Review
