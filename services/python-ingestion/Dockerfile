@@ -23,6 +23,7 @@ RUN useradd -m -u 1000 worker && chown -R worker:worker /app
 USER worker
 
 # Health check script will be called from docker-compose
+# Use -m flag to run as module so absolute imports (from src.config) work correctly
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -m src.health_check || exit 1
 

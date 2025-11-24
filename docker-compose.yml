@@ -62,6 +62,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
+      # Use -m flag to run as module so absolute imports (from src.config) work correctly
       test: ["CMD", "python", "-m", "src.health_check"]
       interval: 30s
       timeout: 10s

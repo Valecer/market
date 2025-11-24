@@ -159,23 +159,23 @@ Build Docker-based Python service with abstract parser interface enabling easy a
 
 ### Tasks
 
-- [ ] T036 [FR-2] Create src/parsers/base_parser.py with abstract ParserInterface base class
-- [ ] T037 [P] [FR-2] Define parse() abstract method in ParserInterface returning List[ParsedItem]
-- [ ] T038 [P] [FR-2] Define validate_config() abstract method in ParserInterface for pre-parsing validation
-- [ ] T039 [P] [FR-2] Define get_parser_name() method in ParserInterface returning parser identifier
-- [ ] T040 [FR-2] Create src/models/parsed_item.py with ParsedSupplierItem Pydantic model
-- [ ] T041 [P] [FR-2] Add field validators to ParsedSupplierItem for price precision (2 decimal places)
-- [ ] T042 [P] [FR-2] Add field validators to ParsedSupplierItem for JSONB serialization in characteristics
-- [ ] T043 [FR-2] Create src/parsers/parser_registry.py with dynamic parser registration mechanism
-- [ ] T044 [P] [FR-2] Implement register_parser() function in parser_registry.py
-- [ ] T045 [P] [FR-2] Implement get_parser() function in parser_registry.py by parser_type string
-- [ ] T046 [FR-2] Create src/worker.py with arq WorkerSettings configuration
-- [ ] T047 [P] [FR-2] Configure structlog JSON logging with task_id context in worker.py
-- [ ] T048 [P] [FR-2] Add graceful error handling wrapper for parser exceptions in worker.py
-- [ ] T049 [FR-2] Create health check script at src/health_check.py testing Redis connection
-- [ ] T050 [FR-2] Update Dockerfile HEALTHCHECK to use health_check.py script
+- [X] T036 [FR-2] Create src/parsers/base_parser.py with abstract ParserInterface base class
+- [X] T037 [P] [FR-2] Define parse() abstract method in ParserInterface returning List[ParsedItem]
+- [X] T038 [P] [FR-2] Define validate_config() abstract method in ParserInterface for pre-parsing validation
+- [X] T039 [P] [FR-2] Define get_parser_name() method in ParserInterface returning parser identifier
+- [X] T040 [FR-2] Create src/models/parsed_item.py with ParsedSupplierItem Pydantic model
+- [X] T041 [P] [FR-2] Add field validators to ParsedSupplierItem for price precision (2 decimal places)
+- [X] T042 [P] [FR-2] Add field validators to ParsedSupplierItem for JSONB serialization in characteristics
+- [X] T043 [FR-2] Create src/parsers/parser_registry.py with dynamic parser registration mechanism
+- [X] T044 [P] [FR-2] Implement register_parser() function in parser_registry.py
+- [X] T045 [P] [FR-2] Implement get_parser() function in parser_registry.py by parser_type string
+- [X] T046 [FR-2] Create src/worker.py with arq WorkerSettings configuration
+- [X] T047 [P] [FR-2] Configure structlog JSON logging with task_id context in worker.py
+- [X] T048 [P] [FR-2] Add graceful error handling wrapper for parser exceptions in worker.py
+- [X] T049 [FR-2] Create health check script at src/health_check.py testing Redis connection
+- [X] T050 [FR-2] Update Dockerfile HEALTHCHECK to use health_check.py script
 - [ ] T051 [FR-2] Build Docker image and verify worker container starts successfully
-- [ ] T052 [FR-2] Create stub parser inheriting from ParserInterface for testing registration
+- [X] T052 [FR-2] Create stub parser inheriting from ParserInterface for testing registration
 
 **Acceptance Criteria:**
 - ✅ AC-1: Python service runs successfully in Docker container
