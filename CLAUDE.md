@@ -15,7 +15,7 @@ Before implmentation, use mcp context7 to collect up-to-date documentation.
 ### Backend Infrastructure
 
 **Python Worker Service:**
-- **Runtime:** Python 3.12 (cmd in use python3.13)
+- **Runtime:** Python 3.12 (cmd in use python3.13, and venv)
 - **ORM:** SQLAlchemy 2.0+ with AsyncIO support
 - **Database Driver:** asyncpg (PostgreSQL async driver)
 - **Task Queue:** arq (asyncio-based Redis queue)
