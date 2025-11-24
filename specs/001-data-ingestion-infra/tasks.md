@@ -104,28 +104,28 @@ Each phase produces independently testable artifacts:
 Create complete database schema with 6 tables (suppliers, categories, products, supplier_items, price_history, parsing_logs) supporting JSONB characteristics and proper foreign key relationships.
 
 ### Independent Test Criteria
-- [ ] Migration runs successfully: `alembic upgrade head`
-- [ ] All 6 tables exist with correct columns: `\dt` in psql
-- [ ] UNIQUE constraint on (supplier_id, supplier_sku) enforced
-- [ ] GIN index on characteristics JSONB column exists
-- [ ] Foreign key CASCADE/SET NULL behavior validated with test inserts
-- [ ] Product status enum accepts only draft/active/archived values
+- [X] Migration runs successfully: `alembic upgrade head`
+- [X] All 6 tables exist with correct columns: `\dt` in psql
+- [X] UNIQUE constraint on (supplier_id, supplier_sku) enforced
+- [X] GIN index on characteristics JSONB column exists
+- [X] Foreign key CASCADE/SET NULL behavior validated with test inserts
+- [X] Product status enum accepts only draft/active/archived values
 
 ### Tasks
 
-- [ ] T023 [FR-1] Create src/db/models/supplier.py with Supplier ORM model using UUIDMixin and TimestampMixin
-- [ ] T024 [P] [FR-1] Create src/db/models/category.py with Category ORM model with self-referential parent_id
-- [ ] T025 [P] [FR-1] Create src/db/models/product.py with Product ORM model including status enum (draft/active/archived)
-- [ ] T026 [FR-1] Create src/db/models/supplier_item.py with SupplierItem ORM model with JSONB characteristics column
-- [ ] T027 [P] [FR-1] Create src/db/models/price_history.py with PriceHistory ORM model with CASCADE delete
-- [ ] T028 [P] [FR-1] Create src/db/models/parsing_log.py with ParsingLog ORM model for error tracking
-- [ ] T029 [FR-1] Create Alembic migration 001_initial_schema.py with all table definitions at migrations/versions/
-- [ ] T030 [P] [FR-1] Add GIN index on supplier_items.characteristics in migration file
-- [ ] T031 [P] [FR-1] Add composite index on (supplier_id, supplier_sku) in migration file
-- [ ] T032 [P] [FR-1] Add descending indexes on timestamp columns for chronological queries in migration file
-- [ ] T033 [FR-1] Run migration and verify all tables created with correct constraints using psql
-- [ ] T034 [FR-1] Test foreign key relationships with manual INSERT/DELETE statements in psql
-- [ ] T035 [FR-1] Verify JSONB operations with sample characteristics query: WHERE characteristics @> '{"color": "red"}'
+- [X] T023 [FR-1] Create src/db/models/supplier.py with Supplier ORM model using UUIDMixin and TimestampMixin
+- [X] T024 [P] [FR-1] Create src/db/models/category.py with Category ORM model with self-referential parent_id
+- [X] T025 [P] [FR-1] Create src/db/models/product.py with Product ORM model including status enum (draft/active/archived)
+- [X] T026 [FR-1] Create src/db/models/supplier_item.py with SupplierItem ORM model with JSONB characteristics column
+- [X] T027 [P] [FR-1] Create src/db/models/price_history.py with PriceHistory ORM model with CASCADE delete
+- [X] T028 [P] [FR-1] Create src/db/models/parsing_log.py with ParsingLog ORM model for error tracking
+- [X] T029 [FR-1] Create Alembic migration 001_initial_schema.py with all table definitions at migrations/versions/
+- [X] T030 [P] [FR-1] Add GIN index on supplier_items.characteristics in migration file
+- [X] T031 [P] [FR-1] Add composite index on (supplier_id, supplier_sku) in migration file
+- [X] T032 [P] [FR-1] Add descending indexes on timestamp columns for chronological queries in migration file
+- [X] T033 [FR-1] Run migration and verify all tables created with correct constraints using psql
+- [X] T034 [FR-1] Test foreign key relationships with manual INSERT/DELETE statements in psql
+- [X] T035 [FR-1] Verify JSONB operations with sample characteristics query: WHERE characteristics @> '{"color": "red"}'
 
 **Acceptance Criteria:**
 - ✅ AC-1: Products table exists with Internal SKU, name, category reference

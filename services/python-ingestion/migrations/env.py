@@ -11,6 +11,16 @@ from alembic import context
 from src.db.base import Base
 from src.config import settings
 
+# Import all models so Alembic can discover them
+from src.db.models import (  # noqa: F401
+    Supplier,
+    Category,
+    Product,
+    SupplierItem,
+    PriceHistory,
+    ParsingLog,
+)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

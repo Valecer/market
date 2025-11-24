@@ -1,7 +1,7 @@
 """Base SQLAlchemy configuration and mixins."""
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
-from sqlalchemy import func
+from sqlalchemy import func, DateTime
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -27,10 +27,12 @@ class UUIDMixin:
 class TimestampMixin:
     """Mixin for created_at and updated_at timestamps."""
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,

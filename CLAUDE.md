@@ -13,7 +13,7 @@ This file provides context to Claude AI when working on this project.
 ### Backend Infrastructure
 
 **Python Worker Service:**
-- **Runtime:** Python 3.12
+- **Runtime:** Python 3.12 (cmd in use python3.13)
 - **ORM:** SQLAlchemy 2.0+ with AsyncIO support
 - **Database Driver:** asyncpg (PostgreSQL async driver)
 - **Task Queue:** arq (asyncio-based Redis queue)
