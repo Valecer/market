@@ -86,4 +86,9 @@ temp/
 *.pem
 *.key
 secrets/
+credentials/*
+!credentials/
+!credentials/.gitkeep
+!credentials/README.md
+google-credentials.json
 

@@ -1,0 +1,241 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parse Task Queue Message",
+  "description": "Message schema for enqueuing data parsing tasks in Redis queue",
+  "type": "object",
+  "required": [
+    "task_id",
+    "parser_type",
+    "supplier_name",
+    "source_config"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique identifier for this parse task",
+      "minLength": 1,
+      "maxLength": 255,
+      "example": "task-2025-11-23-001"
+    },
+    "parser_type": {
+      "type": "string",
+      "enum": ["google_sheets", "csv", "excel"],
+      "description": "Type of parser to use for data extraction"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Name of the supplier providing the data",
+      "minLength": 1,
+      "maxLength": 255,
+      "example": "Acme Wholesale"
+    },
+    "source_config": {
+      "type": "object",
+      "description": "Parser-specific configuration (schema varies by parser_type)",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/GoogleSheetsConfig"
+        },
+        {
+          "$ref": "#/definitions/CSVConfig"
+        },
+        {
+          "$ref": "#/definitions/ExcelConfig"
+        }
+      ]
+    },
+    "retry_count": {
+      "type": "integer",
+      "description": "Current retry attempt number",
+      "minimum": 0,
+      "default": 0
+    },
+    "max_retries": {
+      "type": "integer",
+      "description": "Maximum number of retry attempts before moving to DLQ",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 3
+    },
+    "enqueued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when task was enqueued"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high"],
+      "default": "normal",
+      "description": "Task priority for queue processing"
+    }
+  },
+  "definitions": {
+    "GoogleSheetsConfig": {
+      "type": "object",
+      "required": ["sheet_url"],
+      "properties": {
+        "sheet_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Full URL to Google Sheets document",
+          "pattern": "^https://docs\\.google\\.com/spreadsheets/",
+          "example": "https://docs.google.com/spreadsheets/d/abc123xyz/edit"
+        },
+        "sheet_name": {
+          "type": "string",
+          "description": "Name of the specific sheet tab to parse",
+          "default": "Sheet1",
+          "example": "Price List November 2025"
+        },
+        "column_mapping": {
+          "type": "object",
+          "description": "Manual override for column mapping (optional, auto-detected if not provided)",
+          "properties": {
+            "sku": {
+              "type": "string",
+              "description": "Column header or index for supplier SKU"
+            },
+            "name": {
+              "type": "string",
+              "description": "Column header or index for product name"
+            },
+            "price": {
+              "type": "string",
+              "description": "Column header or index for price"
+            }
+          },
+          "example": {
+            "sku": "Product Code",
+            "name": "Description",
+            "price": "Unit Price"
+          }
+        },
+        "characteristic_columns": {
+          "type": "array",
+          "description": "List of column headers to merge into characteristics JSONB",
+          "items": {
+            "type": "string"
+          },
+          "example": ["Color", "Size", "Material", "Origin"]
+        },
+        "header_row": {
+          "type": "integer",
+          "description": "Row number containing column headers (1-indexed)",
+          "minimum": 1,
+          "default": 1
+        },
+        "data_start_row": {
+          "type": "integer",
+          "description": "First row containing data (1-indexed)",
+          "minimum": 2,
+          "default": 2
+        },
+        "credentials_path": {
+          "type": "string",
+          "description": "Path to Google service account credentials JSON file",
+          "default": "/app/credentials/google-sheets.json"
+        }
+      }
+    },
+    "CSVConfig": {
+      "type": "object",
+      "required": ["file_path"],
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to CSV file (local or remote URL)"
+        },
+        "delimiter": {
+          "type": "string",
+          "description": "CSV delimiter character",
+          "default": ",",
+          "maxLength": 1
+        },
+        "encoding": {
+          "type": "string",
+          "description": "File encoding",
+          "default": "utf-8",
+          "example": "utf-8"
+        },
+        "has_header": {
+          "type": "boolean",
+          "description": "Whether first row contains headers",
+          "default": true
+        },
+        "column_mapping": {
+          "type": "object",
+          "description": "Column index or name mapping",
+          "properties": {
+            "sku": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "integer", "minimum": 0}
+              ]
+            },
+            "name": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "integer", "minimum": 0}
+              ]
+            },
+            "price": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "integer", "minimum": 0}
+              ]
+            }
+          }
+        }
+      }
+    },
+    "ExcelConfig": {
+      "type": "object",
+      "required": ["file_path"],
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to Excel file (.xlsx, .xls)"
+        },
+        "sheet_name": {
+          "type": "string",
+          "description": "Name of sheet to parse",
+          "default": "Sheet1"
+        },
+        "header_row": {
+          "type": "integer",
+          "description": "Row number containing headers (0-indexed)",
+          "minimum": 0,
+          "default": 0
+        },
+        "column_mapping": {
+          "type": "object",
+          "description": "Column name or index mapping"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "task_id": "task-2025-11-23-001",
+      "parser_type": "google_sheets",
+      "supplier_name": "Acme Wholesale",
+      "source_config": {
+        "sheet_url": "https://docs.google.com/spreadsheets/d/1abc123xyz/edit",
+        "sheet_name": "November 2025 Price List",
+        "column_mapping": {
+          "sku": "Item Code",
+          "name": "Product Description",
+          "price": "Unit Price"
+        },
+        "characteristic_columns": ["Color", "Size", "Material"],
+        "header_row": 1,
+        "data_start_row": 2
+      },
+      "retry_count": 0,
+      "max_retries": 3,
+      "enqueued_at": "2025-11-23T10:30:00Z",
+      "priority": "normal"
+    }
+  ]
+}
+

@@ -1,0 +1,213 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parser Interface Contract",
+  "description": "Standard interface that all data source parsers must implement",
+  "type": "object",
+  "required": ["parser_name", "parse", "validate_config"],
+  "properties": {
+    "parser_name": {
+      "type": "string",
+      "description": "Unique identifier for the parser",
+      "enum": ["GoogleSheetsParser", "CSVParser", "ExcelParser"]
+    },
+    "parse": {
+      "type": "object",
+      "description": "Main parsing method that extracts data from source",
+      "required": ["input", "output"],
+      "properties": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "source_config": {
+              "type": "object",
+              "description": "Parser-specific configuration (see queue-message.schema.json)"
+            }
+          }
+        },
+        "output": {
+          "type": "array",
+          "description": "List of parsed and validated supplier items",
+          "items": {
+            "$ref": "#/definitions/ParsedItem"
+          }
+        },
+        "errors": {
+          "type": "array",
+          "description": "List of parsing errors encountered",
+          "items": {
+            "$ref": "#/definitions/ParsingError"
+          }
+        }
+      }
+    },
+    "validate_config": {
+      "type": "object",
+      "description": "Method to validate source configuration before parsing",
+      "required": ["input", "output"],
+      "properties": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "type": "object",
+              "description": "Parser-specific configuration to validate"
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "valid": {
+              "type": "boolean",
+              "description": "Whether configuration is valid"
+            },
+            "errors": {
+              "type": "array",
+              "description": "List of validation errors if invalid",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ParsedItem": {
+      "type": "object",
+      "required": ["supplier_sku", "name", "price"],
+      "properties": {
+        "supplier_sku": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Supplier's SKU/product code"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Product name/description"
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0,
+          "multipleOf": 0.01,
+          "description": "Product price (non-negative, max 2 decimal places)"
+        },
+        "characteristics": {
+          "type": "object",
+          "description": "Flexible key-value pairs for product attributes",
+          "additionalProperties": true,
+          "example": {
+            "color": "blue",
+            "size": "M",
+            "material": "cotton",
+            "weight_kg": 0.5
+          }
+        },
+        "row_number": {
+          "type": "integer",
+          "description": "Source row number for traceability",
+          "minimum": 1
+        }
+      }
+    },
+    "ParsingError": {
+      "type": "object",
+      "required": ["error_type", "error_message"],
+      "properties": {
+        "error_type": {
+          "type": "string",
+          "enum": [
+            "ValidationError",
+            "ParserError",
+            "ConfigurationError",
+            "NetworkError",
+            "AuthenticationError"
+          ],
+          "description": "Category of error"
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Human-readable error description"
+        },
+        "row_number": {
+          "type": "integer",
+          "description": "Row number where error occurred (if applicable)",
+          "minimum": 1
+        },
+        "row_data": {
+          "type": "object",
+          "description": "Raw row data that caused the error (if available)"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the error occurred (ISO 8601)"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "parser_name": "GoogleSheetsParser",
+      "parse": {
+        "input": {
+          "source_config": {
+            "sheet_url": "https://docs.google.com/spreadsheets/d/abc123",
+            "sheet_name": "Price List"
+          }
+        },
+        "output": [
+          {
+            "supplier_sku": "ABC-001",
+            "name": "Cotton T-Shirt",
+            "price": 19.99,
+            "characteristics": {
+              "color": "blue",
+              "size": "M"
+            },
+            "row_number": 2
+          },
+          {
+            "supplier_sku": "ABC-002",
+            "name": "Denim Jeans",
+            "price": 49.99,
+            "characteristics": {
+              "color": "black",
+              "size": "32"
+            },
+            "row_number": 3
+          }
+        ],
+        "errors": [
+          {
+            "error_type": "ValidationError",
+            "error_message": "Missing required field 'price'",
+            "row_number": 4,
+            "row_data": {
+              "sku": "ABC-003",
+              "name": "Hoodie",
+              "price": ""
+            },
+            "timestamp": "2025-11-23T10:30:15Z"
+          }
+        ]
+      },
+      "validate_config": {
+        "input": {
+          "config": {
+            "sheet_url": "https://docs.google.com/spreadsheets/d/abc123"
+          }
+        },
+        "output": {
+          "valid": true,
+          "errors": []
+        }
+      }
+    }
+  ]
+}
+
