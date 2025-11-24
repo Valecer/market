@@ -8,6 +8,8 @@ This file provides context to Claude AI when working on this project.
 **Type:** Data ingestion infrastructure for supplier price list management  
 **Stage:** Planning Complete, Implementation Pending
 
+Before implmentation, use mcp context7 to collect up-to-date documentation.
+
 ## Technology Stack
 
 ### Backend Infrastructure

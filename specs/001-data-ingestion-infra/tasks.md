@@ -149,13 +149,13 @@ Create complete database schema with 6 tables (suppliers, categories, products, 
 Build Docker-based Python service with abstract parser interface enabling easy addition of new data source types (Google Sheets, CSV, Excel) without modifying core service code.
 
 ### Independent Test Criteria
-- [ ] Worker service starts successfully in Docker container
-- [ ] Abstract ParserInterface defines parse() and validate_config() methods
-- [ ] Mock parser can inherit from ParserInterface and be registered
-- [ ] Parser registration mechanism allows adding new parsers dynamically
-- [ ] Service logs JSON-formatted messages with task_id context
-- [ ] Health check endpoint returns success when service is running
-- [ ] Parser errors are caught and logged without crashing worker
+- [X] Worker service starts successfully in Docker container
+- [X] Abstract ParserInterface defines parse() and validate_config() methods
+- [X] Mock parser can inherit from ParserInterface and be registered
+- [X] Parser registration mechanism allows adding new parsers dynamically
+- [X] Service logs JSON-formatted messages with task_id context
+- [X] Health check endpoint returns success when service is running
+- [X] Parser errors are caught and logged without crashing worker
 
 ### Tasks
 
@@ -174,7 +174,7 @@ Build Docker-based Python service with abstract parser interface enabling easy a
 - [X] T048 [P] [FR-2] Add graceful error handling wrapper for parser exceptions in worker.py
 - [X] T049 [FR-2] Create health check script at src/health_check.py testing Redis connection
 - [X] T050 [FR-2] Update Dockerfile HEALTHCHECK to use health_check.py script
-- [ ] T051 [FR-2] Build Docker image and verify worker container starts successfully
+- [X] T051 [FR-2] Build Docker image and verify worker container starts successfully
 - [X] T052 [FR-2] Create stub parser inheriting from ParserInterface for testing registration
 
 **Acceptance Criteria:**
@@ -198,31 +198,31 @@ Build Docker-based Python service with abstract parser interface enabling easy a
 Implement Redis queue system with arq worker that consumes ParseTask messages, includes retry logic with exponential backoff (1s, 5s, 25s), and routes permanently failed tasks to dead letter queue.
 
 ### Independent Test Criteria
-- [ ] Redis instance accessible from Python service with password authentication
-- [ ] Worker successfully consumes test message from queue
-- [ ] ParseTaskMessage Pydantic model validates queue message structure
-- [ ] Retry count increments after simulated transient failure
-- [ ] Task moves to DLQ after exceeding max_retries (3)
-- [ ] Queue depth can be monitored with monitor_queue.py script
-- [ ] Concurrent worker processing (3 workers) handles multiple tasks
+- [X] Redis instance accessible from Python service with password authentication
+- [X] Worker successfully consumes test message from queue
+- [X] ParseTaskMessage Pydantic model validates queue message structure
+- [X] Retry count increments after simulated transient failure
+- [X] Task moves to DLQ after exceeding max_retries (3)
+- [X] Queue depth can be monitored with monitor_queue.py script
+- [X] Concurrent worker processing (3 workers) handles multiple tasks
 
 ### Tasks
 
-- [ ] T053 [FR-4] Create src/models/queue_message.py with ParseTaskMessage Pydantic model matching JSON schema
-- [ ] T054 [P] [FR-4] Add task_id, parser_type, supplier_name fields to ParseTaskMessage
-- [ ] T055 [P] [FR-4] Add source_config, retry_count, max_retries fields to ParseTaskMessage
-- [ ] T056 [P] [FR-4] Add enqueued_at timestamp field to ParseTaskMessage with default factory
-- [ ] T057 [FR-4] Create src/worker.py with arq worker function parse_task(ctx, message: dict)
-- [ ] T058 [P] [FR-4] Implement retry logic with exponential backoff delays [1, 5, 25] seconds in worker.py
-- [ ] T059 [P] [FR-4] Implement dead letter queue routing after max_retries exceeded in worker.py
-- [ ] T060 [FR-4] Configure arq WorkerSettings with Redis connection and max_jobs=5 in worker.py
-- [ ] T061 [P] [FR-4] Add queue depth monitoring with periodic logging in worker.py
-- [ ] T062 [P] [FR-4] Implement graceful task acknowledgment and error handling in worker.py
-- [ ] T063 [FR-4] Create scripts/enqueue_task.py helper script for testing task submission
-- [ ] T064 [P] [FR-4] Create scripts/monitor_queue.py script to display queue and DLQ depth
-- [ ] T065 [FR-4] Test enqueuing message and verify worker picks it up from logs
-- [ ] T066 [FR-4] Test retry behavior by simulating transient error in parse_task function
-- [ ] T067 [FR-4] Test DLQ routing by forcing task to exceed max_retries
+- [X] T053 [FR-4] Create src/models/queue_message.py with ParseTaskMessage Pydantic model matching JSON schema
+- [X] T054 [P] [FR-4] Add task_id, parser_type, supplier_name fields to ParseTaskMessage
+- [X] T055 [P] [FR-4] Add source_config, retry_count, max_retries fields to ParseTaskMessage
+- [X] T056 [P] [FR-4] Add enqueued_at timestamp field to ParseTaskMessage with default factory
+- [X] T057 [FR-4] Create src/worker.py with arq worker function parse_task(ctx, message: dict)
+- [X] T058 [P] [FR-4] Implement retry logic with exponential backoff delays [1, 5, 25] seconds in worker.py
+- [X] T059 [P] [FR-4] Implement dead letter queue routing after max_retries exceeded in worker.py
+- [X] T060 [FR-4] Configure arq WorkerSettings with Redis connection and max_jobs=5 in worker.py
+- [X] T061 [P] [FR-4] Add queue depth monitoring with periodic logging in worker.py
+- [X] T062 [P] [FR-4] Implement graceful task acknowledgment and error handling in worker.py
+- [X] T063 [FR-4] Create scripts/enqueue_task.py helper script for testing task submission
+- [X] T064 [P] [FR-4] Create scripts/monitor_queue.py script to display queue and DLQ depth
+- [X] T065 [FR-4] Test enqueuing message and verify worker picks it up from logs
+- [X] T066 [FR-4] Test retry behavior by simulating transient error in parse_task function
+- [X] T067 [FR-4] Test DLQ routing by forcing task to exceed max_retries
 
 **Acceptance Criteria:**
 - ✅ AC-1: Redis instance running and accessible to Python service
