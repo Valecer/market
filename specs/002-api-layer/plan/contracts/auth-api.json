@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Authentication API Contract",
+  "description": "JWT-based authentication endpoints",
+  "version": "1.0.0",
+  "endpoints": {
+    "login": {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "authentication": "none",
+      "requestBody": {
+        "$ref": "#/definitions/LoginRequest"
+      },
+      "responses": {
+        "200": {
+          "description": "Successful login with JWT token",
+          "schema": {
+            "$ref": "#/definitions/LoginResponse"
+          }
+        },
+        "401": {
+          "description": "Invalid credentials",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        },
+        "400": {
+          "description": "Validation error (missing fields)",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "LoginRequest": {
+      "type": "object",
+      "required": ["username", "password"],
+      "properties": {
+        "username": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 255,
+          "description": "User's username"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 255,
+          "description": "User's password (plaintext, transmitted over HTTPS)"
+        }
+      },
+      "additionalProperties": false,
+      "example": {
+        "username": "admin",
+        "password": "admin123"
+      }
+    },
+    "LoginResponse": {
+      "type": "object",
+      "required": ["token", "expires_at", "user"],
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "JWT token for authentication (use in Authorization: Bearer <token> header)"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Token expiration timestamp (ISO-8601)"
+        },
+        "user": {
+          "type": "object",
+          "required": ["id", "username", "role"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "User UUID"
+            },
+            "username": {
+              "type": "string",
+              "description": "User's username"
+            },
+            "role": {
+              "type": "string",
+              "enum": ["sales", "procurement", "admin"],
+              "description": "User's role for authorization"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "example": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3MzI2MjM2MDAsImlzcyI6Im1hcmtldGJlbC1hcGkifQ.signature",
+        "expires_at": "2025-11-27T10:30:00Z",
+        "user": {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "username": "admin",
+          "role": "admin"
+        }
+      }
+    },
+    "JWTPayload": {
+      "type": "object",
+      "required": ["sub", "role", "exp", "iss"],
+      "properties": {
+        "sub": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Subject: User ID"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["sales", "procurement", "admin"],
+          "description": "User role for authorization"
+        },
+        "exp": {
+          "type": "integer",
+          "description": "Expiration time (Unix timestamp)"
+        },
+        "iss": {
+          "type": "string",
+          "description": "Issuer: should match JWT_ISSUER env var (e.g., 'marketbel-api')"
+        }
+      },
+      "additionalProperties": false,
+      "description": "JWT payload structure (decoded from token)",
+      "example": {
+        "sub": "550e8400-e29b-41d4-a716-446655440000",
+        "role": "admin",
+        "exp": 1732623600,
+        "iss": "marketbel-api"
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "VALIDATION_ERROR",
+                "UNAUTHORIZED",
+                "INTERNAL_ERROR"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "details": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "error": {
+            "code": "UNAUTHORIZED",
+            "message": "Invalid username or password"
+          }
+        },
+        {
+          "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "Invalid request parameters",
+            "details": {
+              "field": "password",
+              "issue": "must be at least 8 characters"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "security": {
+    "bearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "Use JWT token obtained from /auth/login endpoint in Authorization header: `Authorization: Bearer <token>`"
+    }
+  },
+  "notes": {
+    "tokenExpiration": "Tokens expire after 24 hours by default (configurable via JWT_EXPIRATION_HOURS env var)",
+    "passwordHashing": "Passwords are hashed using bcrypt with cost factor 10",
+    "secureTransport": "All authentication requests MUST use HTTPS in production",
+    "tokenRefresh": "Token refresh is out of scope for MVP - clients must re-login after expiration",
+    "passwordReset": "Password reset is out of scope for MVP - handled by administrator"
+  }
+}

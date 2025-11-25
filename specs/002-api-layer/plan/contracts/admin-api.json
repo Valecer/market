@@ -1,0 +1,424 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Admin API Contract",
+  "description": "Authenticated endpoints for internal staff operations",
+  "version": "1.0.0",
+  "endpoints": {
+    "getAdminProducts": {
+      "method": "GET",
+      "path": "/api/v1/admin/products",
+      "authentication": "required",
+      "requiredRoles": ["sales", "procurement", "admin"],
+      "queryParameters": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"],
+            "description": "Filter by product status"
+          },
+          "min_margin": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Minimum margin percentage"
+          },
+          "max_margin": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Maximum margin percentage"
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Filter by supplier UUID"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "schema": {
+            "$ref": "#/definitions/AdminProductsResponse"
+          }
+        },
+        "401": {
+          "description": "Missing or invalid JWT token",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    },
+    "matchProduct": {
+      "method": "PATCH",
+      "path": "/api/v1/admin/products/:id/match",
+      "authentication": "required",
+      "requiredRoles": ["procurement", "admin"],
+      "requestBody": {
+        "$ref": "#/definitions/MatchRequest"
+      },
+      "responses": {
+        "200": {
+          "schema": {
+            "$ref": "#/definitions/MatchResponse"
+          }
+        },
+        "400": {
+          "description": "Validation error"
+        },
+        "404": {
+          "description": "Product or supplier item not found"
+        },
+        "409": {
+          "description": "Supplier item already linked to different product"
+        }
+      }
+    },
+    "createProduct": {
+      "method": "POST",
+      "path": "/api/v1/admin/products",
+      "authentication": "required",
+      "requiredRoles": ["procurement", "admin"],
+      "requestBody": {
+        "$ref": "#/definitions/CreateProductRequest"
+      },
+      "responses": {
+        "201": {
+          "schema": {
+            "$ref": "#/definitions/CreateProductResponse"
+          }
+        },
+        "400": {
+          "description": "Validation error (duplicate SKU, invalid category, etc.)"
+        },
+        "403": {
+          "description": "Insufficient role permissions"
+        }
+      }
+    },
+    "triggerSync": {
+      "method": "POST",
+      "path": "/api/v1/admin/sync",
+      "authentication": "required",
+      "requiredRoles": ["admin"],
+      "rateLimit": {
+        "maxRequests": 10,
+        "perMinutes": 1
+      },
+      "requestBody": {
+        "$ref": "#/definitions/SyncRequest"
+      },
+      "responses": {
+        "200": {
+          "schema": {
+            "$ref": "#/definitions/SyncResponse"
+          }
+        },
+        "404": {
+          "description": "Supplier not found"
+        },
+        "429": {
+          "description": "Rate limit exceeded"
+        },
+        "503": {
+          "description": "Redis unavailable"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AdminProductsResponse": {
+      "type": "object",
+      "required": ["total_count", "page", "limit", "data"],
+      "properties": {
+        "total_count": {
+          "type": "integer"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AdminProduct"
+          }
+        }
+      }
+    },
+    "AdminProduct": {
+      "type": "object",
+      "required": ["id", "internal_sku", "name", "status", "supplier_items"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "internal_sku": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category_id": {
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active", "archived"]
+        },
+        "supplier_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SupplierItemDetail"
+          }
+        },
+        "margin_percentage": {
+          "type": ["number", "null"],
+          "description": "Calculated margin: (target - min_price) / target * 100"
+        }
+      },
+      "example": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "internal_sku": "PROD-001",
+        "name": "USB-C Cable 2m",
+        "category_id": "660e8400-e29b-41d4-a716-446655440000",
+        "status": "active",
+        "supplier_items": [
+          {
+            "id": "770e8400-e29b-41d4-a716-446655440000",
+            "supplier_id": "880e8400-e29b-41d4-a716-446655440000",
+            "supplier_name": "TechSupplier Inc",
+            "supplier_sku": "TS-USB-C-2M",
+            "current_price": "9.99",
+            "characteristics": {
+              "color": "black",
+              "length": "2m"
+            },
+            "last_ingested_at": "2025-11-26T10:30:00Z"
+          }
+        ],
+        "margin_percentage": 25.5
+      }
+    },
+    "SupplierItemDetail": {
+      "type": "object",
+      "required": ["id", "supplier_id", "supplier_name", "supplier_sku", "current_price", "last_ingested_at"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "supplier_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "supplier_name": {
+          "type": "string"
+        },
+        "supplier_sku": {
+          "type": "string"
+        },
+        "current_price": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d{2}$"
+        },
+        "characteristics": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "JSONB flexible attributes"
+        },
+        "last_ingested_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "MatchRequest": {
+      "type": "object",
+      "required": ["action", "supplier_item_id"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["link", "unlink"]
+        },
+        "supplier_item_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "example": {
+        "action": "link",
+        "supplier_item_id": "770e8400-e29b-41d4-a716-446655440000"
+      }
+    },
+    "MatchResponse": {
+      "type": "object",
+      "required": ["product"],
+      "properties": {
+        "product": {
+          "$ref": "#/definitions/AdminProduct"
+        }
+      }
+    },
+    "CreateProductRequest": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "internal_sku": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Optional, auto-generated if not provided"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active"],
+          "default": "draft"
+        },
+        "supplier_item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional initial supplier item to link"
+        }
+      },
+      "example": {
+        "name": "HDMI Cable 3m",
+        "category_id": "660e8400-e29b-41d4-a716-446655440000",
+        "status": "draft",
+        "supplier_item_id": "770e8400-e29b-41d4-a716-446655440000"
+      }
+    },
+    "CreateProductResponse": {
+      "type": "object",
+      "required": ["id", "internal_sku", "name", "status", "supplier_items", "created_at"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "internal_sku": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category_id": {
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active"]
+        },
+        "supplier_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SupplierItemDetail"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "SyncRequest": {
+      "type": "object",
+      "required": ["supplier_id"],
+      "properties": {
+        "supplier_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "example": {
+        "supplier_id": "880e8400-e29b-41d4-a716-446655440000"
+      }
+    },
+    "SyncResponse": {
+      "type": "object",
+      "required": ["task_id", "supplier_id", "status", "enqueued_at"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique task identifier for tracking"
+        },
+        "supplier_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["queued"],
+          "description": "Always 'queued' on successful enqueue"
+        },
+        "enqueued_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "example": {
+        "task_id": "990e8400-e29b-41d4-a716-446655440000",
+        "supplier_id": "880e8400-e29b-41d4-a716-446655440000",
+        "status": "queued",
+        "enqueued_at": "2025-11-26T10:30:00Z"
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "VALIDATION_ERROR",
+                "UNAUTHORIZED",
+                "FORBIDDEN",
+                "NOT_FOUND",
+                "CONFLICT",
+                "RATE_LIMIT_EXCEEDED",
+                "REDIS_UNAVAILABLE",
+                "INTERNAL_ERROR"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "details": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

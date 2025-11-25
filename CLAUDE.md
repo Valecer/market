@@ -4,17 +4,27 @@ This file provides context to Claude AI when working on this project.
 
 ## Project Overview
 
-**Name:** Marketbel - Unified Catalog System  
-**Type:** Data ingestion infrastructure for supplier price list management  
-**Stage:** Planning Complete, Implementation Pending
+**Name:** Marketbel - Unified Catalog System
+**Type:** Multi-service application for supplier price list management and product catalog
+**Stage:** Phase 1 Complete ✅ | Phase 2 Planning Complete ✅
 
-Before implmentation, use mcp context7 to collect up-to-date documentation.
+Before implementation, use mcp context7 to collect up-to-date documentation.
 
 ## Technology Stack
 
 ### Backend Infrastructure
 
-**Python Worker Service:**
+**Bun API Service (Phase 2):**
+- **Runtime:** Bun (latest)
+- **Framework:** ElysiaJS (high-performance, type-safe)
+- **ORM:** Drizzle ORM + node-postgres
+- **Validation:** TypeBox (native to Elysia)
+- **Authentication:** @elysiajs/jwt + bcrypt
+- **Documentation:** @elysiajs/swagger (auto-generated OpenAPI)
+- **Queue Client:** ioredis (publisher-only)
+- **Database Access:** READ-ONLY for Phase 1 tables, MANAGED for users table
+
+**Python Worker Service (Phase 1):**
 - **Runtime:** Python 3.12 (cmd in use python3.13, and venv)
 - **ORM:** SQLAlchemy 2.0+ with AsyncIO support
 - **Database Driver:** asyncpg (PostgreSQL async driver)
@@ -37,6 +47,15 @@ Before implmentation, use mcp context7 to collect up-to-date documentation.
 
 ### Key Design Patterns
 
+**Phase 2 (Bun API):**
+1. **SOLID Architecture:** Controllers (HTTP) → Services (logic) → Repositories (data)
+2. **Feature-Based Structure:** auth/, catalog/, admin/ modules with controller/service/model
+3. **Type Safety:** End-to-end TypeScript with Drizzle ORM + TypeBox validation
+4. **JWT Authentication:** Role-based access (sales, procurement, admin)
+5. **Schema Introspection:** Drizzle reads Phase 1 schema without managing migrations
+6. **Queue Publisher:** Redis LPUSH for async task delegation to Python worker
+
+**Phase 1 (Python Worker):**
 1. **Parser Interface:** Abstract base class for pluggable data sources (Google Sheets, CSV, Excel)
 2. **Async Architecture:** Full async/await pattern with SQLAlchemy AsyncIO + arq
 3. **Queue-Based Processing:** Decoupled ingestion with retry logic and dead letter queue
@@ -67,18 +86,44 @@ Before implmentation, use mcp context7 to collect up-to-date documentation.
 ```
 marketbel/
 ├── specs/
-│   └── 001-data-ingestion-infra/
-│       ├── spec.md                    # Feature specification
-│       ├── checklists/requirements.md # Requirements tracking
-│       └── plan/                      # Implementation planning
-│           ├── research.md            # Technical decisions
-│           ├── data-model.md          # Database schema & ORM
-│           ├── implementation-plan.md # 9-milestone roadmap
-│           ├── quickstart.md          # Setup guide
-│           ├── contracts/             # JSON Schema contracts
-│           └── SUMMARY.md             # Planning summary
+│   ├── 001-data-ingestion-infra/     # Phase 1 (Python Worker)
+│   │   ├── spec.md
+│   │   └── plan/
+│   │       ├── research.md
+│   │       ├── data-model.md
+│   │       ├── implementation-plan.md
+│   │       ├── quickstart.md
+│   │       └── contracts/
+│   └── 002-api-layer/                 # Phase 2 (Bun API)
+│       ├── spec.md
+│       └── plan/
+│           ├── research.md
+│           ├── data-model.md
+│           ├── quickstart.md
+│           └── contracts/
+│               ├── catalog-api.json
+│               ├── admin-api.json
+│               ├── auth-api.json
+│               └── queue-messages.json
 ├── services/
-│   └── python-ingestion/
+│   ├── bun-api/                       # Phase 2: API Service
+│   │   ├── src/
+│   │   │   ├── index.ts               # Entry point
+│   │   │   ├── db/
+│   │   │   │   ├── client.ts          # Drizzle connection
+│   │   │   │   ├── schema/            # Auto-generated + manual schemas
+│   │   │   │   └── repositories/      # Repository pattern
+│   │   │   ├── controllers/           # Feature-based HTTP controllers
+│   │   │   │   ├── auth/
+│   │   │   │   ├── catalog/
+│   │   │   │   └── admin/
+│   │   │   ├── services/              # Business logic
+│   │   │   ├── types/                 # TypeBox schemas & TS types
+│   │   │   ├── middleware/            # JWT auth, error handling
+│   │   │   └── utils/                 # Helpers
+│   │   ├── migrations/                # SQL migrations for users table
+│   │   └── tests/                     # Unit + integration tests
+│   └── python-ingestion/              # Phase 1: Data Ingestion
 │       ├── src/
 │       │   ├── db/models/             # SQLAlchemy ORM models
 │       │   ├── parsers/               # Data source parsers
@@ -90,31 +135,39 @@ marketbel/
 
 ## Current Focus
 
-**Feature:** 001-data-ingestion-infra  
-**Phase:** Planning Complete ✅  
-**Next Step:** Begin Implementation (Milestone 1: Infrastructure Setup)
+**Phase 1 (Python Worker):** Complete ✅ | Implemented and tested
+**Phase 2 (Bun API):** Planning Complete ✅ | Ready for implementation
 
-**Recent Work:**
-- Completed research on technology stack decisions
-- Designed complete database schema with 6 tables
-- Created JSON Schema contracts for queue messages
-- Generated quickstart guide for 30-minute setup
-- Built 9-milestone implementation roadmap (5 weeks)
+**Phase 2 Recent Work:**
+- Researched ElysiaJS, Drizzle ORM, TypeBox integration
+- Designed hybrid database strategy (introspect Phase 1, manage users table)
+- Created API contracts (catalog, admin, auth, queue messages)
+- Generated 15-minute quickstart guide
+- Documented SOLID architecture pattern for controllers/services/repositories
 
 ## Development Guidelines
 
 ### Code Style
 
-**Python:**
+**TypeScript (Bun API):**
+- Use TypeScript strict mode (no `any` without justification)
+- Controllers handle HTTP only - no business logic
+- Services are static classes or pure functions (stateless)
+- Repositories implement interfaces for Dependency Inversion
+- TypeBox schemas for all request/response validation
+- Feature-based folder structure (auth/, catalog/, admin/)
+
+**Python (Worker):**
 - Use async/await for all I/O operations
 - Type hints required for all functions
 - Pydantic models for data validation
 - structlog for structured JSON logging
 
 **Database:**
-- Use SQLAlchemy 2.0 style (no legacy Query API)
-- Always use `async with session.begin()` for transactions
-- Prefer `session.execute(select())` over `session.query()`
+- **Bun API:** Drizzle ORM with introspected schema, use repository pattern
+- **Python:** SQLAlchemy 2.0 style (no legacy Query API)
+- Always use transactions for write operations
+- Prefer parameterized queries over string concatenation
 
 **Error Handling:**
 - Custom exception hierarchy rooted in `DataIngestionError`
@@ -171,26 +224,59 @@ async def test_parse_with_mocked_client(self, parser, mock_spreadsheet):
 
 ### Docker Operations
 ```bash
-# Start all services
+# Start all services (Python worker + Bun API)
 docker-compose up -d
 
-# View logs
+# View Bun API logs
+docker-compose logs -f bun-api
+
+# View Python worker logs
 docker-compose logs -f worker
 
-# Run migrations
+# Run Phase 1 migrations (Python/Alembic)
 docker-compose exec worker alembic upgrade head
+
+# Run Phase 2 migration (users table)
+psql $DATABASE_URL -f services/bun-api/migrations/001_create_users.sql
 
 # Access database
 docker-compose exec postgres psql -U marketbel_user -d marketbel
 ```
 
-### Development
+### Bun API Development
 ```bash
+# Navigate to Bun service
+cd services/bun-api
+
+# Install dependencies
+bun install
+
+# Run with hot reload
+bun --watch src/index.ts
+
+# Run tests
+bun test
+
+# Introspect database schema
+bun run drizzle-kit introspect:pg
+
+# Type check
+bun run tsc --noEmit
+
+# Access Swagger docs
+open http://localhost:3000/docs
+```
+
+### Python Worker Development
+```bash
+# Navigate to Python service
+cd services/python-ingestion
+
 # Create virtual environment
 python -m venv venv && source venv/bin/activate
 
 # Install dependencies
-pip install -r services/python-ingestion/requirements.txt
+pip install -r requirements.txt
 
 # Run tests
 pytest tests/ -v --cov=src
@@ -201,13 +287,23 @@ alembic revision --autogenerate -m "Description"
 
 ## Key References
 
-**Internal Documentation:**
+**Phase 2 (Bun API) Documentation:**
+- Feature Spec: `/specs/002-api-layer/spec.md`
+- Research: `/specs/002-api-layer/plan/research.md`
+- Data Model: `/specs/002-api-layer/plan/data-model.md`
+- Quickstart: `/specs/002-api-layer/plan/quickstart.md`
+- API Contracts: `/specs/002-api-layer/plan/contracts/`
+
+**Phase 1 (Python Worker) Documentation:**
 - Feature Spec: `/specs/001-data-ingestion-infra/spec.md`
 - Implementation Plan: `/specs/001-data-ingestion-infra/plan/implementation-plan.md`
 - Data Model: `/specs/001-data-ingestion-infra/plan/data-model.md`
 - Quickstart: `/specs/001-data-ingestion-infra/plan/quickstart.md`
 
 **External Documentation:**
+- [ElysiaJS](https://elysiajs.com/)
+- [Drizzle ORM](https://orm.drizzle.team/)
+- [Bun](https://bun.sh/docs)
 - [SQLAlchemy 2.0 Async](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html)
 - [arq Documentation](https://arq-docs.helpmanual.io/)
 - [Pydantic v2](https://docs.pydantic.dev/)
@@ -215,24 +311,35 @@ alembic revision --autogenerate -m "Description"
 
 ## Notes for Claude
 
+**Phase 2 (Bun API) Implementation:**
+- **SOLID principles are mandatory:** Controllers → Services → Repositories
+- **No business logic in controllers:** Only HTTP handling, validation, serialization
+- **Schema introspection is read-only:** Do NOT manage Phase 1 table migrations
+- **Users table is managed locally:** SQL migration required before deployment
+- **Type safety is critical:** TypeScript strict mode, TypeBox validation, Drizzle types
+- **Performance targets:** p95 < 500ms for catalog, < 1000ms for admin endpoints
+- **JWT authentication:** Role-based (sales, procurement, admin)
+- **Queue communication:** Publish-only to Redis, Python worker consumes
+
+**Phase 1 (Python Worker) Notes:**
 - **Parser extensibility is critical:** New data sources should be easy to add
 - **Error handling must not crash worker:** Use `parsing_logs` table
 - **Performance target:** >1,000 items/min throughput
 - **Dynamic column mapping:** Google Sheets headers vary between suppliers
 - **JSONB characteristics:** Flexible schema for varying product attributes
-- **Product lifecycle:** Draft → Active → Archived status transitions
 
-When implementing:
-1. Start with `quickstart.md` for environment setup
-2. Reference `data-model.md` for SQLAlchemy models
-3. Use `contracts/` JSON schemas for validation
-4. Follow milestones in `implementation-plan.md`
-5. Consult `research.md` for technical decision rationale
+**When implementing Phase 2:**
+1. Start with `quickstart.md` for 15-minute setup
+2. Reference `research.md` for technology stack decisions and best practices
+3. Reference `data-model.md` for Drizzle schemas and TypeBox validation
+4. Use `contracts/` JSON schemas for API request/response validation
+5. Follow SOLID architecture: feature-based modules with controller/service/model
+6. Test with Swagger UI at `/docs` endpoint
 
 ## Workflow State
 
-**Current Branch:** 001-data-ingestion-infra (worktree)  
-**Planning Status:** Complete ✅  
-**Implementation Status:** Not started  
-**Next Milestone:** M1 - Infrastructure Setup (Week 1)
+**Current Branch:** 002-api-layer
+**Phase 1 Status:** Complete ✅ (Implemented and tested)
+**Phase 2 Status:** Planning Complete ✅ (Ready for implementation)
+**Next Step:** Implement Phase 2 - Bun API Service
 
