@@ -21,7 +21,7 @@ import pytest
 import asyncio
 from abc import ABC
 from typing import List, Dict, Any
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 import json
 import sys
 
@@ -217,21 +217,55 @@ class TestJSONLoggingWithTaskId:
     """Test that service logs JSON-formatted messages with task_id context."""
     
     @pytest.mark.asyncio
-    async def test_parse_task_logs_with_task_id_context(self):
+    @patch('src.worker.get_or_create_supplier')
+    @patch('src.worker.upsert_supplier_item')
+    @patch('src.worker.log_parsing_error')
+    async def test_parse_task_logs_with_task_id_context(self, mock_log_error, mock_upsert_item, mock_get_supplier):
         """Verify parse_task() logs JSON messages with task_id."""
+        from unittest.mock import AsyncMock
+        from uuid import uuid4
+        
+        # Mock database operations
+        mock_supplier = AsyncMock()
+        mock_supplier.id = uuid4()
+        mock_get_supplier.return_value = mock_supplier
+        
+        # Mock upsert_supplier_item to return (supplier_item, price_changed, is_new_item)
+        mock_supplier_item = AsyncMock()
+        mock_supplier_item.id = uuid4()
+        mock_upsert_item.return_value = (mock_supplier_item, False, True)
+        
         # Create test message with valid config
         message = {
             "task_id": "test-task-123",
             "parser_type": "stub",
             "supplier_name": "Test Supplier",
-            "source_config": {"test": "config"},  # Valid non-empty config
+            "source_config": {},  # Empty config is allowed for stub parser
             "retry_count": 0,
             "max_retries": 3,
         }
         
-        # Call parse_task
+        # Call parse_task with mocked database operations
         ctx = {}
-        result = await parse_task(ctx, message)
+        with patch('src.worker.async_session_maker') as mock_session_maker:
+            # Mock async context manager for session
+            mock_session = AsyncMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            
+            # Mock session.begin() to return an async context manager
+            mock_begin = AsyncMock()
+            mock_begin.__aenter__ = AsyncMock(return_value=None)
+            mock_begin.__aexit__ = AsyncMock(return_value=None)
+            mock_session.begin = Mock(return_value=mock_begin)
+            
+            mock_session_maker.return_value = mock_session
+            
+            # Mock the database operations
+            with patch('src.worker.get_or_create_supplier', return_value=mock_supplier), \
+                 patch('src.worker.upsert_supplier_item', return_value=(mock_supplier_item, False, True)), \
+                 patch('src.worker.create_price_history_entry', return_value=None):
+                result = await parse_task(ctx, message)
         
         # Verify result contains task_id - this proves task_id context is used
         assert result["task_id"] == "test-task-123"
@@ -293,17 +327,17 @@ class TestHealthCheck:
         with patch('src.health_check.Redis') as mock_redis:
             mock_client = AsyncMock()
             mock_redis.from_url.return_value = mock_client
-            mock_client.ping = AsyncMock(return_value=True)
-            mock_client.aclose = AsyncMock(return_value=None)
-            
-            # Mock settings
-            with patch('src.health_check.settings') as mock_settings:
-                mock_settings.redis_url = "redis://localhost:6379/0"
-                
-                result = await check_redis_connection()
-                assert result is True
-                mock_client.ping.assert_called_once()
-                mock_client.aclose.assert_called_once()
+            # Use patch.object() to configure mock methods instead of direct assignment
+            with patch.object(mock_client, 'ping', return_value=True), \
+                 patch.object(mock_client, 'aclose', return_value=None):
+                # Mock settings
+                with patch('src.health_check.settings') as mock_settings:
+                    mock_settings.redis_url = "redis://localhost:6379/0"
+                    
+                    result = await check_redis_connection()
+                    assert result is True
+                    mock_client.ping.assert_called_once()
+                    mock_client.aclose.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_health_check_redis_connection_fails_gracefully(self):
@@ -331,43 +365,44 @@ class TestParserErrorHandling:
     @pytest.mark.asyncio
     async def test_parse_task_handles_parser_error_gracefully(self):
         """Verify parse_task() handles ParserError without crashing."""
-        # Create a parser that raises ParserError
-        class ErrorParser(ParserInterface):
-            async def parse(self, config: Dict[str, Any]) -> List[ParsedSupplierItem]:
-                raise ParserError("Test parser error")
-            
-            def validate_config(self, config: Dict[str, Any]) -> bool:
-                return True
-            
-            def get_parser_name(self) -> str:
-                return "error_parser"
+        # Instead of creating a new parser type (which would fail validation),
+        # we'll patch the stub parser to raise an error during parsing
+        from src.parsers.stub_parser import StubParser
         
-        # Register error parser
-        register_parser("error_parser", ErrorParser)
+        # Create a mock stub parser that raises ParserError
+        original_parse = StubParser.parse
+        
+        async def error_parse(self, config):
+            raise ParserError("Test parser error")
         
         try:
+            # Patch StubParser.parse to raise error
+            StubParser.parse = error_parse
+            
             message = {
                 "task_id": "test-error-task",
-                "parser_type": "error_parser",
+                "parser_type": "stub",  # Use valid parser type
                 "supplier_name": "Test Supplier",
-                "source_config": {"test": "config"},  # Valid config dict
+                "source_config": {},  # Valid config dict
                 "retry_count": 0,
                 "max_retries": 3,
             }
             
-            ctx = {}
+            ctx = {"job_try": 1}  # Set job_try to simulate first attempt
             
-            # Should raise ParserError (which triggers retry, not crash)
-            with pytest.raises(ParserError):
+            # ParserError should trigger a retry (arq.Retry), not crash the worker
+            # The worker catches ParserError and raises arq.Retry for retry mechanism
+            from arq.worker import Retry
+            
+            with pytest.raises(Retry):
                 await parse_task(ctx, message)
             
-            # Worker should not crash - exception is raised for retry mechanism
+            # Worker should not crash - Retry exception is raised for retry mechanism
             # but worker continues processing other tasks
             
         finally:
-            # Clean up
-            from src.parsers.parser_registry import _parser_registry
-            _parser_registry.pop("error_parser", None)
+            # Restore original parse method
+            StubParser.parse = original_parse
     
     @pytest.mark.asyncio
     async def test_parse_task_handles_validation_error_without_retry(self):
@@ -415,7 +450,10 @@ class TestParserErrorHandling:
     @pytest.mark.asyncio
     async def test_worker_continues_after_error(self):
         """Verify worker can process multiple tasks even after errors."""
-        # Process first task with error
+        from uuid import uuid4
+        from unittest.mock import AsyncMock, patch
+        
+        # Process first task with error (validation error - empty supplier_name)
         message1 = {
             "task_id": "task-1-error",
             "parser_type": "stub",
@@ -434,12 +472,37 @@ class TestParserErrorHandling:
             "task_id": "task-2-success",
             "parser_type": "stub",
             "supplier_name": "Test Supplier",
-            "source_config": {"test": "config"},  # Valid config
+            "source_config": {},  # Empty config is allowed for stub parser
             "retry_count": 0,
             "max_retries": 3,
         }
         
-        result2 = await parse_task(ctx, message2)
+        # Mock database operations for successful task
+        mock_supplier = AsyncMock()
+        mock_supplier.id = uuid4()
+        mock_supplier_item = AsyncMock()
+        mock_supplier_item.id = uuid4()
+        
+        with patch('src.worker.async_session_maker') as mock_session_maker:
+            # Mock async context manager for session
+            mock_session = AsyncMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            
+            # Mock session.begin() to return an async context manager
+            mock_begin = AsyncMock()
+            mock_begin.__aenter__ = AsyncMock(return_value=None)
+            mock_begin.__aexit__ = AsyncMock(return_value=None)
+            mock_session.begin = Mock(return_value=mock_begin)
+            
+            mock_session_maker.return_value = mock_session
+            
+            # Mock the database operations
+            with patch('src.worker.get_or_create_supplier', return_value=mock_supplier), \
+                 patch('src.worker.upsert_supplier_item', return_value=(mock_supplier_item, False, True)), \
+                 patch('src.worker.create_price_history_entry', return_value=None):
+                result2 = await parse_task(ctx, message2)
+        
         assert result2["status"] == "success"
         assert result2["items_parsed"] > 0
 

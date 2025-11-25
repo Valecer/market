@@ -3,7 +3,7 @@ from arq.connections import RedisSettings, ArqRedis
 from arq.worker import Retry
 from arq import cron
 from typing import Dict, Any
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 import structlog
 import asyncio
 from src.config import settings, configure_logging
@@ -12,6 +12,13 @@ import src.parsers  # noqa: F401
 from src.parsers import create_parser_instance
 from src.models.queue_message import ParseTaskMessage
 from src.errors.exceptions import ParserError, ValidationError, DatabaseError
+from src.db.base import async_session_maker
+from src.db.operations import (
+    get_or_create_supplier,
+    upsert_supplier_item,
+    create_price_history_entry,
+    log_parsing_error
+)
 
 # Configure logging
 configure_logging(settings.log_level)
@@ -118,19 +125,12 @@ async def parse_task(ctx: Dict[str, Any], message: Dict[str, Any] = None, **kwar
             items_count = len(parsed_items)
             
             log.info(
-                "parse_task_completed",
+                "parse_completed",
                 items_parsed=items_count,
                 parser_name=parser.get_parser_name()
             )
-            
-            return {
-                "task_id": task_id,
-                "status": "success",
-                "items_parsed": items_count,
-                "errors": []
-            }
         except ValidationError as e:
-            # Validation errors are logged but don't crash the worker
+            # Validation errors during parsing are logged but don't crash the worker
             log.warning("parse_validation_error", error=str(e))
             return {
                 "task_id": task_id,
@@ -150,6 +150,179 @@ async def parse_task(ctx: Dict[str, Any], message: Dict[str, Any] = None, **kwar
                 # Re-raise original exception to mark job as failed
                 # Don't wrap it - let arq handle the failure
                 raise
+        
+        # Process parsed items and persist to database
+        start_time = datetime.now(timezone.utc)
+        success_count = 0
+        failed_count = 0
+        price_history_count = 0
+        
+        try:
+            # Get or create supplier within transaction
+            async with async_session_maker() as session:
+                async with session.begin():
+                    try:
+                        # Get or create supplier
+                        # Map parser_type to valid source_type for database constraint
+                        # "stub" is used in tests but not allowed in DB constraint
+                        source_type_map = {
+                            "stub": "csv",  # Map stub parser to csv for testing
+                            "google_sheets": "google_sheets",
+                            "csv": "csv",
+                            "excel": "excel",
+                        }
+                        db_source_type = source_type_map.get(parser_type, parser_type)
+                        
+                        supplier = await get_or_create_supplier(
+                            session=session,
+                            supplier_name=supplier_name,
+                            source_type=db_source_type,
+                            metadata=source_config
+                        )
+                        supplier_id = supplier.id
+                        
+                        log.debug(
+                            "supplier_ready",
+                            supplier_id=str(supplier_id),
+                            supplier_name=supplier_name
+                        )
+                        
+                        # Process each parsed item
+                        for row_number, parsed_item in enumerate(parsed_items, start=1):
+                            try:
+                                # Upsert supplier item
+                                supplier_item, price_changed, is_new_item = await upsert_supplier_item(
+                                    session=session,
+                                    supplier_id=supplier_id,
+                                    parsed_item=parsed_item
+                                )
+                                
+                                # Create price history entry if price changed OR if it's a new item
+                                # This ensures all items have price history entries
+                                if price_changed or is_new_item:
+                                    await create_price_history_entry(
+                                        session=session,
+                                        supplier_item_id=supplier_item.id,
+                                        price=parsed_item.price
+                                    )
+                                    price_history_count += 1
+                                
+                                success_count += 1
+                                
+                            except ValidationError as e:
+                                # Row-level validation error - log but continue processing
+                                failed_count += 1
+                                try:
+                                    await log_parsing_error(
+                                        session=session,
+                                        task_id=task_id,
+                                        supplier_id=supplier_id,
+                                        error_type="ValidationError",
+                                        error_message=str(e),
+                                        row_number=row_number,
+                                        row_data=parsed_item.model_dump() if hasattr(parsed_item, 'model_dump') else None
+                                    )
+                                except Exception as log_err:
+                                    # Even logging errors shouldn't crash - just log to structlog
+                                    log.error(
+                                        "failed_to_log_parsing_error",
+                                        error=str(log_err),
+                                        original_error=str(e),
+                                        row_number=row_number
+                                    )
+                                
+                                log.warning(
+                                    "row_validation_failed",
+                                    row_number=row_number,
+                                    error=str(e),
+                                    supplier_sku=parsed_item.supplier_sku if hasattr(parsed_item, 'supplier_sku') else None
+                                )
+                                # Continue processing other rows
+                                continue
+                            
+                            except DatabaseError as e:
+                                # Database errors during row processing - rollback transaction
+                                log.error(
+                                    "row_database_error",
+                                    row_number=row_number,
+                                    error=str(e),
+                                    error_type=type(e).__name__
+                                )
+                                # Transaction will rollback automatically
+                                raise
+                        
+                        # Transaction commits automatically on successful exit from context manager
+                        log.info(
+                            "database_transaction_committed",
+                            supplier_id=str(supplier_id),
+                            success_count=success_count,
+                            failed_count=failed_count
+                        )
+                    
+                    except DatabaseError as e:
+                        # Database errors trigger transaction rollback and task retry
+                        log.error(
+                            "database_transaction_failed",
+                            error=str(e),
+                            error_type=type(e).__name__
+                        )
+                        # Transaction will rollback automatically
+                        # Re-raise to trigger retry logic
+                        raise
+                    
+                    except Exception as e:
+                        # Unexpected errors during database operations
+                        log.error(
+                            "unexpected_database_error",
+                            error=str(e),
+                            error_type=type(e).__name__
+                        )
+                        # Transaction will rollback automatically
+                        raise DatabaseError(f"Unexpected database error: {e}") from e
+        
+        except DatabaseError as e:
+            # Database errors trigger retry if not exceeded max retries
+            log.error("database_operation_failed", error=str(e), error_type=type(e).__name__)
+            should_retry = _handle_retry(log, retry_count, max_tries, e, type(e).__name__)
+            if should_retry:
+                raise Retry(defer=_get_retry_delay(retry_count))
+            else:
+                # Max retries exceeded - move to DLQ
+                await _move_to_dlq(ctx, task_id, e)
+                # Re-raise original exception to mark job as failed
+                raise
+        
+        # Calculate task statistics
+        end_time = datetime.now(timezone.utc)
+        duration_seconds = (end_time - start_time).total_seconds()
+        
+        # Determine status
+        if failed_count == 0:
+            status = "success"
+        elif success_count > 0:
+            status = "partial_success"
+        else:
+            status = "error"
+        
+        log.info(
+            "parse_task_completed",
+            status=status,
+            items_total=items_count,
+            items_success=success_count,
+            items_failed=failed_count,
+            price_history_entries=price_history_count,
+            duration_seconds=duration_seconds
+        )
+        
+        return {
+            "task_id": task_id,
+            "status": status,
+            "items_parsed": success_count,
+            "items_failed": failed_count,
+            "price_history_entries": price_history_count,
+            "duration_seconds": duration_seconds,
+            "errors": [] if failed_count == 0 else [f"{failed_count} rows failed validation"]
+        }
     
     except ValidationError as e:
         # Validation errors don't trigger retry (invalid config won't fix itself)
@@ -277,7 +450,7 @@ def _handle_retry(
         log.warning(
             "task_retry_scheduled",
             retry_count=next_retry,
-            max_retries=max_retries,
+            max_tries=max_tries,
             delay_seconds=delay.total_seconds(),
             error=str(error),
             error_type=error_type

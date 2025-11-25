@@ -128,6 +128,38 @@ marketbel/
 - **Integration Tests:** End-to-end with Docker services
 - **Performance Tests:** >1,000 items/min throughput
 
+### Testing Best Practices
+
+**Mocking with `patch.object()`:**
+- ✅ **Always use `patch.object()` for mocking object attributes** - automatically restores original state after tests
+- ❌ **Never use direct assignment** - `obj.attribute = Mock()` leaks between tests
+- Use context managers (`with patch.object(...)`) for scope-limited mocks
+- Use decorators (`@patch.object`) when mocking throughout entire test method
+- For module-level patching, use `@patch('module.path')` instead
+
+**Example - Correct Approach:**
+```python
+async def test_parse_with_mocked_client(self, parser, mock_spreadsheet):
+    """Using patch.object() - recommended."""
+    with patch.object(parser._client, 'open_by_url', return_value=mock_spreadsheet):
+        result = await parser.parse(config)
+        # Mock automatically restored after 'with' block
+```
+
+**Example - Incorrect Approach:**
+```python
+async def test_parse_with_mocked_client(self, parser, mock_spreadsheet):
+    """Direct assignment - AVOID."""
+    parser._client.open_by_url = Mock(return_value=mock_spreadsheet)
+    result = await parser.parse(config)
+    # Attribute remains changed - can affect other tests!
+```
+
+**When to use `patch.object()` vs `patch()`:**
+- Use `patch.object()` when: patching attributes of existing object instances
+- Use `patch()` when: patching imports/module-level functions/classes
+- See `/docs/mocking-guide.md` for detailed examples and rationale
+
 ### Security Considerations
 
 - Google service account credentials mounted as read-only volume

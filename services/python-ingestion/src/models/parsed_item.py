@@ -38,22 +38,19 @@ class ParsedSupplierItem(BaseModel):
     @field_validator('price')
     @classmethod
     def validate_price_precision(cls, v: Decimal) -> Decimal:
-        """Ensure price has at most 2 decimal places.
+        """Ensure price has at most 2 decimal places by quantizing.
         
         Args:
             v: Price value to validate
         
         Returns:
-            Price rounded to 2 decimal places
+            Price quantized to 2 decimal places
         
-        Raises:
-            ValueError: If price has more than 2 decimal places
+        Note:
+            This validator quantizes prices to 2 decimal places rather than
+            raising an error, as prices may come from sources with varying precision.
         """
-        # Get decimal tuple: (sign, digits, exponent)
-        # exponent < -2 means more than 2 decimal places
-        if v.as_tuple().exponent < -2:
-            raise ValueError('Price must have at most 2 decimal places')
-        # Quantize to 2 decimal places
+        # Quantize to 2 decimal places (rounds to nearest)
         return v.quantize(Decimal('0.01'))
     
     @field_validator('characteristics')
