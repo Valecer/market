@@ -72,16 +72,16 @@ class ParseTaskMessage(BaseModel):
     def validate_source_config_not_empty(self) -> Self:
         """Validate source_config is not empty (except for test parsers).
         
-        For most parsers, config should not be empty. However, test parsers
-        (stub, test_retry, test_dlq) accept empty config for testing purposes.
+        For most parsers, config should not be empty. However, the stub parser
+        accepts empty config for testing purposes.
         """
-        # Allow empty config for test parsers (used for testing)
-        if self.parser_type in ('stub', 'test_retry', 'test_dlq'):
+        # Allow empty config for stub parser (used for testing)
+        if self.parser_type == 'stub':
             return self
         
         # For other parsers, config should not be empty
         if not self.source_config:
-            raise ValueError('source_config cannot be empty (except for test parsers)')
+            raise ValueError('source_config cannot be empty (except for stub parser)')
         return self
     
     model_config = {

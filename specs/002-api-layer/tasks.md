@@ -36,31 +36,31 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T001 Install Bun runtime (v1.0+) and verify installation with `bun --version`
-- [ ] T002 Create project directory structure: `services/bun-api/{src,migrations,tests}`
-- [ ] T003 Initialize Bun project with `bun init -y` in services/bun-api/
-- [ ] T004 [P] Install core dependencies: elysia, @elysiajs/jwt, @elysiajs/swagger, @elysiajs/cors
-- [ ] T005 [P] Install database dependencies: drizzle-orm, drizzle-typebox, pg, drizzle-kit
-- [ ] T006 [P] Install queue dependency: ioredis
-- [ ] T007 Create `.env` file with environment variables (DATABASE_URL, REDIS_URL, JWT_SECRET, etc.)
-- [ ] T008 Create `drizzle.config.ts` for Drizzle Kit configuration
-- [ ] T009 Create database migration for users table: `migrations/001_create_users.sql`
-- [ ] T010 Generate bcrypt password hashes for seed users (admin, sales, procurement)
-- [ ] T011 Run users table migration: `psql $DATABASE_URL -f migrations/001_create_users.sql`
-- [ ] T012 Run Drizzle introspection: `bun run drizzle-kit introspect:pg` to generate schema
-- [ ] T013 Create database client in `src/db/client.ts` with connection pooling
-- [ ] T014 Create minimal API entry point in `src/index.ts` with Elysia app
-- [ ] T015 [P] Configure CORS middleware with allowed origins from env
-- [ ] T016 [P] Configure JWT plugin with secret from env
-- [ ] T017 [P] Configure Swagger plugin for API documentation
-- [ ] T018 Implement health check endpoint at `/health` checking DB and Redis connectivity
-- [ ] T019 Create project structure for controllers: `src/controllers/{auth,catalog,admin}`
-- [ ] T020 Create project structure for services: `src/services/`
-- [ ] T021 Create project structure for types: `src/types/`
-- [ ] T022 Create project structure for repositories: `src/db/repositories/`
-- [ ] T023 Create project structure for middleware: `src/middleware/`
-- [ ] T024 Verify server starts and health check passes: `bun --watch src/index.ts`
-- [ ] T025 Create README.md in services/bun-api/ with setup instructions
+- [X] T001 Install Bun runtime (v1.0+) and verify installation with `bun --version`
+- [X] T002 Create project directory structure: `services/bun-api/{src,migrations,tests}`
+- [X] T003 Initialize Bun project with `bun init -y` in services/bun-api/
+- [X] T004 [P] Install core dependencies: elysia, @elysiajs/jwt, @elysiajs/swagger, @elysiajs/cors
+- [X] T005 [P] Install database dependencies: drizzle-orm, drizzle-typebox, pg, drizzle-kit
+- [X] T006 [P] Install queue dependency: ioredis
+- [X] T007 Create `.env` file with environment variables (DATABASE_URL, REDIS_URL, JWT_SECRET, etc.)
+- [X] T008 Create `drizzle.config.ts` for Drizzle Kit configuration
+- [X] T009 Create database migration for users table: `migrations/001_create_users.sql`
+- [X] T010 Generate bcrypt password hashes for seed users (admin, sales, procurement)
+- [X] T011 Run users table migration: `psql $DATABASE_URL -f migrations/001_create_users.sql`
+- [X] T012 Run Drizzle introspection: `bun run drizzle-kit introspect:pg` to generate schema
+- [X] T013 Create database client in `src/db/client.ts` with connection pooling
+- [X] T014 Create minimal API entry point in `src/index.ts` with Elysia app
+- [X] T015 [P] Configure CORS middleware with allowed origins from env
+- [X] T016 [P] Configure JWT plugin with secret from env
+- [X] T017 [P] Configure Swagger plugin for API documentation
+- [X] T018 Implement health check endpoint at `/health` checking DB and Redis connectivity
+- [X] T019 Create project structure for controllers: `src/controllers/{auth,catalog,admin}`
+- [X] T020 Create project structure for services: `src/services/`
+- [X] T021 Create project structure for types: `src/types/`
+- [X] T022 Create project structure for repositories: `src/db/repositories/`
+- [X] T023 Create project structure for middleware: `src/middleware/`
+- [X] T024 Verify server starts and health check passes: `bun --watch src/index.ts`
+- [X] T025 Create README.md in services/bun-api/ with setup instructions
 
 ---
 
@@ -78,21 +78,21 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T026 Create TypeBox validation schemas for error responses in `src/types/errors.ts`
-- [ ] T027 Create global error handler middleware in `src/middleware/error-handler.ts`
-- [ ] T028 Create request logging middleware in `src/middleware/logger.ts`
-- [ ] T029 Create JWT authentication middleware in `src/middleware/auth.ts`
-- [ ] T030 Create role-based authorization guard in `src/middleware/rbac.ts`
-- [ ] T031 [P] Define TypeScript interfaces for Drizzle schemas in `src/db/schema/index.ts`
-- [ ] T032 [P] Create TypeBox validation schemas for catalog types in `src/types/catalog.types.ts`
-- [ ] T033 [P] Create TypeBox validation schemas for admin types in `src/types/admin.types.ts`
-- [ ] T034 [P] Create TypeBox validation schemas for auth types in `src/types/auth.types.ts`
-- [ ] T035 Create user repository interface in `src/db/repositories/user.repository.ts`
-- [ ] T036 Implement user repository with findByUsername and findById methods
-- [ ] T037 Create Redis client wrapper in `src/services/queue.service.ts`
-- [ ] T038 Implement Redis health check in queue service
-- [ ] T039 Create utility for generating internal SKUs in `src/utils/sku-generator.ts`
-- [ ] T040 Create utility for JWT token generation in `src/utils/jwt-utils.ts`
+- [X] T026 Create TypeBox validation schemas for error responses in `src/types/errors.ts`
+- [X] T027 Create global error handler middleware in `src/middleware/error-handler.ts`
+- [X] T028 Create request logging middleware in `src/middleware/logger.ts`
+- [X] T029 Create JWT authentication middleware in `src/middleware/auth.ts`
+- [X] T030 Create role-based authorization guard in `src/middleware/rbac.ts`
+- [X] T031 [P] Define TypeScript interfaces for Drizzle schemas in `src/db/schema/types.ts`
+- [X] T032 [P] Create TypeBox validation schemas for catalog types in `src/types/catalog.types.ts`
+- [X] T033 [P] Create TypeBox validation schemas for admin types in `src/types/admin.types.ts`
+- [X] T034 [P] Create TypeBox validation schemas for auth types in `src/types/auth.types.ts`
+- [X] T035 Create user repository interface in `src/db/repositories/user.repository.ts`
+- [X] T036 Implement user repository with findByUsername and findById methods
+- [X] T037 Create Redis client wrapper in `src/services/queue.service.ts`
+- [X] T038 Implement Redis health check in queue service
+- [X] T039 Create utility for generating internal SKUs in `src/utils/sku-generator.ts`
+- [X] T040 Create utility for JWT token generation in `src/utils/jwt-utils.ts`
 
 ---
 

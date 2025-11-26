@@ -151,5 +151,5 @@ Check that credentials are mounted as read-only in container:
 docker-compose exec worker ls -la /app/credentials/
 # Should show google-credentials.json with read-only permissions
 
-dd
+docker-compose exec worker test -w /app/credentials/google-credentials.json && echo "❌ WRITABLE (BAD)" || echo "✅ Read-only (GOOD)"
 ```
