@@ -3,6 +3,8 @@ import { swagger } from '@elysiajs/swagger'
 import { cors } from '@elysiajs/cors'
 import { jwt } from '@elysiajs/jwt'
 import { checkDatabaseConnection } from './db/client'
+import { errorHandler } from './middleware/error-handler'
+import { authController } from './controllers/auth'
 import Redis from 'ioredis'
 
 // Initialize Redis client
@@ -20,6 +22,7 @@ async function checkRedisConnection(): Promise<boolean> {
 }
 
 const app = new Elysia()
+  .use(errorHandler)
   .use(
     cors({
       origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
@@ -49,6 +52,7 @@ const app = new Elysia()
       exp: `${process.env.JWT_EXPIRATION_HOURS || 24}h`,
     })
   )
+  .use(authController)
   .get('/health', async () => {
     const dbHealthy = await checkDatabaseConnection()
     const redisHealthy = await checkRedisConnection()

@@ -18,6 +18,7 @@ export const errorHandler = new Elysia({ name: 'error-handler' })
     })
 
     // Handle validation errors (from TypeBox/Elysia)
+    // ElysiaJS returns 422 for validation errors, but our API contract specifies 400
     if (code === 'VALIDATION') {
       set.status = 400
       return createErrorResponse(
@@ -74,4 +75,3 @@ export const errorHandler = new Elysia({ name: 'error-handler' })
         : error.message || 'An unexpected error occurred'
     )
   })
-

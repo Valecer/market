@@ -113,20 +113,20 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T041 [US1] Create LoginRequest and LoginResponse TypeBox schemas in auth types
-- [ ] T042 [US1] Create authentication service in `src/services/auth.service.ts`
-- [ ] T043 [US1] Implement login method: validate credentials against users table
-- [ ] T044 [US1] Implement password verification using Bun.password.verify with bcrypt
-- [ ] T045 [US1] Implement JWT token generation with user claims (sub, role, exp, iss)
-- [ ] T046 [US1] Create auth controller in `src/controllers/auth/index.ts`
-- [ ] T047 [US1] Implement POST `/api/v1/auth/login` endpoint with request validation
-- [ ] T048 [US1] Add login endpoint to main app in src/index.ts
-- [ ] T049 [US1] Test login flow: valid credentials return token with 200
-- [ ] T050 [US1] Test login flow: invalid username returns 401
-- [ ] T051 [US1] Test login flow: invalid password returns 401
-- [ ] T052 [US1] Test login flow: missing fields return 400
-- [ ] T053 [US1] Verify JWT payload structure matches specification
-- [ ] T054 [US1] Test token expiration after configured hours
+- [X] T041 [US1] Create LoginRequest and LoginResponse TypeBox schemas in auth types
+- [X] T042 [US1] Create authentication service in `src/services/auth.service.ts`
+- [X] T043 [US1] Implement login method: validate credentials against users table
+- [X] T044 [US1] Implement password verification using Bun.password.verify with bcrypt
+- [X] T045 [US1] Implement JWT token generation with user claims (sub, role, exp, iss)
+- [X] T046 [US1] Create auth controller in `src/controllers/auth/index.ts`
+- [X] T047 [US1] Implement POST `/api/v1/auth/login` endpoint with request validation
+- [X] T048 [US1] Add login endpoint to main app in src/index.ts
+- [X] T049 [US1] Test login flow: valid credentials return token with 200
+- [X] T050 [US1] Test login flow: invalid username returns 401
+- [X] T051 [US1] Test login flow: invalid password returns 401
+- [X] T052 [US1] Test login flow: missing fields return 400
+- [X] T053 [US1] Verify JWT payload structure matches specification
+- [X] T054 [US1] Test token expiration after configured hours
 
 ---
 
