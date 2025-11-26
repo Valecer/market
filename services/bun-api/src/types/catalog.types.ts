@@ -8,11 +8,11 @@ import { Type, Static } from '@sinclair/typebox'
 
 export const CatalogQuerySchema = Type.Object({
   category_id: Type.Optional(Type.String({ format: 'uuid' })),
-  min_price: Type.Optional(Type.Number({ minimum: 0 })),
-  max_price: Type.Optional(Type.Number({ minimum: 0 })),
+  min_price: Type.Optional(Type.Union([Type.Number({ minimum: 0 }), Type.String()])),
+  max_price: Type.Optional(Type.Union([Type.Number({ minimum: 0 }), Type.String()])),
   search: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
-  page: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
-  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 200, default: 50 })),
+  page: Type.Optional(Type.Union([Type.Integer({ minimum: 1 }), Type.String()])),
+  limit: Type.Optional(Type.Union([Type.Integer({ minimum: 1, maximum: 200 }), Type.String()])),
 })
 
 export type CatalogQuery = Static<typeof CatalogQuerySchema>

@@ -5,6 +5,7 @@ import { jwt } from '@elysiajs/jwt'
 import { checkDatabaseConnection } from './db/client'
 import { errorHandler } from './middleware/error-handler'
 import { authController } from './controllers/auth'
+import { catalogController } from './controllers/catalog'
 import Redis from 'ioredis'
 
 // Initialize Redis client
@@ -53,6 +54,7 @@ const app = new Elysia()
     })
   )
   .use(authController)
+  .use(catalogController)
   .get('/health', async () => {
     const dbHealthy = await checkDatabaseConnection()
     const redisHealthy = await checkRedisConnection()

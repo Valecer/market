@@ -149,27 +149,27 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T055 [P] [US2] Create CatalogProduct and CatalogResponse TypeBox schemas in catalog types
-- [ ] T056 [P] [US2] Create CatalogQuery interface for query parameters in catalog types
-- [ ] T057 [US2] Create product repository interface in `src/db/repositories/product.repository.ts`
-- [ ] T058 [US2] Implement findActive method with filters (category, price range, search)
-- [ ] T059 [US2] Add aggregations for min_price, max_price, supplier_count using Drizzle SQL
-- [ ] T060 [US2] Implement pagination logic with offset and limit
-- [ ] T061 [US2] Add sorting by product name (ascending)
-- [ ] T062 [US2] Create catalog service in `src/services/catalog.service.ts`
-- [ ] T063 [US2] Implement getProducts method calling repository with filters
-- [ ] T064 [US2] Implement total count query for pagination metadata
-- [ ] T065 [US2] Create catalog controller in `src/controllers/catalog/index.ts`
-- [ ] T066 [US2] Implement GET `/api/v1/catalog` endpoint with query parameter validation
-- [ ] T067 [US2] Add catalog routes to main app in src/index.ts
-- [ ] T068 [US2] Test catalog endpoint: no auth required
-- [ ] T069 [US2] Test catalog endpoint: only active products returned
-- [ ] T070 [US2] Test catalog endpoint: category filter works
-- [ ] T071 [US2] Test catalog endpoint: price range filter works
-- [ ] T072 [US2] Test catalog endpoint: search filter works
-- [ ] T073 [US2] Test catalog endpoint: combined filters work
-- [ ] T074 [US2] Test catalog endpoint: pagination metadata correct
-- [ ] T075 [US2] Test catalog endpoint: response time meets p95 < 500ms target
+- [X] T055 [P] [US2] Create CatalogProduct and CatalogResponse TypeBox schemas in catalog types
+- [X] T056 [P] [US2] Create CatalogQuery interface for query parameters in catalog types
+- [X] T057 [US2] Create product repository interface in `src/db/repositories/product.repository.ts`
+- [X] T058 [US2] Implement findActive method with filters (category, price range, search)
+- [X] T059 [US2] Add aggregations for min_price, max_price, supplier_count using Drizzle SQL
+- [X] T060 [US2] Implement pagination logic with offset and limit
+- [X] T061 [US2] Add sorting by product name (ascending)
+- [X] T062 [US2] Create catalog service in `src/services/catalog.service.ts`
+- [X] T063 [US2] Implement getProducts method calling repository with filters
+- [X] T064 [US2] Implement total count query for pagination metadata
+- [X] T065 [US2] Create catalog controller in `src/controllers/catalog/index.ts`
+- [X] T066 [US2] Implement GET `/api/v1/catalog` endpoint with query parameter validation
+- [X] T067 [US2] Add catalog routes to main app in src/index.ts
+- [X] T068 [US2] Test catalog endpoint: no auth required
+- [X] T069 [US2] Test catalog endpoint: only active products returned
+- [X] T070 [US2] Test catalog endpoint: category filter works
+- [X] T071 [US2] Test catalog endpoint: price range filter works
+- [X] T072 [US2] Test catalog endpoint: search filter works
+- [X] T073 [US2] Test catalog endpoint: combined filters work
+- [X] T074 [US2] Test catalog endpoint: pagination metadata correct
+- [X] T075 [US2] Test catalog endpoint: response time meets p95 < 500ms target
 
 ---
 
