@@ -192,28 +192,28 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T076 [P] [US3] Create AdminProduct and AdminProductsResponse TypeBox schemas in admin types
-- [ ] T077 [P] [US3] Create SupplierItemDetail TypeBox schema in admin types
-- [ ] T078 [US3] Extend product repository with findAll method for admin view
-- [ ] T079 [US3] Implement JOIN query to fetch supplier items with supplier details
-- [ ] T080 [US3] Implement margin calculation logic: (target - min_price) / target * 100
-- [ ] T081 [US3] Add filtering by status, min_margin, max_margin, supplier_id
-- [ ] T082 [US3] Add pagination with default 50 items per page
-- [ ] T083 [US3] Create admin service in `src/services/admin.service.ts`
-- [ ] T084 [US3] Implement getAdminProducts method with filters and pagination
-- [ ] T085 [US3] Create admin controller in `src/controllers/admin/index.ts`
-- [ ] T086 [US3] Implement GET `/api/v1/admin/products` endpoint with auth middleware
-- [ ] T087 [US3] Add role check: sales, procurement, or admin roles allowed
-- [ ] T088 [US3] Add admin routes to main app in src/index.ts
-- [ ] T089 [US3] Test admin products endpoint: requires authentication
-- [ ] T090 [US3] Test admin products endpoint: returns all product statuses
-- [ ] T091 [US3] Test admin products endpoint: includes supplier details
-- [ ] T092 [US3] Test admin products endpoint: margin calculation correct
-- [ ] T093 [US3] Test admin products endpoint: status filter works
-- [ ] T094 [US3] Test admin products endpoint: margin filters work
-- [ ] T095 [US3] Test admin products endpoint: supplier filter works
-- [ ] T096 [US3] Test admin products endpoint: pagination works
-- [ ] T097 [US3] Test admin products endpoint: 401 without token
+- [X] T076 [P] [US3] Create AdminProduct and AdminProductsResponse TypeBox schemas in admin types
+- [X] T077 [P] [US3] Create SupplierItemDetail TypeBox schema in admin types
+- [X] T078 [US3] Extend product repository with findAll method for admin view
+- [X] T079 [US3] Implement JOIN query to fetch supplier items with supplier details
+- [X] T080 [US3] Implement margin calculation logic: (target - min_price) / target * 100
+- [X] T081 [US3] Add filtering by status, min_margin, max_margin, supplier_id
+- [X] T082 [US3] Add pagination with default 50 items per page
+- [X] T083 [US3] Create admin service in `src/services/admin.service.ts`
+- [X] T084 [US3] Implement getAdminProducts method with filters and pagination
+- [X] T085 [US3] Create admin controller in `src/controllers/admin/index.ts`
+- [X] T086 [US3] Implement GET `/api/v1/admin/products` endpoint with auth middleware
+- [X] T087 [US3] Add role check: sales, procurement, or admin roles allowed
+- [X] T088 [US3] Add admin routes to main app in src/index.ts
+- [X] T089 [US3] Test admin products endpoint: requires authentication
+- [X] T090 [US3] Test admin products endpoint: returns all product statuses
+- [X] T091 [US3] Test admin products endpoint: includes supplier details
+- [X] T092 [US3] Test admin products endpoint: margin calculation correct
+- [X] T093 [US3] Test admin products endpoint: status filter works
+- [X] T094 [US3] Test admin products endpoint: margin filters work
+- [X] T095 [US3] Test admin products endpoint: supplier filter works
+- [X] T096 [US3] Test admin products endpoint: pagination works
+- [X] T097 [US3] Test admin products endpoint: 401 without token
 
 ---
 

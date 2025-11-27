@@ -16,15 +16,27 @@ import type { UserRole } from '../types/auth.types'
 export function requireRole(allowedRoles: UserRole[]) {
   return new Elysia({ name: 'require-role' })
     .derive(({ user }) => {
+      // Just pass user through - we'll check in beforeHandle
+      return { user }
+    })
+    .onBeforeHandle(({ user, error }) => {
       if (!user) {
-        throw new Error('Unauthorized')
+        return error(401, {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Unauthorized',
+          },
+        })
       }
 
       if (!allowedRoles.includes(user.role)) {
-        throw new Error('Forbidden: Insufficient permissions')
+        return error(403, {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Forbidden: Insufficient permissions',
+          },
+        })
       }
-
-      return { user }
     })
 }
 

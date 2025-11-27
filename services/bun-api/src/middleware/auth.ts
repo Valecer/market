@@ -59,9 +59,17 @@ export const authMiddleware = new Elysia({ name: 'auth' })
  */
 export const requireAuth = new Elysia({ name: 'require-auth' })
   .derive(({ user }) => {
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    // Just pass user through - we'll check in beforeHandle
     return { user }
+  })
+  .onBeforeHandle(({ user, set, error }) => {
+    if (!user) {
+      return error(401, {
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Unauthorized',
+        },
+      })
+    }
   })
 

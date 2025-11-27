@@ -1,7 +1,8 @@
-import { eq, and, like, gte, lte, sql, asc, count } from 'drizzle-orm'
+import { eq, and, like, gte, lte, sql, asc, count, inArray } from 'drizzle-orm'
 import { db } from '../client'
-import { products, supplierItems } from '../schema/schema'
+import { products, supplierItems, suppliers } from '../schema/schema'
 import type { CatalogQuery, CatalogProduct } from '../../types/catalog.types'
+import type { AdminQuery, AdminProduct, SupplierItemDetail } from '../../types/admin.types'
 
 /**
  * Product Repository Interface
@@ -22,6 +23,20 @@ export interface IProductRepository {
    * @returns Total count of matching products
    */
   countActive(filters: Omit<CatalogQuery, 'page' | 'limit'>): Promise<number>
+
+  /**
+   * Find all products (all statuses) with supplier details for admin view
+   * @param filters - Query filters (status, margin, supplier_id, pagination)
+   * @returns Array of admin products with supplier item details
+   */
+  findAll(filters: AdminQuery): Promise<AdminProduct[]>
+
+  /**
+   * Get total count of products matching admin filters
+   * @param filters - Query filters (status, margin, supplier_id)
+   * @returns Total count of matching products
+   */
+  countAll(filters: Omit<AdminQuery, 'page' | 'limit'>): Promise<number>
 }
 
 /**
@@ -32,7 +47,9 @@ export interface IProductRepository {
 export class ProductRepository implements IProductRepository {
   async findActive(filters: CatalogQuery): Promise<CatalogProduct[]> {
     const { category_id, min_price, max_price, search, page = 1, limit = 50 } = filters
-    const offset = (page - 1) * limit
+    const pageNum = Number(page)
+    const limitNum = Number(limit)
+    const offset = (pageNum - 1) * limitNum
 
     // Build WHERE conditions
     const conditions = [eq(products.status, 'active')]
@@ -89,7 +106,7 @@ export class ProductRepository implements IProductRepository {
     // Apply sorting and pagination
     const result = await query
       .orderBy(asc(products.name))
-      .limit(limit)
+      .limit(limitNum)
       .offset(offset)
 
     // Format prices to ensure 2 decimal places
@@ -169,6 +186,199 @@ export class ProductRepository implements IProductRepository {
         .from(products)
         .leftJoin(supplierItems, eq(products.id, supplierItems.productId))
         .where(and(...conditions))
+
+      return Number(countResult[0]?.count) || 0
+    }
+  }
+
+  async findAll(filters: AdminQuery): Promise<AdminProduct[]> {
+    const { status, min_margin, max_margin, supplier_id, page = 1, limit = 50 } = filters
+    const offset = (page - 1) * limit
+
+    // Build WHERE conditions for products
+    const productConditions = []
+    if (status) {
+      productConditions.push(eq(products.status, status))
+    }
+
+    // If supplier_id filter is specified, we need to get product IDs that have items from that supplier
+    let filteredProductIds: string[] | undefined
+    if (supplier_id) {
+      const productsWithSupplier = await db
+        .selectDistinct({ id: products.id })
+        .from(products)
+        .leftJoin(supplierItems, eq(products.id, supplierItems.productId))
+        .where(
+          and(
+            productConditions.length > 0 ? and(...productConditions) : undefined,
+            eq(supplierItems.supplierId, supplier_id)
+          )
+        )
+      
+      filteredProductIds = productsWithSupplier.map((p) => p.id)
+      
+      if (filteredProductIds.length === 0) {
+        return []
+      }
+      
+      // Add product ID filter
+      productConditions.push(inArray(products.id, filteredProductIds))
+    }
+
+    // Get products matching filters
+    const productQuery = db
+      .select({
+        id: products.id,
+        internal_sku: products.internalSku,
+        name: products.name,
+        category_id: products.categoryId,
+        status: products.status,
+      })
+      .from(products)
+      .where(productConditions.length > 0 ? and(...productConditions) : undefined)
+      .orderBy(asc(products.name))
+      .limit(Number(limit))
+      .offset(Number(offset))
+
+    const productRows = await productQuery
+
+    if (productRows.length === 0) {
+      return []
+    }
+
+    const productIds = productRows.map((p) => p.id)
+
+    // Now fetch supplier items for these products
+    const supplierItemConditions = [inArray(supplierItems.productId, productIds)]
+    
+    if (supplier_id) {
+      supplierItemConditions.push(eq(supplierItems.supplierId, supplier_id))
+    }
+
+    // Fetch supplier items with supplier details
+    const supplierItemRows = await db
+      .select({
+        id: supplierItems.id,
+        supplier_id: supplierItems.supplierId,
+        supplier_name: suppliers.name,
+        supplier_sku: supplierItems.supplierSku,
+        current_price: supplierItems.currentPrice,
+        characteristics: supplierItems.characteristics,
+        last_ingested_at: supplierItems.lastIngestedAt,
+        product_id: supplierItems.productId,
+      })
+      .from(supplierItems)
+      .leftJoin(suppliers, eq(supplierItems.supplierId, suppliers.id))
+      .where(and(...supplierItemConditions))
+
+    // Group supplier items by product
+    const supplierItemsByProduct = new Map<string, SupplierItemDetail[]>()
+    for (const item of supplierItemRows) {
+      if (!item.product_id) continue
+      
+      const productId = item.product_id
+      if (!supplierItemsByProduct.has(productId)) {
+        supplierItemsByProduct.set(productId, [])
+      }
+
+      const price = parseFloat(item.current_price || '0').toFixed(2)
+      supplierItemsByProduct.get(productId)!.push({
+        id: item.id,
+        supplier_id: item.supplier_id,
+        supplier_name: item.supplier_name || '',
+        supplier_sku: item.supplier_sku,
+        current_price: price,
+        characteristics: (item.characteristics as Record<string, any>) || {},
+        last_ingested_at: item.last_ingested_at,
+      })
+    }
+
+    // Build result with margin calculation
+    const result: AdminProduct[] = []
+    for (const product of productRows) {
+      const items = supplierItemsByProduct.get(product.id) || []
+      
+      // Calculate margin percentage
+      // Formula: (target - min_price) / target * 100
+      // Note: target_price field doesn't exist in products table yet
+      // TODO: When target_price is added to products table, implement margin calculation:
+      // const targetPrice = product.target_price
+      // if (targetPrice && items.length > 0) {
+      //   const minPrice = Math.min(...items.map(i => parseFloat(i.current_price)))
+      //   margin_percentage = targetPrice > 0 ? ((targetPrice - minPrice) / targetPrice) * 100 : null
+      // }
+      let margin_percentage: number | null = null
+
+      // Apply margin filters if specified
+      // Note: Margin filtering is currently disabled because target_price doesn't exist
+      // When target_price is added, uncomment the following:
+      // if (min_margin !== undefined && margin_percentage !== null && margin_percentage < min_margin) {
+      //   continue
+      // }
+      // if (max_margin !== undefined && margin_percentage !== null && margin_percentage > max_margin) {
+      //   continue
+      // }
+
+      // Filter by supplier_id if specified (already done in query, but double-check items)
+      if (supplier_id && items.length === 0) {
+        continue
+      }
+
+      result.push({
+        id: product.id,
+        internal_sku: product.internal_sku,
+        name: product.name,
+        category_id: product.category_id,
+        status: product.status as 'draft' | 'active' | 'archived',
+        supplier_items: items,
+        margin_percentage,
+      })
+    }
+
+    return result
+  }
+
+  async countAll(filters: Omit<AdminQuery, 'page' | 'limit'>): Promise<number> {
+    const { status, min_margin, max_margin, supplier_id } = filters
+
+    // Build WHERE conditions for products
+    const productConditions = []
+    if (status) {
+      productConditions.push(eq(products.status, status))
+    }
+
+    // If we have margin or supplier filters, we need to join with supplier_items
+    if (min_margin !== undefined || max_margin !== undefined || supplier_id) {
+      // Build conditions for supplier items
+      const supplierItemConditions = []
+      if (supplier_id) {
+        supplierItemConditions.push(eq(supplierItems.supplierId, supplier_id))
+      }
+
+      // Count distinct products that have matching supplier items
+      // Note: Margin filtering would require target_price field which doesn't exist yet
+      const countResult = await db
+        .select({
+          count: sql<number>`COUNT(DISTINCT ${products.id})::int`,
+        })
+        .from(products)
+        .leftJoin(supplierItems, eq(products.id, supplierItems.productId))
+        .where(
+          and(
+            productConditions.length > 0 ? and(...productConditions) : undefined,
+            supplierItemConditions.length > 0 ? and(...supplierItemConditions) : undefined,
+          )
+        )
+
+      return Number(countResult[0]?.count) || 0
+    } else {
+      // Simple count without joins
+      const countResult = await db
+        .select({
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(products)
+        .where(productConditions.length > 0 ? and(...productConditions) : undefined)
 
       return Number(countResult[0]?.count) || 0
     }
