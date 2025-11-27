@@ -237,30 +237,30 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T098 [P] [US4] Create MatchRequest and MatchResponse TypeBox schemas in admin types
-- [ ] T099 [US4] Create supplier item repository in `src/db/repositories/supplier-item.repository.ts`
-- [ ] T100 [US4] Implement findById method in supplier item repository
-- [ ] T101 [US4] Implement updateProductId method with transaction support
-- [ ] T102 [US4] Add product repository method: findByIdWithSuppliers for response
-- [ ] T103 [US4] Create matching service method in admin service
-- [ ] T104 [US4] Implement validation: product exists and not archived
-- [ ] T105 [US4] Implement validation: supplier item exists
-- [ ] T106 [US4] Implement validation: supplier item not already linked (for link action)
-- [ ] T107 [US4] Implement validation: supplier item linked to correct product (for unlink action)
-- [ ] T108 [US4] Implement link action: update supplier_items.product_id in transaction
-- [ ] T109 [US4] Implement unlink action: set supplier_items.product_id to NULL in transaction
-- [ ] T110 [US4] Implement PATCH `/api/v1/admin/products/:id/match` endpoint
-- [ ] T111 [US4] Add role check: procurement or admin only
-- [ ] T112 [US4] Add request body validation for action and supplier_item_id
-- [ ] T113 [US4] Test matching endpoint: requires authentication
-- [ ] T114 [US4] Test matching endpoint: requires procurement or admin role
-- [ ] T115 [US4] Test matching endpoint: link action works correctly
-- [ ] T116 [US4] Test matching endpoint: unlink action works correctly
-- [ ] T117 [US4] Test matching endpoint: 400 if product archived
-- [ ] T118 [US4] Test matching endpoint: 409 if item already linked to different product
-- [ ] T119 [US4] Test matching endpoint: 404 if product not found
-- [ ] T120 [US4] Test matching endpoint: 404 if supplier item not found
-- [ ] T121 [US4] Test matching endpoint: transaction rollback on error
+- [X] T098 [P] [US4] Create MatchRequest and MatchResponse TypeBox schemas in admin types
+- [X] T099 [US4] Create supplier item repository in `src/db/repositories/supplier-item.repository.ts`
+- [X] T100 [US4] Implement findById method in supplier item repository
+- [X] T101 [US4] Implement updateProductId method with transaction support
+- [X] T102 [US4] Add product repository method: findByIdWithSuppliers for response
+- [X] T103 [US4] Create matching service method in admin service
+- [X] T104 [US4] Implement validation: product exists and not archived
+- [X] T105 [US4] Implement validation: supplier item exists
+- [X] T106 [US4] Implement validation: supplier item not already linked (for link action)
+- [X] T107 [US4] Implement validation: supplier item linked to correct product (for unlink action)
+- [X] T108 [US4] Implement link action: update supplier_items.product_id in transaction
+- [X] T109 [US4] Implement unlink action: set supplier_items.product_id to NULL in transaction
+- [X] T110 [US4] Implement PATCH `/api/v1/admin/products/:id/match` endpoint
+- [X] T111 [US4] Add role check: procurement or admin only
+- [X] T112 [US4] Add request body validation for action and supplier_item_id
+- [X] T113 [US4] Test matching endpoint: requires authentication
+- [X] T114 [US4] Test matching endpoint: requires procurement or admin role
+- [X] T115 [US4] Test matching endpoint: link action works correctly
+- [X] T116 [US4] Test matching endpoint: unlink action works correctly
+- [X] T117 [US4] Test matching endpoint: 400 if product archived
+- [X] T118 [US4] Test matching endpoint: 409 if item already linked to different product
+- [X] T119 [US4] Test matching endpoint: 404 if product not found
+- [X] T120 [US4] Test matching endpoint: 404 if supplier item not found
+- [X] T121 [US4] Test matching endpoint: transaction rollback on error
 
 ---
 

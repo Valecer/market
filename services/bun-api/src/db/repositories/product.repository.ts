@@ -37,6 +37,13 @@ export interface IProductRepository {
    * @returns Total count of matching products
    */
   countAll(filters: Omit<AdminQuery, 'page' | 'limit'>): Promise<number>
+
+  /**
+   * Find a product by ID with all supplier items
+   * @param id - The product UUID
+   * @returns The product with supplier items if found, null otherwise
+   */
+  findByIdWithSuppliers(id: string): Promise<AdminProduct | null>
 }
 
 /**
@@ -381,6 +388,69 @@ export class ProductRepository implements IProductRepository {
         .where(productConditions.length > 0 ? and(...productConditions) : undefined)
 
       return Number(countResult[0]?.count) || 0
+    }
+  }
+
+  async findByIdWithSuppliers(id: string): Promise<AdminProduct | null> {
+    // Fetch product
+    const productResult = await db
+      .select({
+        id: products.id,
+        internal_sku: products.internalSku,
+        name: products.name,
+        category_id: products.categoryId,
+        status: products.status,
+      })
+      .from(products)
+      .where(eq(products.id, id))
+      .limit(1)
+
+    if (!productResult[0]) {
+      return null
+    }
+
+    const product = productResult[0]
+
+    // Fetch supplier items for this product
+    const supplierItemRows = await db
+      .select({
+        id: supplierItems.id,
+        supplier_id: supplierItems.supplierId,
+        supplier_name: suppliers.name,
+        supplier_sku: supplierItems.supplierSku,
+        current_price: supplierItems.currentPrice,
+        characteristics: supplierItems.characteristics,
+        last_ingested_at: supplierItems.lastIngestedAt,
+      })
+      .from(supplierItems)
+      .leftJoin(suppliers, eq(supplierItems.supplierId, suppliers.id))
+      .where(eq(supplierItems.productId, id))
+
+    // Map supplier items to SupplierItemDetail format
+    const supplier_items: SupplierItemDetail[] = supplierItemRows.map((item) => {
+      const price = parseFloat(item.current_price || '0').toFixed(2)
+      return {
+        id: item.id,
+        supplier_id: item.supplier_id,
+        supplier_name: item.supplier_name || '',
+        supplier_sku: item.supplier_sku,
+        current_price: price,
+        characteristics: (item.characteristics as Record<string, any>) || {},
+        last_ingested_at: item.last_ingested_at,
+      }
+    })
+
+    // Calculate margin percentage (currently null as target_price doesn't exist)
+    let margin_percentage: number | null = null
+
+    return {
+      id: product.id,
+      internal_sku: product.internal_sku,
+      name: product.name,
+      category_id: product.category_id,
+      status: product.status as 'draft' | 'active' | 'archived',
+      supplier_items,
+      margin_percentage,
     }
   }
 }
