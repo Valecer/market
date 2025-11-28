@@ -21,6 +21,8 @@ import { PublicLayout } from '@/components/shared/PublicLayout'
 import { AdminLayout } from '@/components/shared/AdminLayout'
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
+import { CatalogPage } from '@/pages/CatalogPage'
+import { ProductDetailPage } from '@/pages/ProductDetailPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
@@ -210,11 +212,11 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <CatalogPlaceholder />,
+        element: <CatalogPage />,
       },
       {
         path: 'product/:id',
-        element: <CatalogPlaceholder />, // Will be ProductDetailPage
+        element: <ProductDetailPage />,
       },
       {
         path: 'cart',

@@ -79,18 +79,18 @@ This task list implements a React frontend for the Marketbel product catalog sys
 
 ### Tasks
 
-- [ ] T023 [US1] Create CatalogFilters type interface in `services/frontend/src/types/filters.ts`
-- [ ] T024 [US1] Create useCatalog hook with TanStack Query for GET /catalog in `services/frontend/src/hooks/useCatalog.ts`
-- [ ] T025 [US1] Create useProduct hook for GET /catalog/:id in `services/frontend/src/hooks/useProduct.ts`
-- [ ] T026 [US1] Create useCategories hook for category dropdown in `services/frontend/src/hooks/useCategories.ts`
-- [ ] T027 [P] [US1] Create ProductCard component with name, price, image, category in `services/frontend/src/components/catalog/ProductCard.tsx`
-- [ ] T028 [P] [US1] Create ProductGrid component with responsive grid layout in `services/frontend/src/components/catalog/ProductGrid.tsx`
-- [ ] T029 [US1] Create FilterBar component with category dropdown, price range inputs, debounced search in `services/frontend/src/components/catalog/FilterBar.tsx`
-- [ ] T030 [US1] Create CatalogPage that composes FilterBar and ProductGrid in `services/frontend/src/pages/CatalogPage.tsx`
-- [ ] T031 [US1] Implement URL query parameter sync for filters (shareable links) in `services/frontend/src/pages/CatalogPage.tsx`
-- [ ] T032 [US1] Create ProductDetailPage with all characteristics and back navigation in `services/frontend/src/pages/ProductDetailPage.tsx`
-- [ ] T033 [US1] Add loading skeleton components for catalog and product detail in `services/frontend/src/components/shared/LoadingSkeleton.tsx`
-- [ ] T034 [US1] Add error state components with retry button in `services/frontend/src/components/shared/ErrorState.tsx`
+- [X] T023 [US1] Create CatalogFilters type interface in `services/frontend/src/types/filters.ts`
+- [X] T024 [US1] Create useCatalog hook with TanStack Query for GET /catalog in `services/frontend/src/hooks/useCatalog.ts`
+- [X] T025 [US1] Create useProduct hook for GET /catalog/:id in `services/frontend/src/hooks/useProduct.ts`
+- [X] T026 [US1] Create useCategories hook for category dropdown in `services/frontend/src/hooks/useCategories.ts`
+- [X] T027 [P] [US1] Create ProductCard component with name, price, image, category in `services/frontend/src/components/catalog/ProductCard.tsx`
+- [X] T028 [P] [US1] Create ProductGrid component with responsive grid layout in `services/frontend/src/components/catalog/ProductGrid.tsx`
+- [X] T029 [US1] Create FilterBar component with category dropdown, price range inputs, debounced search in `services/frontend/src/components/catalog/FilterBar.tsx`
+- [X] T030 [US1] Create CatalogPage that composes FilterBar and ProductGrid in `services/frontend/src/pages/CatalogPage.tsx`
+- [X] T031 [US1] Implement URL query parameter sync for filters (shareable links) in `services/frontend/src/pages/CatalogPage.tsx`
+- [X] T032 [US1] Create ProductDetailPage with all characteristics and back navigation in `services/frontend/src/pages/ProductDetailPage.tsx`
+- [X] T033 [US1] Add loading skeleton components for catalog and product detail in `services/frontend/src/components/shared/LoadingSkeleton.tsx`
+- [X] T034 [US1] Add error state components with retry button in `services/frontend/src/components/shared/ErrorState.tsx`
 
 **Independent Test Criteria:**
 - Catalog page loads and displays products from API
