@@ -10,6 +10,7 @@
 
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { CartIcon } from '@/components/cart'
 
 export function PublicLayout() {
   const { isAuthenticated, user, logout } = useAuth()
@@ -81,27 +82,8 @@ export function PublicLayout() {
 
             {/* Right side - Auth & Cart */}
             <div className="flex items-center gap-4">
-              {/* Cart Icon (placeholder - will be replaced in Phase 4) */}
-              <Link
-                to="/cart"
-                className="relative p-2 text-slate-600 hover:text-slate-900 transition-colors"
-                aria-label="Shopping cart"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                  />
-                </svg>
-                {/* Cart badge - will be connected in Phase 4 */}
-              </Link>
+              {/* Cart Icon with badge */}
+              <CartIcon />
 
               {/* Auth */}
               {isAuthenticated ? (

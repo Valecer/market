@@ -109,18 +109,18 @@ This task list implements a React frontend for the Marketbel product catalog sys
 
 ### Tasks
 
-- [ ] T035 [US2] Create CartItem and Cart type interfaces in `services/frontend/src/types/cart.ts`
-- [ ] T036 [US2] Create CartContext with useReducer for cart state management in `services/frontend/src/contexts/CartContext.tsx`
-- [ ] T037 [US2] Implement localStorage persistence (save on change, load on mount) in `services/frontend/src/contexts/CartContext.tsx`
-- [ ] T038 [US2] Create useCart hook with addItem, removeItem, updateQuantity, clearCart actions in `services/frontend/src/hooks/useCart.ts`
-- [ ] T039 [P] [US2] Create CartIcon component with item count badge for header in `services/frontend/src/components/cart/CartIcon.tsx`
-- [ ] T040 [P] [US2] Create CartItem component with quantity controls (+/-) in `services/frontend/src/components/cart/CartItem.tsx`
-- [ ] T041 [US2] Create CartSummary component with subtotal, tax, total calculations in `services/frontend/src/components/cart/CartSummary.tsx`
-- [ ] T042 [US2] Create CartPage displaying all items with quantity controls in `services/frontend/src/pages/CartPage.tsx`
-- [ ] T043 [US2] Add "Add to Cart" button to ProductCard and ProductDetailPage in `services/frontend/src/components/catalog/ProductCard.tsx`
-- [ ] T044 [US2] Create CheckoutMockPage with shipping/billing form (display-only, no validation) in `services/frontend/src/pages/CheckoutMockPage.tsx`
-- [ ] T045 [US2] Create OrderSuccessPage shown after "Place Order" click in `services/frontend/src/pages/OrderSuccessPage.tsx`
-- [ ] T046 [US2] Add cart routes (/cart, /checkout, /order-success) to router in `services/frontend/src/routes.tsx`
+- [X] T035 [US2] Create CartItem and Cart type interfaces in `services/frontend/src/types/cart.ts`
+- [X] T036 [US2] Create CartContext with useReducer for cart state management in `services/frontend/src/contexts/CartContext.tsx`
+- [X] T037 [US2] Implement localStorage persistence (save on change, load on mount) in `services/frontend/src/contexts/CartContext.tsx`
+- [X] T038 [US2] Create useCart hook with addItem, removeItem, updateQuantity, clearCart actions in `services/frontend/src/hooks/useCart.ts`
+- [X] T039 [P] [US2] Create CartIcon component with item count badge for header in `services/frontend/src/components/cart/CartIcon.tsx`
+- [X] T040 [P] [US2] Create CartItem component with quantity controls (+/-) in `services/frontend/src/components/cart/CartItemRow.tsx`
+- [X] T041 [US2] Create CartSummary component with subtotal, tax, total calculations in `services/frontend/src/components/cart/CartSummary.tsx`
+- [X] T042 [US2] Create CartPage displaying all items with quantity controls in `services/frontend/src/pages/CartPage.tsx`
+- [X] T043 [US2] Add "Add to Cart" button to ProductCard and ProductDetailPage in `services/frontend/src/components/catalog/ProductCard.tsx`
+- [X] T044 [US2] Create CheckoutMockPage with shipping/billing form (display-only, no validation) in `services/frontend/src/pages/CheckoutMockPage.tsx`
+- [X] T045 [US2] Create OrderSuccessPage shown after "Place Order" click in `services/frontend/src/pages/OrderSuccessPage.tsx`
+- [X] T046 [US2] Add cart routes (/cart, /checkout, /order-success) to router in `services/frontend/src/routes.tsx`
 
 **Independent Test Criteria:**
 - "Add to Cart" button adds item to cart

@@ -23,6 +23,9 @@ import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { CatalogPage } from '@/pages/CatalogPage'
 import { ProductDetailPage } from '@/pages/ProductDetailPage'
+import { CartPage } from '@/pages/CartPage'
+import { CheckoutMockPage } from '@/pages/CheckoutMockPage'
+import { OrderSuccessPage } from '@/pages/OrderSuccessPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
@@ -127,18 +130,6 @@ function AdminProductDetailPlaceholder() {
   )
 }
 
-function CartPlaceholder() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-lg shadow-md p-8 text-center">
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">
-          Shopping Cart
-        </h2>
-        <p className="text-slate-500">Coming in Phase 4.</p>
-      </div>
-    </div>
-  )
-}
 
 function UnauthorizedPage() {
   return (
@@ -220,15 +211,15 @@ export const router = createBrowserRouter([
       },
       {
         path: 'cart',
-        element: <CartPlaceholder />,
+        element: <CartPage />,
       },
       {
         path: 'checkout',
-        element: <CartPlaceholder />, // Will be CheckoutMockPage
+        element: <CheckoutMockPage />,
       },
       {
         path: 'order-success',
-        element: <CartPlaceholder />, // Will be OrderSuccessPage
+        element: <OrderSuccessPage />,
       },
       {
         path: 'unauthorized',

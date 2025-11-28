@@ -8,12 +8,14 @@
  * this page uses data from the catalog list or admin endpoint.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useCatalog } from '@/hooks/useCatalog'
+import { useCart } from '@/hooks/useCart'
 import { formatPrice, getPlaceholderImage, cn } from '@/lib/utils'
 import { ProductDetailSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/ErrorState'
+import type { CartProduct } from '@/types/cart'
 
 /**
  * Product detail page component
@@ -21,6 +23,7 @@ import { ErrorState } from '@/components/shared/ErrorState'
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { addItem, getItemQuantity } = useCart()
 
   // Fetch catalog to find the product
   // In a real app, there would be a dedicated /catalog/:id endpoint
@@ -75,6 +78,21 @@ export function ProductDetailPage() {
     supplier_count,
     category_id,
   } = product
+
+  // Current quantity in cart
+  const quantityInCart = getItemQuantity(id!)
+
+  // Handle add to cart
+  const handleAddToCart = useCallback(() => {
+    const cartProduct: CartProduct = {
+      id: product.id,
+      name: product.name,
+      sku: product.internal_sku,
+      price: product.min_price,
+      category: product.category_id ?? undefined,
+    }
+    addItem(cartProduct)
+  }, [product, addItem])
 
   // Price display
   const priceDisplay =
@@ -212,8 +230,8 @@ export function ProductDetailPage() {
                 </dl>
               </div>
 
-              {/* CTA Button - Placeholder for Phase 4 */}
-              <div className="pt-4">
+              {/* Add to Cart Button */}
+              <div className="pt-4 space-y-3">
                 <button
                   className={cn(
                     'w-full sm:w-auto inline-flex items-center justify-center gap-2',
@@ -221,10 +239,8 @@ export function ProductDetailPage() {
                     'hover:bg-primary/90 transition-colors',
                     'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
                   )}
-                  onClick={() => {
-                    // TODO: Implement add to cart in Phase 4
-                    alert('Shopping cart feature coming in Phase 4!')
-                  }}
+                  onClick={handleAddToCart}
+                  aria-label={`Add ${name} to cart`}
                 >
                   <svg
                     className="w-5 h-5"
@@ -242,9 +258,26 @@ export function ProductDetailPage() {
                   </svg>
                   Add to Cart
                 </button>
-                <p className="mt-2 text-xs text-muted">
-                  * Shopping cart functionality coming in Phase 4
-                </p>
+
+                {/* Show quantity if already in cart */}
+                {quantityInCart > 0 && (
+                  <p className="text-sm text-success flex items-center gap-1">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    {quantityInCart} in your cart
+                  </p>
+                )}
               </div>
             </div>
           </div>

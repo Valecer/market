@@ -221,15 +221,15 @@ export function LoginPage() {
           <div className="grid grid-cols-3 gap-2 text-xs text-slate-600">
             <div className="text-center p-2 bg-white rounded">
               <div className="font-medium">Admin</div>
-              <div className="text-muted">admin / admin</div>
+              <div className="text-muted">admin / admin123</div>
             </div>
             <div className="text-center p-2 bg-white rounded">
               <div className="font-medium">Sales</div>
-              <div className="text-muted">sales / sales</div>
+              <div className="text-muted">sales / sales123</div>
             </div>
             <div className="text-center p-2 bg-white rounded">
               <div className="font-medium">Procurement</div>
-              <div className="text-muted">procurement / procurement</div>
+              <div className="text-muted">procurement / procurement123</div>
             </div>
           </div>
         </div>

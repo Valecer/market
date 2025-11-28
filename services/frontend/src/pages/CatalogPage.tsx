@@ -15,10 +15,12 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useCatalog } from '@/hooks/useCatalog'
 import { useCategories } from '@/hooks/useCategories'
+import { useCart } from '@/hooks/useCart'
 import { FilterBar } from '@/components/catalog/FilterBar'
 import { ProductGrid, PaginationInfo, Pagination } from '@/components/catalog/ProductGrid'
 import { FilterBarSkeleton } from '@/components/shared/LoadingSkeleton'
 import type { CatalogFilters } from '@/types/filters'
+import type { CartProduct } from '@/types/cart'
 
 const ITEMS_PER_PAGE = 12
 
@@ -56,6 +58,7 @@ function filtersToURLParams(filters: CatalogFilters): Record<string, string> {
  */
 export function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { addItem } = useCart()
 
   // Parse filters from URL
   const filters = useMemo(
@@ -92,6 +95,24 @@ export function CatalogPage() {
 
   // Fetch categories for filter dropdown
   const { categories, isLoading: categoriesLoading } = useCategories()
+
+  // Handle add to cart
+  const handleAddToCart = useCallback(
+    (productId: string) => {
+      const product = catalogData?.data?.find((p) => p.id === productId)
+      if (product) {
+        const cartProduct: CartProduct = {
+          id: product.id,
+          name: product.name,
+          sku: product.internal_sku,
+          price: product.min_price, // Use min price for cart
+          category: product.category_id ?? undefined,
+        }
+        addItem(cartProduct)
+      }
+    },
+    [catalogData?.data, addItem]
+  )
 
   // Calculate pagination info
   const totalPages = catalogData
@@ -172,6 +193,7 @@ export function CatalogPage() {
           isLoading={isLoading}
           error={error}
           onRetry={() => refetch()}
+          onAddToCart={handleAddToCart}
           skeletonCount={6}
         />
 
