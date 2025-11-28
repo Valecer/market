@@ -160,7 +160,13 @@ export const adminController = (app: Elysia) =>
             }
           },
           response: { 200: AdminProductsResponseSchema, 400: ErrorSchemas.validation, 401: ErrorSchemas.unauthorized, 500: ErrorSchemas.internal },
-          detail: { tags: ['admin'], summary: 'Get paginated admin products with supplier details' },
+          detail: {
+            tags: ['admin'],
+            summary: 'Get paginated admin products with supplier details',
+            description:
+              'Returns a paginated list of products with all statuses (draft, active, archived). Includes supplier item details, margin calculations, and supports filtering by status, margin range, and supplier.',
+            security: [{ bearerAuth: [] }],
+          },
         }
       )
       // PATCH /products/:id/match - procurement/admin only
@@ -207,7 +213,13 @@ export const adminController = (app: Elysia) =>
                 return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
               },
               response: { 200: MatchResponseSchema, 400: ErrorSchemas.validation, 401: ErrorSchemas.unauthorized, 403: ErrorSchemas.forbidden, 404: ErrorSchemas.notFound, 409: ErrorSchemas.conflict, 500: ErrorSchemas.internal },
-              detail: { tags: ['admin'], summary: 'Link or unlink supplier item to product' },
+              detail: {
+                tags: ['admin'],
+                summary: 'Link or unlink supplier item to product',
+                description:
+                  'Manually link a supplier item to a product (creating a product-supplier relationship) or unlink it (removing the relationship). Requires procurement or admin role. Operations are atomic and use database transactions.',
+                security: [{ bearerAuth: [] }],
+              },
             }
           )
       )
@@ -251,7 +263,13 @@ export const adminController = (app: Elysia) =>
             return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
           },
           response: { 201: CreateProductResponseSchema, 400: ErrorSchemas.validation, 401: ErrorSchemas.unauthorized, 403: ErrorSchemas.forbidden, 500: ErrorSchemas.internal },
-          detail: { tags: ['admin'], summary: 'Create a new product with optional supplier item linkage' },
+          detail: {
+            tags: ['admin'],
+            summary: 'Create a new product with optional supplier item linkage',
+            description:
+              'Creates a new internal product. Supports the "split SKU" workflow where a supplier item can be linked during creation. If internal_sku is not provided, one is auto-generated. Requires procurement or admin role.',
+            security: [{ bearerAuth: [] }],
+          },
         }
       )
       // POST /sync - admin only with rate limiting
@@ -294,7 +312,13 @@ export const adminController = (app: Elysia) =>
             return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
           },
           response: { 202: SyncResponseSchema, 400: ErrorSchemas.validation, 401: ErrorSchemas.unauthorized, 403: ErrorSchemas.forbidden, 404: ErrorSchemas.notFound, 429: ErrorSchemas.rateLimited, 500: ErrorSchemas.internal, 503: ErrorSchemas.redisUnavailable },
-          detail: { tags: ['admin'], summary: 'Trigger data sync for a supplier' },
+          detail: {
+            tags: ['admin'],
+            summary: 'Trigger data sync for a supplier',
+            description:
+              'Enqueues a background task to synchronize data from a supplier source (Google Sheets, CSV, etc.). Returns immediately with a task_id for tracking. Rate limited to 10 requests per minute per user. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
     }
       )
     )

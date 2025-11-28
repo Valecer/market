@@ -376,18 +376,18 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T169 [P] [US7] Configure Swagger plugin with API metadata (title, version, description)
-- [ ] T170 [P] [US7] Add OpenAPI tags for endpoint grouping (auth, catalog, admin)
-- [ ] T171 [US7] Add example request bodies to all POST/PATCH endpoints
-- [ ] T172 [US7] Add example responses to all endpoints (200, 400, 401, 404, etc.)
-- [ ] T173 [US7] Document authentication using bearer token security scheme
-- [ ] T174 [US7] Add endpoint descriptions and summaries
-- [ ] T175 [US7] Test Swagger UI: accessible at /docs
-- [ ] T176 [US7] Test Swagger UI: all endpoints listed
-- [ ] T177 [US7] Test Swagger UI: request/response schemas visible
-- [ ] T178 [US7] Test Swagger UI: examples provided
-- [ ] T179 [US7] Test Swagger UI: try it out works for catalog endpoint
-- [ ] T180 [US7] Test OpenAPI spec: valid JSON at /docs/json
+- [X] T169 [P] [US7] Configure Swagger plugin with API metadata (title, version, description)
+- [X] T170 [P] [US7] Add OpenAPI tags for endpoint grouping (auth, catalog, admin)
+- [X] T171 [US7] Add example request bodies to all POST/PATCH endpoints
+- [X] T172 [US7] Add example responses to all endpoints (200, 400, 401, 404, etc.)
+- [X] T173 [US7] Document authentication using bearer token security scheme
+- [X] T174 [US7] Add endpoint descriptions and summaries
+- [X] T175 [US7] Test Swagger UI: accessible at /docs
+- [X] T176 [US7] Test Swagger UI: all endpoints listed
+- [X] T177 [US7] Test Swagger UI: request/response schemas visible
+- [X] T178 [US7] Test Swagger UI: examples provided
+- [X] T179 [US7] Test Swagger UI: try it out works for catalog endpoint
+- [X] T180 [US7] Test OpenAPI spec: valid JSON at /docs/json
 
 ---
 

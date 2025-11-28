@@ -33,17 +33,65 @@ const app = new Elysia()
   )
   .use(
     swagger({
+      path: '/docs',
       documentation: {
         info: {
           title: 'Marketbel API',
           version: '1.0.0',
-          description: 'High-performance API for product catalog management',
+          description:
+            'High-performance API for unified product catalog management. Provides endpoints for browsing products, managing supplier relationships, and triggering data synchronization.',
+          termsOfService: '/terms',
+          contact: {
+            name: 'Marketbel API Support',
+            email: 'api-support@marketbel.com',
+          },
+          license: {
+            name: 'Proprietary',
+            url: '/license',
+          },
         },
-        tags: [
-          { name: 'auth', description: 'Authentication endpoints' },
-          { name: 'catalog', description: 'Public catalog endpoints' },
-          { name: 'admin', description: 'Admin operations endpoints' },
+        servers: [
+          {
+            url: 'http://localhost:3000',
+            description: 'Development server',
+          },
+          {
+            url: 'https://api.marketbel.com',
+            description: 'Production server',
+          },
         ],
+        tags: [
+          {
+            name: 'auth',
+            description:
+              'Authentication endpoints for obtaining JWT tokens. Use the login endpoint to authenticate and receive a bearer token for protected endpoints.',
+          },
+          {
+            name: 'catalog',
+            description:
+              'Public catalog endpoints for browsing active products. No authentication required. Supports filtering by category, price range, and search.',
+          },
+          {
+            name: 'admin',
+            description:
+              'Protected admin endpoints for internal staff. Requires JWT authentication. Includes product management, supplier matching, and sync operations.',
+          },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+              description:
+                'JWT token obtained from POST /api/v1/auth/login. Include in Authorization header as: Bearer <token>',
+            },
+          },
+        },
+        externalDocs: {
+          description: 'API Implementation Guide',
+          url: 'https://github.com/marketbel/api-docs',
+        },
       },
     })
   )
