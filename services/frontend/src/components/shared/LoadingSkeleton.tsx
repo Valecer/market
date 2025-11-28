@@ -185,3 +185,11 @@ export function ProductDetailSkeleton() {
   )
 }
 
+/**
+ * Generic loading skeleton with customizable height
+ * Alias for Skeleton with default styles
+ */
+export function LoadingSkeleton({ className }: SkeletonProps) {
+  return <Skeleton className={className} />
+}
+

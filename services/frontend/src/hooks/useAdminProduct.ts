@@ -1,12 +1,11 @@
 /**
- * useProduct Hook
+ * useAdminProduct Hook
  *
- * TanStack Query hook for fetching a single product's admin details.
- * Used in ProductDetailPage and admin views.
+ * TanStack Query hook for fetching a single admin product with full details.
+ * Includes supplier items, pricing data, and margin calculations.
  *
- * Note: The API currently doesn't have a public /catalog/:id endpoint,
- * so this hook fetches from the admin endpoint for authorized users,
- * or uses the catalog list data for public users.
+ * Note: Uses the admin products endpoint with filtering since there's no
+ * dedicated single-product admin endpoint.
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -14,11 +13,10 @@ import { apiClient, type AdminProduct } from '@/lib/api-client'
 import { queryKeys } from '@/lib/query-keys'
 
 /**
- * Fetch a single admin product with supplier items
+ * Fetch a single admin product by ID
+ * Since there's no dedicated endpoint, we fetch the list and filter
  */
 async function fetchAdminProduct(id: string): Promise<AdminProduct> {
-  // Note: This endpoint requires authentication
-  // For public product detail, we'll use the catalog list data
   const { data, error } = await apiClient.GET('/api/v1/admin/products', {
     params: {
       query: {
@@ -43,12 +41,13 @@ async function fetchAdminProduct(id: string): Promise<AdminProduct> {
 }
 
 /**
- * Hook for fetching admin product details
+ * Hook for fetching a single admin product with full details
  *
  * Features:
  * - Fetches product with supplier items and margin data
  * - Requires authentication (sales or admin role)
  * - Query disabled when no id provided
+ * - 5 minute cache time
  */
 export function useAdminProduct(id: string | undefined) {
   return useQuery({

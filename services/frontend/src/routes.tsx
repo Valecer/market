@@ -26,6 +26,8 @@ import { ProductDetailPage } from '@/pages/ProductDetailPage'
 import { CartPage } from '@/pages/CartPage'
 import { CheckoutMockPage } from '@/pages/CheckoutMockPage'
 import { OrderSuccessPage } from '@/pages/OrderSuccessPage'
+import { SalesCatalogPage } from '@/pages/admin/SalesCatalogPage'
+import { InternalProductDetailPage } from '@/pages/admin/InternalProductDetailPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
@@ -91,18 +93,7 @@ function AdminDashboardPlaceholder() {
   )
 }
 
-function SalesCatalogPlaceholder() {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-8">
-      <h2 className="text-xl font-semibold text-slate-900 mb-2">
-        Sales Catalog
-      </h2>
-      <p className="text-slate-500">
-        Internal catalog with margins and supplier items. Coming in Phase 5.
-      </p>
-    </div>
-  )
-}
+// SalesCatalogPlaceholder removed - now using actual SalesCatalogPage component
 
 function ProcurementPlaceholder() {
   return (
@@ -117,18 +108,7 @@ function ProcurementPlaceholder() {
   )
 }
 
-function AdminProductDetailPlaceholder() {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-8">
-      <h2 className="text-xl font-semibold text-slate-900 mb-2">
-        Product Detail
-      </h2>
-      <p className="text-slate-500">
-        Internal product detail with supplier items. Coming in Phase 5.
-      </p>
-    </div>
-  )
-}
+// AdminProductDetailPlaceholder removed - now using actual InternalProductDetailPage component
 
 
 function UnauthorizedPage() {
@@ -251,7 +231,7 @@ export const router = createBrowserRouter([
         path: 'sales',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'sales']}>
-            <SalesCatalogPlaceholder />
+            <SalesCatalogPage />
           </ProtectedRoute>
         ),
       },
@@ -259,7 +239,7 @@ export const router = createBrowserRouter([
         path: 'products/:id',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'sales']}>
-            <AdminProductDetailPlaceholder />
+            <InternalProductDetailPage />
           </ProtectedRoute>
         ),
       },

@@ -140,16 +140,16 @@ This task list implements a React frontend for the Marketbel product catalog sys
 
 ### Tasks
 
-- [ ] T047 [US3] Create AdminProductFilters type interface in `services/frontend/src/types/filters.ts`
-- [ ] T048 [US3] Create useAdminProducts hook for GET /admin/products with pricing in `services/frontend/src/hooks/useAdminProducts.ts`
-- [ ] T049 [US3] Create useAdminProduct hook for GET /admin/products/:id with supplier items in `services/frontend/src/hooks/useAdminProduct.ts`
-- [ ] T050 [US3] Create SalesTable component using TanStack Table with columns (name, SKU, selling price, cost price, margin%, category) in `services/frontend/src/components/admin/SalesTable.tsx`
-- [ ] T051 [US3] Implement column sorting (click header to sort) in SalesTable in `services/frontend/src/components/admin/SalesTable.tsx`
-- [ ] T052 [US3] Create SalesFilterBar with category, margin range, status filters in `services/frontend/src/components/admin/SalesFilterBar.tsx`
-- [ ] T053 [US3] Create SalesCatalogPage composing SalesFilterBar and SalesTable in `services/frontend/src/pages/admin/SalesCatalogPage.tsx`
-- [ ] T054 [US3] Create InternalProductDetailPage with supplier items and price history in `services/frontend/src/pages/admin/InternalProductDetailPage.tsx`
-- [ ] T055 [US3] Create SupplierComparison component showing all linked supplier items in `services/frontend/src/components/admin/SupplierComparison.tsx`
-- [ ] T056 [US3] Add admin sales routes (/admin/sales, /admin/products/:id) to router in `services/frontend/src/routes.tsx`
+- [X] T047 [US3] Create AdminProductFilters type interface in `services/frontend/src/types/filters.ts`
+- [X] T048 [US3] Create useAdminProducts hook for GET /admin/products with pricing in `services/frontend/src/hooks/useAdminProducts.ts`
+- [X] T049 [US3] Create useAdminProduct hook for GET /admin/products/:id with supplier items in `services/frontend/src/hooks/useAdminProduct.ts`
+- [X] T050 [US3] Create SalesTable component using TanStack Table with columns (name, SKU, selling price, cost price, margin%, category) in `services/frontend/src/components/admin/SalesTable.tsx`
+- [X] T051 [US3] Implement column sorting (click header to sort) in SalesTable in `services/frontend/src/components/admin/SalesTable.tsx`
+- [X] T052 [US3] Create SalesFilterBar with category, margin range, status filters in `services/frontend/src/components/admin/SalesFilterBar.tsx`
+- [X] T053 [US3] Create SalesCatalogPage composing SalesFilterBar and SalesTable in `services/frontend/src/pages/admin/SalesCatalogPage.tsx`
+- [X] T054 [US3] Create InternalProductDetailPage with supplier items and price history in `services/frontend/src/pages/admin/InternalProductDetailPage.tsx`
+- [X] T055 [US3] Create SupplierComparison component showing all linked supplier items in `services/frontend/src/components/admin/SupplierComparison.tsx`
+- [X] T056 [US3] Add admin sales routes (/admin/sales, /admin/products/:id) to router in `services/frontend/src/routes.tsx`
 
 **Independent Test Criteria:**
 - /admin/sales requires JWT authentication (redirects if not logged in)

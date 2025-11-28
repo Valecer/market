@@ -7,6 +7,7 @@
 export { useAuth } from './useAuth'
 export { useCart } from './useCart'
 export { useCatalog, type CatalogResponse, type CatalogFilters } from './useCatalog'
-export { useAdminProduct } from './useProduct'
 export { useCategories, type Category } from './useCategories'
+export { useAdminProducts, type AdminProductsResponse } from './useAdminProducts'
+export { useAdminProduct } from './useAdminProduct'
 
