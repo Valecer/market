@@ -24,12 +24,14 @@ services:
     image: redis:7-alpine
     container_name: marketbel-redis
     command: redis-server --requirepass ${REDIS_PASSWORD:-dev_redis_password}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-dev_redis_password}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
