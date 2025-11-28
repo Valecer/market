@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Authentication API Contract",
+  "description": "JWT-based authentication endpoints",
+  "version": "1.0.0",
+  "endpoints": {
+    "login": {
+      "method": "POST",
+      "path": "/auth/login",
+      "description": "Authenticate user and return JWT token",
+      "authentication": "none",
+      "request": {
+        "body": {
+          "type": "object",
+          "required": ["username", "password"],
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "User's username",
+              "minLength": 3,
+              "maxLength": 50,
+              "example": "sales_user"
+            },
+            "password": {
+              "type": "string",
+              "description": "User's password",
+              "minLength": 8,
+              "example": "SecurePassword123!"
+            }
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns user and JWT token",
+          "schema": {
+            "type": "object",
+            "required": ["user", "token"],
+            "properties": {
+              "user": {
+                "$ref": "#/definitions/User"
+              },
+              "token": {
+                "type": "string",
+                "description": "JWT access token",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              }
+            }
+          },
+          "example": {
+            "user": {
+              "id": "123e4567-e89b-12d3-a456-426614174000",
+              "username": "sales_user",
+              "role": "sales",
+              "created_at": "2025-01-10T09:00:00Z",
+              "updated_at": "2025-01-10T09:00:00Z"
+            },
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0MDAwIiwicm9sZSI6InNhbGVzIiwiaWF0IjoxNzM1NjEyODAwLCJleHAiOjE3MzU2OTkyMDB9.abc123def456"
+          }
+        },
+        "401": {
+          "description": "Unauthorized - invalid credentials",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          },
+          "example": {
+            "error": {
+              "code": "INVALID_CREDENTIALS",
+              "message": "Invalid username or password"
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request - validation error",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    },
+    "logout": {
+      "method": "POST",
+      "path": "/auth/logout",
+      "description": "Logout user (optional endpoint, frontend can clear token locally)",
+      "authentication": "bearer",
+      "request": {},
+      "response": {
+        "200": {
+          "description": "Success - user logged out",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean",
+                "example": true
+              },
+              "message": {
+                "type": "string",
+                "example": "Logged out successfully"
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Unauthorized - invalid or expired token",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "required": ["id", "username", "role"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique user identifier"
+        },
+        "username": {
+          "type": "string",
+          "description": "User's username",
+          "minLength": 3,
+          "maxLength": 50
+        },
+        "role": {
+          "type": "string",
+          "enum": ["sales", "procurement", "admin"],
+          "description": "User role for authorization"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Error code"
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error context",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "securitySchemes": {
+    "BearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "JWT token obtained from /auth/login"
+    }
+  }
+}
