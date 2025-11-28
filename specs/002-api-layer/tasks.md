@@ -333,28 +333,28 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T147 [P] [US6] Create SyncRequest and SyncResponse TypeBox schemas in admin types
-- [ ] T148 [P] [US6] Create ParseTaskMessage TypeBox schema in types/queue.types.ts
-- [ ] T149 [US6] Create supplier repository in `src/db/repositories/supplier.repository.ts`
-- [ ] T150 [US6] Implement findById method in supplier repository
-- [ ] T151 [US6] Implement enqueueParseTask method in queue service
-- [ ] T152 [US6] Implement message serialization matching queue-messages.json contract
-- [ ] T153 [US6] Add Redis error handling with 503 response
-- [ ] T154 [US6] Create sync service method in admin service
-- [ ] T155 [US6] Implement validation: supplier exists
-- [ ] T156 [US6] Implement task message construction with all required fields
-- [ ] T157 [US6] Implement POST `/api/v1/admin/sync` endpoint
-- [ ] T158 [US6] Add role check: admin only
-- [ ] T159 [US6] Add rate limiting middleware: 10 requests per minute per user
-- [ ] T160 [US6] Add request body validation for supplier_id
-- [ ] T161 [US6] Test sync endpoint: requires authentication
-- [ ] T162 [US6] Test sync endpoint: requires admin role (403 for non-admin)
-- [ ] T163 [US6] Test sync endpoint: enqueues message to Redis
-- [ ] T164 [US6] Test sync endpoint: message format matches contract
-- [ ] T165 [US6] Test sync endpoint: returns task_id immediately
-- [ ] T166 [US6] Test sync endpoint: 404 if supplier not found
-- [ ] T167 [US6] Test sync endpoint: 503 if Redis unavailable
-- [ ] T168 [US6] Test sync endpoint: rate limit enforced (429 after 10 requests)
+- [X] T147 [P] [US6] Create SyncRequest and SyncResponse TypeBox schemas in admin types
+- [X] T148 [P] [US6] Create ParseTaskMessage TypeBox schema in types/queue.types.ts
+- [X] T149 [US6] Create supplier repository in `src/db/repositories/supplier.repository.ts`
+- [X] T150 [US6] Implement findById method in supplier repository
+- [X] T151 [US6] Implement enqueueParseTask method in queue service
+- [X] T152 [US6] Implement message serialization matching queue-messages.json contract
+- [X] T153 [US6] Add Redis error handling with 503 response
+- [X] T154 [US6] Create sync service method in admin service
+- [X] T155 [US6] Implement validation: supplier exists
+- [X] T156 [US6] Implement task message construction with all required fields
+- [X] T157 [US6] Implement POST `/api/v1/admin/sync` endpoint
+- [X] T158 [US6] Add role check: admin only
+- [X] T159 [US6] Add rate limiting middleware: 10 requests per minute per user
+- [X] T160 [US6] Add request body validation for supplier_id
+- [X] T161 [US6] Test sync endpoint: requires authentication
+- [X] T162 [US6] Test sync endpoint: requires admin role (403 for non-admin)
+- [X] T163 [US6] Test sync endpoint: enqueues message to Redis
+- [X] T164 [US6] Test sync endpoint: message format matches contract
+- [X] T165 [US6] Test sync endpoint: returns task_id immediately
+- [X] T166 [US6] Test sync endpoint: 404 if supplier not found
+- [X] T167 [US6] Test sync endpoint: 503 if Redis unavailable
+- [X] T168 [US6] Test sync endpoint: rate limit enforced (429 after 10 requests)
 
 ---
 

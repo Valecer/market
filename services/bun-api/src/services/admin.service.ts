@@ -2,9 +2,12 @@ import { db } from '../db/client'
 import { productRepository, type IProductRepository } from '../db/repositories/product.repository'
 import { supplierItemRepository, type ISupplierItemRepository } from '../db/repositories/supplier-item.repository'
 import { categoryRepository, type ICategoryRepository } from '../db/repositories/category.repository'
+import { supplierRepository, type ISupplierRepository } from '../db/repositories/supplier.repository'
+import { queueService, RedisUnavailableError } from './queue.service'
 import { eq } from 'drizzle-orm'
 import { products } from '../db/schema/schema'
-import type { AdminQuery, AdminProductsResponse, MatchRequest, MatchResponse, AdminProduct, CreateProductRequest, CreateProductResponse } from '../types/admin.types'
+import type { AdminQuery, AdminProductsResponse, MatchRequest, MatchResponse, AdminProduct, CreateProductRequest, CreateProductResponse, SyncRequest, SyncResponse } from '../types/admin.types'
+import type { ParseTaskMessage, ParserType } from '../types/queue.types'
 import { createErrorResponse } from '../types/errors'
 import { generateInternalSku } from '../utils/sku-generator'
 
@@ -17,7 +20,8 @@ export class AdminService {
   constructor(
     private readonly productRepo: IProductRepository = productRepository,
     private readonly supplierItemRepo: ISupplierItemRepository = supplierItemRepository,
-    private readonly categoryRepo: ICategoryRepository = categoryRepository
+    private readonly categoryRepo: ICategoryRepository = categoryRepository,
+    private readonly supplierRepo: ISupplierRepository = supplierRepository
   ) {}
 
   /**
@@ -379,6 +383,64 @@ export class AdminService {
       ;(unexpectedError as any).code = 'INTERNAL_ERROR'
       ;(unexpectedError as any).originalError = error
       throw unexpectedError
+    }
+  }
+
+  /**
+   * Trigger a data sync for a supplier
+   * Enqueues a parse task to Redis for the Python worker to process
+   * @param request - Sync request containing supplier_id
+   * @returns Sync response with task_id and enqueue timestamp
+   * @throws Error with appropriate code for error handler to catch
+   */
+  async triggerSync(request: SyncRequest): Promise<SyncResponse> {
+    const { supplier_id } = request
+
+    // T155: Validate supplier exists
+    const supplier = await this.supplierRepo.findById(supplier_id)
+    if (!supplier) {
+      const error = new Error(`Supplier with id ${supplier_id} not found`)
+      ;(error as any).code = 'NOT_FOUND'
+      throw error
+    }
+
+    // T156: Construct task message with all required fields
+    const taskId = crypto.randomUUID()
+    const enqueuedAt = new Date().toISOString()
+
+    // Validate parser_type is a valid value
+    const validParserTypes = ['google_sheets', 'csv', 'excel'] as const
+    const parserType = validParserTypes.includes(supplier.sourceType as ParserType)
+      ? (supplier.sourceType as ParserType)
+      : 'csv' // Default fallback
+
+    const message: ParseTaskMessage = {
+      task_id: taskId,
+      parser_type: parserType,
+      supplier_name: supplier.name,
+      source_config: supplier.metadata || {},
+      retry_count: 0,
+      max_retries: 3,
+      enqueued_at: enqueuedAt,
+    }
+
+    // T151-T153: Enqueue to Redis with error handling
+    try {
+      await queueService.enqueueParseTask(message)
+    } catch (error) {
+      if (error instanceof RedisUnavailableError) {
+        const redisError = new Error('Queue service is temporarily unavailable')
+        ;(redisError as any).code = 'REDIS_UNAVAILABLE'
+        throw redisError
+      }
+      throw error
+    }
+
+    return {
+      task_id: taskId,
+      supplier_id,
+      status: 'queued',
+      enqueued_at: enqueuedAt,
     }
   }
 }
