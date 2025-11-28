@@ -1,50 +1,65 @@
-# Dependencies
-node_modules/
-bun.lockb
+# Docker ignore file for Bun API Service
+
+# Dependencies - will be installed in container
+node_modules
 
 # Build outputs
-dist/
-build/
+dist
+build
 *.tsbuildinfo
 
-# Environment
+# Development files
 .env
 .env.local
 .env.*.local
+.env.example
 
-# Git
-.git/
-.gitignore
+# Test files
+tests
+*.test.ts
+*.spec.ts
+coverage
+.nyc_output
 
-# IDE
-.vscode/
-.idea/
+# IDE and editor files
+.vscode
+.idea
 *.swp
 *.swo
-
-# Logs
-*.log
-logs/
-
-# Testing
-coverage/
-.nyc_output/
-.pytest_cache/
-
-# OS
 .DS_Store
-Thumbs.db
 
-# Temporary
-tmp/
-temp/
-*.tmp
+# Git
+.git
+.gitignore
+.gitattributes
 
 # Documentation
-README.md
-docs/
+*.md
+!README.md
+docs
 
-# Scripts (keep only production scripts)
-scripts/*.ts
-!scripts/seed-users.ts
+# Logs
+logs
+*.log
+npm-debug.log*
 
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Scripts (not needed in production)
+scripts/benchmark-*.ts
+scripts/seed-*.ts
+scripts/hash-*.ts
+
+# Drizzle introspection (schema is included in src)
+drizzle.config.ts
+
+# Type definitions (included in bun-types)
+*.d.ts
+
+# Lock files for other package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

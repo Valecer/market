@@ -406,26 +406,26 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T181 [P] Implement structured logging with request ID propagation
-- [ ] T182 [P] Add response time logging for all endpoints
-- [ ] T183 [P] Add error context logging (stack traces for 5xx errors)
-- [ ] T184 Implement graceful shutdown handler for SIGTERM
-- [ ] T185 Add database connection pool monitoring
-- [ ] T186 Add Redis connection monitoring
-- [ ] T187 Optimize catalog query: add database indexes if needed
-- [ ] T188 Optimize admin products query: add JOINs indexes if needed
-- [ ] T189 Add request/response compression middleware
-- [ ] T190 Add security headers middleware (helmet)
-- [ ] T191 Create performance benchmarking script for catalog endpoint
-- [ ] T192 Create performance benchmarking script for admin endpoints
-- [ ] T193 Verify p95 response times meet targets
-- [ ] T194 Add error monitoring/alerting configuration (optional)
-- [ ] T195 Document environment variables in README
-- [ ] T196 Document deployment steps in README
-- [ ] T197 Create docker-compose service definition for bun-api
-- [ ] T198 Test Docker build and container startup
-- [ ] T199 Update root README with Phase 2 API information
-- [ ] T200 Create architecture decision record for Bun + ElysiaJS choice
+- [X] T181 [P] Implement structured logging with request ID propagation
+- [X] T182 [P] Add response time logging for all endpoints
+- [X] T183 [P] Add error context logging (stack traces for 5xx errors)
+- [X] T184 Implement graceful shutdown handler for SIGTERM
+- [X] T185 Add database connection pool monitoring
+- [X] T186 Add Redis connection monitoring
+- [X] T187 Optimize catalog query: add database indexes if needed (verified: Phase 1 indexes sufficient)
+- [X] T188 Optimize admin products query: add JOINs indexes if needed (verified: Phase 1 indexes sufficient)
+- [X] T189 Add request/response compression middleware
+- [X] T190 Add security headers middleware (helmet)
+- [X] T191 Create performance benchmarking script for catalog endpoint
+- [X] T192 Create performance benchmarking script for admin endpoints
+- [X] T193 Verify p95 response times meet targets (verified via benchmarking scripts and test T075)
+- [X] T194 Add error monitoring/alerting configuration (optional) - structured logging supports log aggregation
+- [X] T195 Document environment variables in README
+- [X] T196 Document deployment steps in README
+- [X] T197 Create docker-compose service definition for bun-api
+- [X] T198 Test Docker build and container startup
+- [X] T199 Update root README with Phase 2 API information
+- [X] T200 Create architecture decision record for Bun + ElysiaJS choice
 
 ---
 

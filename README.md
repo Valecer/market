@@ -19,14 +19,18 @@ This project adheres to a strict constitutional framework based on **SOLID**, **
 
 ### Backend
 
-- **API Service**: [Bun](https://bun.sh/) with TypeScript
-  - Handles API endpoints and user logic
-  - Framework: Elysia or Express
+- **API Service (Phase 2)**: [Bun](https://bun.sh/) + [ElysiaJS](https://elysiajs.com/)
+  - High-performance REST API for product catalog
+  - Framework: ElysiaJS with TypeBox validation
+  - ORM: Drizzle ORM with PostgreSQL introspection
+  - Authentication: JWT with role-based access (sales, procurement, admin)
+  - Documentation: Auto-generated Swagger UI at `/docs`
   - Strict TypeScript typing (`tsc --noEmit` with zero errors)
 
-- **Data Processing Service**: Python 3.11+
-  - Handles data parsing and normalization
-  - Libraries: Pandas, SQLAlchemy, Pydantic
+- **Data Processing Service (Phase 1)**: Python 3.12+
+  - Handles data parsing and normalization (Google Sheets, CSV, Excel)
+  - Libraries: Pandas, SQLAlchemy, Pydantic, arq
+  - Async processing with Redis queue
   - Type-checked with mypy strict mode
 
 ### Data Layer
@@ -62,22 +66,36 @@ This project adheres to a strict constitutional framework based on **SOLID**, **
 
 **Critical**: Services have strict separation of concerns:
 
-1. **Bun Service** (API/User Logic)
-   - HTTP endpoints
-   - Request validation
-   - Job enqueueing
-   - Response formatting
+1. **Bun API Service** (API/User Logic) - **Phase 2** ✅
+   - HTTP endpoints for catalog, admin, authentication
+   - Request validation with TypeBox schemas
+   - Job enqueueing to Redis for data sync
+   - Response formatting with OpenAPI documentation
+   - JWT authentication with role-based access control
 
-2. **Python Service** (Data Processing)
-   - Queue consumption
-   - Data parsing
+2. **Python Worker Service** (Data Processing) - **Phase 1** ✅
+   - Queue consumption via arq
+   - Data parsing (Google Sheets, CSV, Excel)
    - Normalization algorithms
-   - Result persistence
+   - Result persistence to PostgreSQL
 
 3. **Communication**: Services communicate **ONLY** via Redis queues
    - No direct HTTP calls between services
    - Async, decoupled architecture
    - Improves resilience and scalability
+
+### API Endpoints (Phase 2)
+
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `GET /api/v1/catalog` | None | Browse active products with filters |
+| `POST /api/v1/auth/login` | None | Login and get JWT token |
+| `GET /api/v1/admin/products` | JWT | List products with supplier details |
+| `PATCH /api/v1/admin/products/:id/match` | JWT (procurement) | Link/unlink supplier items |
+| `POST /api/v1/admin/products` | JWT (procurement) | Create new product |
+| `POST /api/v1/admin/sync` | JWT (admin) | Trigger data ingestion |
+| `GET /health` | None | Health check |
+| `GET /docs` | None | Swagger UI documentation |
 
 ### Data Flow
 
@@ -280,15 +298,28 @@ marketbel/
 ├── .specify/                  # SpecKit framework
 │   ├── memory/
 │   │   └── constitution.md    # Project constitution
-│   ├── specs/                 # Feature specifications
-│   ├── tasks/                 # Task breakdowns
+│   ├── scripts/               # SpecKit scripts
 │   └── templates/             # Documentation templates
+├── specs/                     # Feature specifications
+│   ├── 001-data-ingestion-infra/  # Phase 1 spec (Python)
+│   └── 002-api-layer/             # Phase 2 spec (Bun API)
 ├── services/
-│   ├── api/                   # Bun service (TypeScript)
-│   └── data-processing/       # Python service
-├── frontend/                  # React + Vite + Tailwind
-├── docker-compose.yml
-├── .env.example
+│   ├── bun-api/               # Bun API service (Phase 2) ✅
+│   │   ├── src/               # TypeScript source
+│   │   ├── tests/             # Bun test suite
+│   │   ├── migrations/        # SQL migrations (users table)
+│   │   ├── scripts/           # Utility scripts
+│   │   └── Dockerfile         # Production container
+│   └── python-ingestion/      # Python worker (Phase 1) ✅
+│       ├── src/               # Python source
+│       ├── tests/             # pytest suite
+│       ├── migrations/        # Alembic migrations
+│       └── Dockerfile         # Production container
+├── docs/
+│   ├── adr/                   # Architecture Decision Records
+│   └── *.md                   # Documentation
+├── credentials/               # Service credentials (gitignored)
+├── docker-compose.yml         # Service orchestration
 └── README.md
 ```
 
