@@ -8,10 +8,13 @@ import { createErrorResponse } from '../../types/errors'
  * 
  * Handles HTTP requests for public catalog endpoints.
  * No business logic - delegates to CatalogService.
+ * 
+ * Uses functional plugin pattern for consistency with other controllers.
+ * See CLAUDE.md for explanation of Elysia plugin scoping.
  */
-
-export const catalogController = new Elysia({ prefix: '/api/v1/catalog' })
-  .get(
+export const catalogController = (app: Elysia) =>
+  app.group('/api/v1/catalog', (app) =>
+    app.get(
     '/',
     async ({ query, set }) => {
       try {
@@ -209,5 +212,6 @@ export const catalogController = new Elysia({ prefix: '/api/v1/catalog' })
         ],
       },
     }
+    )
   )
 

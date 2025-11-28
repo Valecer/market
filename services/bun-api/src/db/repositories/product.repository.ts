@@ -1,6 +1,7 @@
-import { eq, and, like, gte, lte, sql, asc, count, inArray } from 'drizzle-orm'
+import { eq, and, sql, asc, inArray, ilike } from 'drizzle-orm'
 import { db } from '../client'
 import { products, supplierItems, suppliers } from '../schema/schema'
+import type { Product, NewProduct } from '../schema/types'
 import type { CatalogQuery, CatalogProduct } from '../../types/catalog.types'
 import type { AdminQuery, AdminProduct, SupplierItemDetail } from '../../types/admin.types'
 
@@ -44,6 +45,21 @@ export interface IProductRepository {
    * @returns The product with supplier items if found, null otherwise
    */
   findByIdWithSuppliers(id: string): Promise<AdminProduct | null>
+
+  /**
+   * Find a product by internal SKU
+   * @param sku - The internal SKU string
+   * @returns The product if found, null otherwise
+   */
+  findBySku(sku: string): Promise<Product | null>
+
+  /**
+   * Create a new product
+   * @param product - The product data to insert
+   * @param tx - Optional transaction context
+   * @returns The created product
+   */
+  create(product: NewProduct, tx?: typeof db): Promise<Product>
 }
 
 /**
@@ -66,7 +82,8 @@ export class ProductRepository implements IProductRepository {
     }
 
     if (search) {
-      conditions.push(like(products.name, `%${search}%`))
+      // Use ilike for case-insensitive search
+      conditions.push(sql`${products.name} ILIKE ${'%' + search + '%'}`)
     }
 
     // Build HAVING conditions for price filters (after aggregation)
@@ -116,11 +133,12 @@ export class ProductRepository implements IProductRepository {
       .limit(limitNum)
       .offset(offset)
 
-    // Format prices to ensure 2 decimal places
+    // Format prices to ensure 2 decimal places and supplier_count as integer
     return result.map((row) => ({
       ...row,
       min_price: parseFloat(row.min_price || '0').toFixed(2),
       max_price: parseFloat(row.max_price || '0').toFixed(2),
+      supplier_count: Number(row.supplier_count) || 0,
     }))
   }
 
@@ -135,7 +153,8 @@ export class ProductRepository implements IProductRepository {
     }
 
     if (search) {
-      conditions.push(like(products.name, `%${search}%`))
+      // Use Drizzle's ilike for case-insensitive search with proper parameterization
+      conditions.push(ilike(products.name, `%${search}%`))
     }
 
     // Build HAVING conditions for price filters
@@ -452,6 +471,29 @@ export class ProductRepository implements IProductRepository {
       supplier_items,
       margin_percentage,
     }
+  }
+
+  async findBySku(sku: string): Promise<Product | null> {
+    const result = await db
+      .select()
+      .from(products)
+      .where(eq(products.internalSku, sku))
+      .limit(1)
+
+    return result[0] || null
+  }
+
+  async create(product: NewProduct, tx: typeof db = db): Promise<Product> {
+    const result = await tx
+      .insert(products)
+      .values(product)
+      .returning()
+
+    if (!result[0]) {
+      throw new Error('Failed to create product')
+    }
+
+    return result[0]
   }
 }
 

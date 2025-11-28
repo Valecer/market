@@ -1,8 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { Elysia } from 'elysia'
-import { jwt } from '@elysiajs/jwt'
-import { authController } from '../src/controllers/auth'
-import { errorHandler } from '../src/middleware/error-handler'
+import { createAuthTestApp, generateTestToken } from './helpers'
+import { createTestUser, deleteTestUser } from './fixtures'
 
 /**
  * Authentication Endpoint Tests
@@ -10,31 +8,36 @@ import { errorHandler } from '../src/middleware/error-handler'
  * Tests for T049-T054: Login flow scenarios
  */
 
-// Create a test app with auth controller
-const createTestApp = () => {
-  return new Elysia()
-    .use(errorHandler)
-    .use(
-      jwt({
-        name: 'jwt',
-        secret: 'test-secret-key-for-jwt-signing',
-        exp: '24h',
-      })
-    )
-    .use(authController)
+// Test credentials (must match what we create in fixtures)
+const TEST_ADMIN = {
+  username: 'test-auth-admin',
+  password: 'test-auth-admin-123',
+  role: 'admin' as const,
 }
 
 describe('Authentication - Login Endpoint', () => {
-  let app: ReturnType<typeof createTestApp>
-  let server: any
+  let app: ReturnType<typeof createAuthTestApp>
+  let testUserId: string | null = null
 
-  beforeAll(() => {
-    app = createTestApp()
+  beforeAll(async () => {
+    app = createAuthTestApp()
+    
+    // Create test admin user using fixtures
+    testUserId = await createTestUser(
+      TEST_ADMIN.username,
+      TEST_ADMIN.password,
+      TEST_ADMIN.role
+    )
+    
+    if (!testUserId) {
+      throw new Error('Failed to create test admin user')
+    }
   })
 
-  afterAll(() => {
-    if (server) {
-      server.stop()
+  afterAll(async () => {
+    // Cleanup test user using fixture helper
+    if (testUserId) {
+      await deleteTestUser(testUserId)
     }
   })
 
@@ -45,8 +48,8 @@ describe('Authentication - Login Endpoint', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: 'admin',
-            password: 'admin123',
+            username: TEST_ADMIN.username,
+            password: TEST_ADMIN.password,
           }),
         })
       )
@@ -62,6 +65,11 @@ describe('Authentication - Login Endpoint', () => {
       expect(data.user).toHaveProperty('role')
       expect(typeof data.token).toBe('string')
       expect(data.token.length).toBeGreaterThan(0)
+      
+      // Verify user details match the test user
+      expect(data.user.username).toBe(TEST_ADMIN.username)
+      expect(data.user.role).toBe(TEST_ADMIN.role)
+      expect(data.user.id).toBe(testUserId)
     })
   })
 
@@ -72,8 +80,8 @@ describe('Authentication - Login Endpoint', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: 'nonexistent',
-            password: 'admin123',
+            username: 'nonexistent-user-xyz',
+            password: TEST_ADMIN.password,
           }),
         })
       )
@@ -95,8 +103,8 @@ describe('Authentication - Login Endpoint', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: 'admin',
-            password: 'wrongpassword',
+            username: TEST_ADMIN.username,
+            password: 'completely-wrong-password',
           }),
         })
       )
@@ -175,8 +183,8 @@ describe('Authentication - Login Endpoint', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: 'admin',
-            password: 'admin123',
+            username: TEST_ADMIN.username,
+            password: TEST_ADMIN.password,
           }),
         })
       )
@@ -212,6 +220,10 @@ describe('Authentication - Login Endpoint', () => {
       // Verify user in response matches payload
       expect(data.user.id).toBe(payload.sub)
       expect(data.user.role).toBe(payload.role)
+      
+      // Verify payload matches our test user
+      expect(payload.sub).toBe(testUserId)
+      expect(payload.role).toBe(TEST_ADMIN.role)
     })
   })
 
@@ -227,8 +239,8 @@ describe('Authentication - Login Endpoint', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: 'admin',
-            password: 'admin123',
+            username: TEST_ADMIN.username,
+            password: TEST_ADMIN.password,
           }),
         })
       )
@@ -256,6 +268,28 @@ describe('Authentication - Login Endpoint', () => {
       const expiresAtMs = new Date(data.expires_at).getTime()
       const expMs = payload.exp * 1000
       expect(Math.abs(expiresAtMs - expMs)).toBeLessThan(tolerance * 1000)
+    })
+  })
+
+  describe('T055: Helper function generates valid token', () => {
+    test('generateTestToken returns valid token for test user', async () => {
+      // Use the helper function to generate a token
+      const token = await generateTestToken(app, TEST_ADMIN.username, TEST_ADMIN.password)
+      
+      expect(token).not.toBeNull()
+      expect(typeof token).toBe('string')
+      expect(token!.length).toBeGreaterThan(0)
+      
+      // Verify token structure
+      const parts = token!.split('.')
+      expect(parts.length).toBe(3)
+      
+      // Verify payload
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64url').toString('utf-8')
+      )
+      expect(payload.sub).toBe(testUserId)
+      expect(payload.role).toBe(TEST_ADMIN.role)
     })
   })
 })

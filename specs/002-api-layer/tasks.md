@@ -285,31 +285,31 @@ This task list is organized by **user story** to enable independent implementati
 
 ### Tasks
 
-- [ ] T122 [P] [US5] Create CreateProductRequest and CreateProductResponse schemas in admin types
-- [ ] T123 [US5] Implement product repository create method
-- [ ] T124 [US5] Implement category repository findById method for validation
-- [ ] T125 [US5] Implement SKU uniqueness check in product repository
-- [ ] T126 [US5] Create product creation service method in admin service
-- [ ] T127 [US5] Implement validation: name required (1-500 chars)
-- [ ] T128 [US5] Implement validation: internal_sku unique if provided
-- [ ] T129 [US5] Implement validation: category_id exists if provided
-- [ ] T130 [US5] Implement validation: supplier_item_id exists and not linked if provided
-- [ ] T131 [US5] Implement auto-generation of internal_sku using sku-generator utility
-- [ ] T132 [US5] Implement product creation with default status='draft'
-- [ ] T133 [US5] Implement supplier item linking in same transaction if supplier_item_id provided
-- [ ] T134 [US5] Implement POST `/api/v1/admin/products` endpoint
-- [ ] T135 [US5] Add role check: procurement or admin only
-- [ ] T136 [US5] Add request body validation
-- [ ] T137 [US5] Test product creation: requires authentication
-- [ ] T138 [US5] Test product creation: requires procurement or admin role
-- [ ] T139 [US5] Test product creation: creates with auto-generated SKU
-- [ ] T140 [US5] Test product creation: creates with provided SKU
-- [ ] T141 [US5] Test product creation: links supplier item if provided
-- [ ] T142 [US5] Test product creation: 400 if internal_sku duplicate
-- [ ] T143 [US5] Test product creation: 400 if category_id invalid
-- [ ] T144 [US5] Test product creation: 400 if supplier_item_id invalid
-- [ ] T145 [US5] Test product creation: 400 if name empty or too long
-- [ ] T146 [US5] Test product creation: transaction rollback on error
+- [X] T122 [P] [US5] Create CreateProductRequest and CreateProductResponse schemas in admin types
+- [X] T123 [US5] Implement product repository create method
+- [X] T124 [US5] Implement category repository findById method for validation
+- [X] T125 [US5] Implement SKU uniqueness check in product repository
+- [X] T126 [US5] Create product creation service method in admin service
+- [X] T127 [US5] Implement validation: name required (1-500 chars)
+- [X] T128 [US5] Implement validation: internal_sku unique if provided
+- [X] T129 [US5] Implement validation: category_id exists if provided
+- [X] T130 [US5] Implement validation: supplier_item_id exists and not linked if provided
+- [X] T131 [US5] Implement auto-generation of internal_sku using sku-generator utility
+- [X] T132 [US5] Implement product creation with default status='draft'
+- [X] T133 [US5] Implement supplier item linking in same transaction if supplier_item_id provided
+- [X] T134 [US5] Implement POST `/api/v1/admin/products` endpoint
+- [X] T135 [US5] Add role check: procurement or admin only
+- [X] T136 [US5] Add request body validation
+- [X] T137 [US5] Test product creation: requires authentication
+- [X] T138 [US5] Test product creation: requires procurement or admin role
+- [X] T139 [US5] Test product creation: creates with auto-generated SKU
+- [X] T140 [US5] Test product creation: creates with provided SKU
+- [X] T141 [US5] Test product creation: links supplier item if provided
+- [X] T142 [US5] Test product creation: 400 if internal_sku duplicate
+- [X] T143 [US5] Test product creation: 400 if category_id invalid
+- [X] T144 [US5] Test product creation: 400 if supplier_item_id invalid
+- [X] T145 [US5] Test product creation: 400 if name empty or too long
+- [X] T146 [US5] Test product creation: transaction rollback on error
 
 ---
 

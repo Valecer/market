@@ -10,34 +10,42 @@ import type { UserRole } from '../types/auth.types'
 /**
  * Creates a guard that requires specific role(s)
  * 
+ * Uses functional plugin pattern to ensure user from authMiddleware is accessible.
+ * See CLAUDE.md for explanation of Elysia plugin scoping.
+ * 
  * @param allowedRoles - Array of roles that are allowed to access the route
- * @returns Elysia plugin that enforces role-based access
+ * @returns Elysia plugin function that enforces role-based access
  */
 export function requireRole(allowedRoles: UserRole[]) {
-  return new Elysia({ name: 'require-role' })
-    .derive(({ user }) => {
-      // Just pass user through - we'll check in beforeHandle
-      return { user }
-    })
-    .onBeforeHandle(({ user, error }) => {
-      if (!user) {
-        return error(401, {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Unauthorized',
-          },
-        })
-      }
+  return (app: Elysia) =>
+    app
+      .derive((context: any) => {
+        // Pass user through from authMiddleware context
+        // Type assertion needed because TypeScript can't infer user from parent plugin
+        const user = context.user
+        return { user }
+      })
+      .onBeforeHandle(({ user, set }) => {
+        if (!user) {
+          set.status = 401
+          return {
+            error: {
+              code: 'UNAUTHORIZED',
+              message: 'Unauthorized',
+            },
+          }
+        }
 
-      if (!allowedRoles.includes(user.role)) {
-        return error(403, {
-          error: {
-            code: 'FORBIDDEN',
-            message: 'Forbidden: Insufficient permissions',
-          },
-        })
-      }
-    })
+        if (!allowedRoles.includes(user.role)) {
+          set.status = 403
+          return {
+            error: {
+              code: 'FORBIDDEN',
+              message: 'Forbidden: Insufficient permissions',
+            },
+          }
+        }
+      })
 }
 
 /**

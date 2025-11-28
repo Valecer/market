@@ -5,10 +5,11 @@
  * Usage: bun run scripts/hash-password.ts <password>
  */
 
-const password = Bun.argv[2] || 'admin123'
+const password = Bun.argv[2]
 
 if (!password) {
   console.error('Usage: bun run scripts/hash-password.ts <password>')
+  console.error('Example: bun run scripts/hash-password.ts mypassword123')
   process.exit(1)
 }
 

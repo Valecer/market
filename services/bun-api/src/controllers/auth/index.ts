@@ -8,10 +8,13 @@ import { createErrorResponse } from '../../types/errors'
  * 
  * Handles HTTP requests for authentication endpoints.
  * No business logic - delegates to AuthService.
+ * 
+ * Uses functional plugin pattern to ensure JWT plugin from parent app is accessible.
+ * See CLAUDE.md for explanation of Elysia plugin scoping.
  */
-
-export const authController = new Elysia({ prefix: '/api/v1/auth' })
-  .post(
+export const authController = (app: Elysia) =>
+  app.group('/api/v1/auth', (app) =>
+    app.post(
     '/login',
     async ({ body, jwt, set }) => {
       try {
@@ -93,5 +96,6 @@ export const authController = new Elysia({ prefix: '/api/v1/auth' })
         ],
       },
     }
+    )
   )
 

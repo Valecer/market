@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { adminService } from '../../services/admin.service'
-import { AdminQuerySchema, AdminProductsResponseSchema, MatchRequestSchema, MatchResponseSchema } from '../../types/admin.types'
+import { AdminQuerySchema, AdminProductsResponseSchema, MatchRequestSchema, MatchResponseSchema, CreateProductRequestSchema, CreateProductResponseSchema } from '../../types/admin.types'
 import { createErrorResponse } from '../../types/errors'
 import { authMiddleware, requireAuth } from '../../middleware/auth'
 import { requireSales } from '../../middleware/rbac'
@@ -12,9 +12,18 @@ import { requireSales } from '../../middleware/rbac'
  * Requires authentication and appropriate role permissions.
  */
 
-export const adminController = new Elysia({ prefix: '/api/v1/admin' })
-  .use(authMiddleware) // Extract user from JWT token - must be before guard
-  .guard({
+/**
+ * Admin Controller
+ * 
+ * Uses functional plugin pattern to ensure JWT plugin from parent app is accessible
+ * via authMiddleware. See CLAUDE.md for explanation of Elysia plugin scoping.
+ */
+export const adminController = (app: Elysia) =>
+  app
+    .group('/api/v1/admin', (app) =>
+      app
+        .use(authMiddleware) // Extract user from JWT token - must be before guard
+        .guard({
     beforeHandle({ user, set }) {
       if (!user) {
         set.status = 401
@@ -238,37 +247,12 @@ export const adminController = new Elysia({ prefix: '/api/v1/admin' })
       },
     }
   )
-  .patch(
-    '/products/:id/match',
-    async ({ params, body, set, user }) => {
-      try {
-        // Validate product ID format (UUID)
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-        if (!uuidRegex.test(params.id)) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'Product ID must be a valid UUID')
-        }
-
-        // Validate supplier_item_id format (UUID)
-        if (!uuidRegex.test(body.supplier_item_id)) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
-        }
-
-        // Call admin service to match product
-        const response = await adminService.matchProduct(params.id, body)
-
-        set.status = 200
-        return response
-      } catch (error: any) {
-        // Re-throw to be caught by error handler middleware
-        throw error
-      }
-    },
-    {
-      body: MatchRequestSchema,
+  // Matching endpoint requires stricter role check (procurement/admin only)
+  // Create a nested group with its own guard to override the parent guard
+  .group('/products/:id', (app) =>
+    app.guard({
       beforeHandle({ user, set }) {
-        // Check role: procurement or admin only
+        // Override parent guard: only procurement and admin can match products
         if (!user) {
           set.status = 401
           return {
@@ -288,18 +272,70 @@ export const adminController = new Elysia({ prefix: '/api/v1/admin' })
           }
         }
       },
+    })
+    .patch(
+      '/match',
+      async ({ params, body, set, user }) => {
+      // Validate product ID format (UUID)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (!uuidRegex.test(params.id)) {
+        set.status = 400
+        return createErrorResponse('VALIDATION_ERROR', 'Product ID must be a valid UUID')
+      }
+
+      // Validate supplier_item_id format (UUID)
+      if (!uuidRegex.test(body.supplier_item_id)) {
+        set.status = 400
+        return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
+      }
+
+      // Call admin service to match product
+      // Errors will be caught by error handler
+      const response = await adminService.matchProduct(params.id, body)
+
+      set.status = 200
+      return response
+    },
+    {
+      body: MatchRequestSchema,
       error({ code, error, set }) {
+        // Check for custom error code on error object (set by service layer)
+        const customErrorCode = (error as any).code as string | undefined
+        const isError = error instanceof Error
+        const errorMessage = isError ? error.message : String(error)
+        
         // Handle validation errors - convert 422 to 400 to match API contract
-        if (code === 'VALIDATION') {
+        if (code === 'VALIDATION' || customErrorCode === 'VALIDATION_ERROR') {
           set.status = 400
           return createErrorResponse(
             'VALIDATION_ERROR',
-            'Invalid request body',
+            errorMessage || 'Invalid request body',
             {
-              issue: error.message,
+              issue: errorMessage,
             }
           )
         }
+        
+        // Handle NOT_FOUND errors
+        if (customErrorCode === 'NOT_FOUND') {
+          set.status = 404
+          return createErrorResponse('NOT_FOUND', errorMessage || 'Resource not found')
+        }
+        
+        // Handle CONFLICT errors
+        if (customErrorCode === 'CONFLICT') {
+          set.status = 409
+          return createErrorResponse('CONFLICT', errorMessage || 'Conflict')
+        }
+        
+        // For all other errors, default to 500 (should not happen if service layer sets codes correctly)
+        set.status = 500
+        return createErrorResponse(
+          'INTERNAL_ERROR',
+          process.env.NODE_ENV === 'production'
+            ? 'Internal server error'
+            : errorMessage || 'An unexpected error occurred'
+        )
       },
       response: {
         200: MatchResponseSchema,
@@ -424,5 +460,201 @@ export const adminController = new Elysia({ prefix: '/api/v1/admin' })
         ],
       },
     }
+    )
   )
+  .post(
+    '/products',
+    async ({ body, set, user }) => {
+      // Validate supplier_item_id format (UUID) if provided
+      if (body.supplier_item_id) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(body.supplier_item_id)) {
+          set.status = 400
+          return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
+        }
+      }
 
+      // Validate category_id format (UUID) if provided
+      if (body.category_id) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(body.category_id)) {
+          set.status = 400
+          return createErrorResponse('VALIDATION_ERROR', 'category_id must be a valid UUID')
+        }
+      }
+
+      // Call admin service to create product
+      // Errors will be caught by global error handler
+      const response = await adminService.createProduct(body)
+
+      set.status = 201
+      return response
+    },
+    {
+      body: CreateProductRequestSchema,
+      beforeHandle({ user, set }) {
+        // T135: Check role: procurement or admin only
+        if (!user) {
+          set.status = 401
+          return {
+            error: {
+              code: 'UNAUTHORIZED',
+              message: 'Unauthorized',
+            },
+          }
+        }
+        if (!['procurement', 'admin'].includes(user.role)) {
+          set.status = 403
+          return {
+            error: {
+              code: 'FORBIDDEN',
+              message: 'Forbidden: Insufficient permissions. Procurement or admin role required.',
+            },
+          }
+        }
+      },
+      error({ code, error, set }) {
+        // Check for custom error code on error object (set by service layer)
+        const customErrorCode = (error as any).code as string | undefined
+        const isError = error instanceof Error
+        const errorMessage = isError ? error.message : String(error)
+        
+        // Handle validation errors - convert 422 to 400 to match API contract
+        if (code === 'VALIDATION' || customErrorCode === 'VALIDATION_ERROR') {
+          set.status = 400
+          return createErrorResponse(
+            'VALIDATION_ERROR',
+            errorMessage || 'Invalid request body',
+            {
+              issue: errorMessage,
+            }
+          )
+        }
+        
+        // Handle NOT_FOUND errors
+        if (customErrorCode === 'NOT_FOUND') {
+          set.status = 404
+          return createErrorResponse('NOT_FOUND', errorMessage || 'Resource not found')
+        }
+        
+        // Handle CONFLICT errors
+        if (customErrorCode === 'CONFLICT') {
+          set.status = 409
+          return createErrorResponse('CONFLICT', errorMessage || 'Conflict')
+        }
+        
+        // For all other errors, delegate to global error handler logic
+        // Since local handlers take precedence, we need to handle everything here
+        // or the error won't propagate correctly
+        set.status = 500
+        return createErrorResponse(
+          'INTERNAL_ERROR',
+          process.env.NODE_ENV === 'production'
+            ? 'Internal server error'
+            : errorMessage || 'An unexpected error occurred'
+        )
+      },
+      response: {
+        201: CreateProductResponseSchema,
+        400: t.Object({
+          error: t.Object({
+            code: t.Union([
+              t.Literal('VALIDATION_ERROR'),
+            ]),
+            message: t.String(),
+            details: t.Optional(t.Object({})),
+          }),
+        }),
+        401: t.Object({
+          error: t.Object({
+            code: t.Literal('UNAUTHORIZED'),
+            message: t.String(),
+          }),
+        }),
+        403: t.Object({
+          error: t.Object({
+            code: t.Literal('FORBIDDEN'),
+            message: t.String(),
+          }),
+        }),
+        500: t.Object({
+          error: t.Object({
+            code: t.Literal('INTERNAL_ERROR'),
+            message: t.String(),
+          }),
+        }),
+      },
+      detail: {
+        tags: ['admin'],
+        summary: 'Create a new product with optional supplier item linkage',
+        description:
+          'Creates a new internal product with auto-generated or provided SKU. Optionally links a supplier item during creation (split SKU workflow). Requires procurement or admin role. Returns created product with supplier items.',
+        examples: [
+          {
+            description: 'Create product with auto-generated SKU',
+            value: {
+              request: {
+                headers: {
+                  Authorization: 'Bearer <jwt-token>',
+                },
+                body: {
+                  name: 'HDMI Cable 3m',
+                  category_id: '660e8400-e29b-41d4-a716-446655440000',
+                  status: 'draft',
+                },
+              },
+              response: {
+                id: '550e8400-e29b-41d4-a716-446655440000',
+                internal_sku: 'PROD-1732623600000-a3f5',
+                name: 'HDMI Cable 3m',
+                category_id: '660e8400-e29b-41d4-a716-446655440000',
+                status: 'draft',
+                supplier_items: [],
+                created_at: '2025-11-26T10:30:00Z',
+              },
+            },
+          },
+          {
+            description: 'Create product with provided SKU and supplier item link',
+            value: {
+              request: {
+                headers: {
+                  Authorization: 'Bearer <jwt-token>',
+                },
+                body: {
+                  internal_sku: 'PROD-HDMI-3M',
+                  name: 'HDMI Cable 3m',
+                  category_id: '660e8400-e29b-41d4-a716-446655440000',
+                  status: 'draft',
+                  supplier_item_id: '770e8400-e29b-41d4-a716-446655440000',
+                },
+              },
+              response: {
+                id: '550e8400-e29b-41d4-a716-446655440000',
+                internal_sku: 'PROD-HDMI-3M',
+                name: 'HDMI Cable 3m',
+                category_id: '660e8400-e29b-41d4-a716-446655440000',
+                status: 'draft',
+                supplier_items: [
+                  {
+                    id: '770e8400-e29b-41d4-a716-446655440000',
+                    supplier_id: '880e8400-e29b-41d4-a716-446655440000',
+                    supplier_name: 'TechSupplier Inc',
+                    supplier_sku: 'TS-HDMI-3M',
+                    current_price: '12.99',
+                    characteristics: {
+                      length: '3m',
+                      color: 'black',
+                    },
+                    last_ingested_at: '2025-11-26T10:30:00Z',
+                  },
+                ],
+                created_at: '2025-11-26T10:30:00Z',
+              },
+            },
+          },
+        ],
+      },
+    }
+      )
+    )
