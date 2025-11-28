@@ -1,7 +1,31 @@
-import { eq, isNull } from 'drizzle-orm'
+import { eq, isNull, and, ilike, or, count } from 'drizzle-orm'
 import { db } from '../client'
-import { supplierItems } from '../schema/schema'
+import { supplierItems, suppliers } from '../schema/schema'
 import type { SupplierItem } from '../schema/types'
+
+/**
+ * Unmatched supplier item query parameters
+ */
+export interface UnmatchedQuery {
+  supplier_id?: string
+  search?: string
+  page?: number
+  limit?: number
+}
+
+/**
+ * Unmatched supplier item with supplier details
+ */
+export interface UnmatchedSupplierItem {
+  id: string
+  supplier_id: string
+  supplier_name: string
+  supplier_sku: string
+  name: string
+  current_price: string
+  characteristics: Record<string, unknown>
+  last_ingested_at: string
+}
 
 /**
  * Supplier Item Repository Interface
@@ -28,6 +52,20 @@ export interface ISupplierItemRepository {
     productId: string | null,
     tx?: typeof db
   ): Promise<SupplierItem>
+
+  /**
+   * Find all unmatched supplier items (where product_id IS NULL)
+   * @param query - Query parameters for filtering and pagination
+   * @returns Array of unmatched supplier items with supplier details
+   */
+  findUnmatched(query: UnmatchedQuery): Promise<UnmatchedSupplierItem[]>
+
+  /**
+   * Count all unmatched supplier items
+   * @param query - Query parameters for filtering (excluding pagination)
+   * @returns Total count of unmatched supplier items
+   */
+  countUnmatched(query: Omit<UnmatchedQuery, 'page' | 'limit'>): Promise<number>
 }
 
 /**
@@ -65,6 +103,85 @@ export class SupplierItemRepository implements ISupplierItemRepository {
     }
 
     return result[0]
+  }
+
+  async findUnmatched(query: UnmatchedQuery): Promise<UnmatchedSupplierItem[]> {
+    const { supplier_id, search, page = 1, limit = 50 } = query
+    const offset = (page - 1) * limit
+
+    // Build conditions
+    const conditions = [isNull(supplierItems.productId)]
+    
+    if (supplier_id) {
+      conditions.push(eq(supplierItems.supplierId, supplier_id))
+    }
+    
+    if (search) {
+      const searchPattern = `%${search}%`
+      conditions.push(
+        or(
+          ilike(supplierItems.supplierSku, searchPattern),
+          ilike(supplierItems.name, searchPattern)
+        )!
+      )
+    }
+
+    const result = await db
+      .select({
+        id: supplierItems.id,
+        supplier_id: supplierItems.supplierId,
+        supplier_name: suppliers.name,
+        supplier_sku: supplierItems.supplierSku,
+        name: supplierItems.name,
+        current_price: supplierItems.currentPrice,
+        characteristics: supplierItems.characteristics,
+        last_ingested_at: supplierItems.lastIngestedAt,
+      })
+      .from(supplierItems)
+      .leftJoin(suppliers, eq(supplierItems.supplierId, suppliers.id))
+      .where(and(...conditions))
+      .orderBy(supplierItems.lastIngestedAt)
+      .limit(limit)
+      .offset(offset)
+
+    return result.map((item) => ({
+      id: item.id,
+      supplier_id: item.supplier_id,
+      supplier_name: item.supplier_name || '',
+      supplier_sku: item.supplier_sku,
+      name: item.name,
+      current_price: parseFloat(item.current_price || '0').toFixed(2),
+      characteristics: (item.characteristics as Record<string, unknown>) || {},
+      last_ingested_at: item.last_ingested_at,
+    }))
+  }
+
+  async countUnmatched(query: Omit<UnmatchedQuery, 'page' | 'limit'>): Promise<number> {
+    const { supplier_id, search } = query
+
+    // Build conditions
+    const conditions = [isNull(supplierItems.productId)]
+    
+    if (supplier_id) {
+      conditions.push(eq(supplierItems.supplierId, supplier_id))
+    }
+    
+    if (search) {
+      const searchPattern = `%${search}%`
+      conditions.push(
+        or(
+          ilike(supplierItems.supplierSku, searchPattern),
+          ilike(supplierItems.name, searchPattern)
+        )!
+      )
+    }
+
+    const result = await db
+      .select({ count: count() })
+      .from(supplierItems)
+      .where(and(...conditions))
+
+    return result[0]?.count || 0
   }
 }
 

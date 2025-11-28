@@ -8,6 +8,7 @@ import {
   CreateProductResponseSchema,
   SyncRequestSchema,
   SyncResponseSchema,
+  UnmatchedResponseSchema,
 } from '../../types/admin.types'
 import { createErrorResponse } from '../../types/errors'
 import { authMiddleware } from '../../middleware/auth'
@@ -165,6 +166,62 @@ export const adminController = (app: Elysia) =>
             summary: 'Get paginated admin products with supplier details',
             description:
               'Returns a paginated list of products with all statuses (draft, active, archived). Includes supplier item details, margin calculations, and supports filtering by status, margin range, and supplier.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // GET /suppliers/unmatched - procurement/admin only
+      .get(
+        '/suppliers/unmatched',
+        async ({ query, set, user }) => {
+          // Additional check for procurement role
+          if (!user || !['procurement', 'admin'].includes(user.role)) {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Forbidden: Procurement or admin role required.')
+          }
+
+          const unmatchedQuery = {
+            supplier_id: typeof query.supplier_id === 'string' ? query.supplier_id : undefined,
+            search: typeof query.search === 'string' ? query.search : undefined,
+            page: parseNum(query.page) || 1,
+            limit: parseNum(query.limit) || 50,
+          }
+
+          // Validations
+          if (unmatchedQuery.supplier_id && !isValidUUID(unmatchedQuery.supplier_id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'supplier_id must be a valid UUID')
+          }
+          if (unmatchedQuery.page < 1) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'page must be greater than or equal to 1')
+          }
+          if (unmatchedQuery.limit < 1 || unmatchedQuery.limit > 200) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'limit must be between 1 and 200')
+          }
+
+          return adminService.getUnmatchedItems(unmatchedQuery)
+        },
+        {
+          query: t.Object({
+            supplier_id: t.Optional(t.Any()),
+            search: t.Optional(t.Any()),
+            page: t.Optional(t.Any()),
+            limit: t.Optional(t.Any()),
+          }),
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'Invalid query parameters', { issue: error.message })
+            }
+          },
+          response: { 200: UnmatchedResponseSchema, 400: ErrorSchemas.validation, 401: ErrorSchemas.unauthorized, 403: ErrorSchemas.forbidden, 500: ErrorSchemas.internal },
+          detail: {
+            tags: ['admin'],
+            summary: 'Get unmatched supplier items',
+            description:
+              'Returns supplier items that are not linked to any product. Supports filtering by supplier and search query. Requires procurement or admin role.',
             security: [{ bearerAuth: [] }],
           },
         }

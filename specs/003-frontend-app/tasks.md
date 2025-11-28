@@ -168,18 +168,18 @@ This task list implements a React frontend for the Marketbel product catalog sys
 
 ### Tasks
 
-- [ ] T057 [US4] Create ProcurementFilters type interface in `services/frontend/src/types/filters.ts`
-- [ ] T058 [US4] Create useUnmatchedItems hook for GET /admin/suppliers/unmatched in `services/frontend/src/hooks/useUnmatchedItems.ts`
-- [ ] T059 [US4] Create useMatchSupplier mutation hook for PATCH /admin/products/:id/match with optimistic updates in `services/frontend/src/hooks/useMatchSupplier.ts`
-- [ ] T060 [US4] Create UnmatchedItemsTable component with TanStack Table in `services/frontend/src/components/admin/UnmatchedItemsTable.tsx`
-- [ ] T061 [US4] Create ProductSearchModal with fuzzy search for products in `services/frontend/src/components/admin/ProductSearchModal.tsx`
-- [ ] T062 [US4] Create useProductSearch hook for modal search functionality in `services/frontend/src/hooks/useProductSearch.ts`
-- [ ] T063 [US4] Create MatchedItemsSection showing product ↔ supplier item associations in `services/frontend/src/components/admin/MatchedItemsSection.tsx`
-- [ ] T064 [US4] Create ProcurementMatchingPage composing UnmatchedItemsTable and MatchedItemsSection in `services/frontend/src/pages/admin/ProcurementMatchingPage.tsx`
-- [ ] T065 [US4] Implement "Link to Product" button that opens ProductSearchModal in `services/frontend/src/components/admin/UnmatchedItemsTable.tsx`
-- [ ] T066 [US4] Implement "Unlink" button with confirmation in MatchedItemsSection in `services/frontend/src/components/admin/MatchedItemsSection.tsx`
-- [ ] T067 [US4] Create Toast/Notification component for match/unmatch success messages in `services/frontend/src/components/shared/Toast.tsx`
-- [ ] T068 [US4] Add procurement routes (/admin/procurement) to router in `services/frontend/src/routes.tsx`
+- [X] T057 [US4] Create ProcurementFilters type interface in `services/frontend/src/types/filters.ts`
+- [X] T058 [US4] Create useUnmatchedItems hook for GET /admin/suppliers/unmatched in `services/frontend/src/hooks/useUnmatchedItems.ts`
+- [X] T059 [US4] Create useMatchSupplier mutation hook for PATCH /admin/products/:id/match with optimistic updates in `services/frontend/src/hooks/useMatchSupplier.ts`
+- [X] T060 [US4] Create UnmatchedItemsTable component with TanStack Table in `services/frontend/src/components/admin/UnmatchedItemsTable.tsx`
+- [X] T061 [US4] Create ProductSearchModal with fuzzy search for products in `services/frontend/src/components/admin/ProductSearchModal.tsx`
+- [X] T062 [US4] Create useProductSearch hook for modal search functionality in `services/frontend/src/hooks/useProductSearch.ts`
+- [X] T063 [US4] Create MatchedItemsSection showing product ↔ supplier item associations in `services/frontend/src/components/admin/MatchedItemsSection.tsx`
+- [X] T064 [US4] Create ProcurementMatchingPage composing UnmatchedItemsTable and MatchedItemsSection in `services/frontend/src/pages/admin/ProcurementMatchingPage.tsx`
+- [X] T065 [US4] Implement "Link to Product" button that opens ProductSearchModal in `services/frontend/src/components/admin/UnmatchedItemsTable.tsx`
+- [X] T066 [US4] Implement "Unlink" button with confirmation in MatchedItemsSection in `services/frontend/src/components/admin/MatchedItemsSection.tsx`
+- [X] T067 [US4] Create Toast/Notification component for match/unmatch success messages in `services/frontend/src/components/shared/Toast.tsx`
+- [X] T068 [US4] Add procurement routes (/admin/procurement) to router in `services/frontend/src/routes.tsx`
 
 **Independent Test Criteria:**
 - /admin/procurement requires JWT authentication
@@ -200,18 +200,18 @@ This task list implements a React frontend for the Marketbel product catalog sys
 
 ### Tasks
 
-- [ ] T069 [P] Create Button component with variants (primary, secondary, danger, ghost) in `services/frontend/src/components/shared/Button.tsx`
-- [ ] T070 [P] Create Input component with label, error, helperText props in `services/frontend/src/components/shared/Input.tsx`
-- [ ] T071 [P] Create Select component for dropdowns in `services/frontend/src/components/shared/Select.tsx`
-- [ ] T072 Create ErrorBoundary component with fallback UI in `services/frontend/src/components/shared/ErrorBoundary.tsx`
-- [ ] T073 Wrap root app with ErrorBoundary in `services/frontend/src/main.tsx`
-- [ ] T074 Add aria-labels and semantic HTML to all interactive elements in all component files
-- [ ] T075 Add keyboard navigation support (tab order, focus management) to modal and form components
-- [ ] T076 [P] Create Header component with logo, navigation, cart icon, user menu in `services/frontend/src/components/shared/Header.tsx`
-- [ ] T077 [P] Create Footer component with copyright and links in `services/frontend/src/components/shared/Footer.tsx`
-- [ ] T078 Add Dockerfile for production build in `services/frontend/Dockerfile`
-- [ ] T079 Update docker-compose.yml with frontend service in `docker-compose.yml`
-- [ ] T080 Create README with setup instructions, npm scripts, and architecture overview in `services/frontend/README.md`
+- [X] T069 [P] Create Button component with variants (primary, secondary, danger, ghost) in `services/frontend/src/components/shared/Button.tsx`
+- [X] T070 [P] Create Input component with label, error, helperText props in `services/frontend/src/components/shared/Input.tsx`
+- [X] T071 [P] Create Select component for dropdowns in `services/frontend/src/components/shared/Select.tsx`
+- [X] T072 Create ErrorBoundary component with fallback UI in `services/frontend/src/components/shared/ErrorBoundary.tsx`
+- [X] T073 Wrap root app with ErrorBoundary in `services/frontend/src/main.tsx`
+- [X] T074 Add aria-labels and semantic HTML to all interactive elements in all component files
+- [X] T075 Add keyboard navigation support (tab order, focus management) to modal and form components
+- [X] T076 [P] Create Header component with logo, navigation, cart icon, user menu in `services/frontend/src/components/shared/Header.tsx`
+- [X] T077 [P] Create Footer component with copyright and links in `services/frontend/src/components/shared/Footer.tsx`
+- [X] T078 Add Dockerfile for production build in `services/frontend/Dockerfile`
+- [X] T079 Update docker-compose.yml with frontend service in `docker-compose.yml`
+- [X] T080 Create README with setup instructions, npm scripts, and architecture overview in `services/frontend/README.md`
 
 **Polish Criteria:**
 - All buttons have consistent styling via Button component

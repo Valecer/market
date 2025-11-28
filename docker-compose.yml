@@ -106,6 +106,29 @@ services:
     networks:
       - marketbel-network
 
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        VITE_ENV: ${VITE_ENV:-production}
+    container_name: marketbel-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      bun-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - marketbel-network
+
 volumes:
   postgres_data:
     driver: local

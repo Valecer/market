@@ -1,73 +1,324 @@
-# React + TypeScript + Vite
+# Marketbel Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React-based web application for the Marketbel product catalog system. Provides role-based access for public catalog browsing, sales team analysis, and procurement supplier matching.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **React** | 19.x | UI framework |
+| **TypeScript** | 5.9+ | Type safety |
+| **Vite** | 7.x | Build tool & dev server |
+| **Bun** | Latest | JavaScript runtime & package manager |
+| **TanStack Query** | 5.x | Server state management |
+| **TanStack Table** | 8.x | Data tables |
+| **React Router** | 7.x | Client-side routing |
+| **Radix UI Themes** | 3.x | Accessible UI components |
+| **Tailwind CSS** | 4.1.x | CSS-first styling |
 
-## React Compiler
+## Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the ESLint configuration
+- [Bun](https://bun.sh/) (latest version)
+- Bun API running on `http://localhost:3000` (see `services/bun-api/`)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Development
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# Install dependencies
+bun install
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Start development server
+bun run dev
+# → Opens http://localhost:5173
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Run type check
+bun run type-check
+
+# Run linter
+bun run lint
+
+# Run tests
+bun test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Production Build
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Build for production
+bun run build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview production build locally
+bun run preview
+
+# Build Docker image
+docker build -t marketbel-frontend .
+
+# Run with Docker
+docker run -p 80:80 marketbel-frontend
 ```
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── admin/          # Admin-specific components
+│   │   ├── MatchedItemsSection.tsx
+│   │   ├── ProductSearchModal.tsx
+│   │   ├── SalesFilterBar.tsx
+│   │   ├── SalesTable.tsx
+│   │   ├── SupplierComparison.tsx
+│   │   └── UnmatchedItemsTable.tsx
+│   ├── cart/           # Shopping cart components
+│   │   ├── CartIcon.tsx
+│   │   ├── CartItemRow.tsx
+│   │   └── CartSummary.tsx
+│   ├── catalog/        # Public catalog components
+│   │   ├── FilterBar.tsx
+│   │   ├── ProductCard.tsx
+│   │   └── ProductGrid.tsx
+│   └── shared/         # Reusable UI components
+│       ├── AdminLayout.tsx
+│       ├── Button.tsx
+│       ├── ErrorBoundary.tsx
+│       ├── ErrorState.tsx
+│       ├── Input.tsx
+│       ├── LoadingSkeleton.tsx
+│       ├── ProtectedRoute.tsx
+│       ├── PublicLayout.tsx
+│       ├── Select.tsx
+│       └── Toast.tsx
+├── contexts/
+│   ├── AuthContext.tsx     # JWT authentication state
+│   └── CartContext.tsx     # Shopping cart state
+├── hooks/
+│   ├── useAdminProduct.ts  # Single product (admin)
+│   ├── useAdminProducts.ts # Product list (admin)
+│   ├── useAuth.ts          # Authentication hook
+│   ├── useCart.ts          # Cart operations
+│   ├── useCatalog.ts       # Public catalog
+│   ├── useCategories.ts    # Category list
+│   ├── useMatchSupplier.ts # Link/unlink supplier items
+│   ├── useProductSearch.ts # Product search (modal)
+│   └── useUnmatchedItems.ts # Unmatched supplier items
+├── lib/
+│   ├── api-client.ts   # OpenAPI fetch client
+│   ├── query-keys.ts   # TanStack Query key factory
+│   └── utils.ts        # Helper functions
+├── pages/
+│   ├── admin/
+│   │   ├── InternalProductDetailPage.tsx
+│   │   ├── ProcurementMatchingPage.tsx
+│   │   └── SalesCatalogPage.tsx
+│   ├── CartPage.tsx
+│   ├── CatalogPage.tsx
+│   ├── CheckoutMockPage.tsx
+│   ├── LoginPage.tsx
+│   ├── OrderSuccessPage.tsx
+│   └── ProductDetailPage.tsx
+├── types/
+│   ├── api.ts          # Auto-generated API types
+│   ├── auth.ts         # Authentication types
+│   ├── cart.ts         # Cart types
+│   └── filters.ts      # Filter types
+├── App.tsx             # Root component
+├── main.tsx            # Entry point
+├── routes.tsx          # Route configuration
+└── index.css           # Tailwind CSS config
+```
+
+## Routes
+
+### Public Routes
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/` | CatalogPage | Product catalog with filters |
+| `/product/:id` | ProductDetailPage | Product details |
+| `/cart` | CartPage | Shopping cart |
+| `/checkout` | CheckoutMockPage | Mock checkout form |
+| `/order-success` | OrderSuccessPage | Order confirmation |
+| `/login` | LoginPage | Authentication |
+
+### Admin Routes (Protected)
+
+| Route | Component | Required Role |
+|-------|-----------|---------------|
+| `/admin` | Dashboard | admin, sales, procurement |
+| `/admin/sales` | SalesCatalogPage | admin, sales |
+| `/admin/products/:id` | InternalProductDetailPage | admin, sales |
+| `/admin/procurement` | ProcurementMatchingPage | admin, procurement |
+
+## Authentication
+
+The app uses JWT tokens for authentication. Token is stored in localStorage and automatically included in API requests.
+
+**Demo Credentials:**
+
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | `admin` | `admin123` |
+| Sales | `sales` | `sales123` |
+| Procurement | `procurement` | `procurement123` |
+
+## API Client
+
+Types are auto-generated from the Bun API OpenAPI specification:
+
+```bash
+# Regenerate API types (requires Bun API running)
+bun run generate-api-types
+```
+
+Example usage:
+
+```tsx
+import { apiClient } from '@/lib/api-client'
+
+// Fetch products with type safety
+const response = await apiClient.GET('/catalog', {
+  params: { query: { category_id: '123', limit: 20 } }
+})
+
+if (response.data) {
+  // response.data is fully typed
+  response.data.items.forEach(product => console.log(product.name))
+}
+```
+
+## State Management
+
+| State Type | Solution | Scope |
+|------------|----------|-------|
+| Server State | TanStack Query | API data caching |
+| Auth State | React Context | User + JWT token |
+| Cart State | React Context + localStorage | Cart items |
+| UI State | Component state | Forms, modals |
+
+## Styling
+
+Using **Tailwind CSS v4.1** with CSS-first configuration:
+
+```css
+/* src/index.css */
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563eb;
+  --color-danger: #dc2626;
+  /* ... */
+}
+```
+
+**NO** `tailwind.config.js` file - all configuration via `@theme` blocks.
+
+## Shared Components
+
+### Button
+
+```tsx
+import { Button } from '@/components/shared'
+
+<Button variant="primary">Save</Button>
+<Button variant="danger" icon={<TrashIcon />}>Delete</Button>
+<Button variant="ghost" loading>Loading...</Button>
+```
+
+Variants: `primary`, `secondary`, `danger`, `ghost`
+Sizes: `sm`, `md`, `lg`
+
+### Input
+
+```tsx
+import { Input } from '@/components/shared'
+
+<Input label="Email" type="email" error="Invalid email" />
+<Input label="Name" helperText="Your full name" />
+```
+
+### Select
+
+```tsx
+import { Select } from '@/components/shared'
+
+<Select
+  label="Category"
+  options={[
+    { value: '1', label: 'Electronics' },
+    { value: '2', label: 'Clothing' },
+  ]}
+  error="Please select a category"
+/>
+```
+
+## Environment Variables
+
+```bash
+# .env.development
+VITE_API_URL=http://localhost:3000
+VITE_ENV=development
+
+# .env.production
+VITE_API_URL=https://api.marketbel.com
+VITE_ENV=production
+```
+
+## Docker
+
+```bash
+# Build image
+docker build -t marketbel-frontend \
+  --build-arg VITE_API_URL=https://api.example.com \
+  .
+
+# Run container
+docker run -p 80:80 marketbel-frontend
+
+# Or use docker-compose from project root
+docker-compose up frontend
+```
+
+## Testing
+
+```bash
+# Run all tests
+bun test
+
+# Run with coverage
+bun test --coverage
+
+# Run specific test file
+bun test src/hooks/useAuth.test.ts
+```
+
+## Performance Targets
+
+| Metric | Target |
+|--------|--------|
+| Initial Load | < 3 seconds (3G) |
+| Catalog Render | < 2 seconds (100 products) |
+| Filter Response | < 500ms |
+| Bundle Size | < 200KB gzipped |
+| Lighthouse Score | > 80 |
+
+## Accessibility
+
+- WCAG 2.1 Level AA compliance
+- Semantic HTML throughout
+- ARIA labels on interactive elements
+- Keyboard navigation support
+- Focus management for modals
+- Color contrast requirements met
+
+## Browser Support
+
+- Chrome (latest 2 versions)
+- Firefox (latest 2 versions)
+- Safari (latest 2 versions)
+- Edge (latest 2 versions)
+
+## License
+
+Internal use only - Marketbel © 2025

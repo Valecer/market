@@ -132,7 +132,7 @@ export function SupplierComparison({ supplierItems, isLoading = false }: Supplie
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sortedItems.map((item, index) => {
+        {sortedItems.map((item) => {
           const price = parseFloat(item.current_price)
           const isLowest = price === lowestPrice
           const priceDiff = price - lowestPrice

@@ -28,6 +28,7 @@ import { CheckoutMockPage } from '@/pages/CheckoutMockPage'
 import { OrderSuccessPage } from '@/pages/OrderSuccessPage'
 import { SalesCatalogPage } from '@/pages/admin/SalesCatalogPage'
 import { InternalProductDetailPage } from '@/pages/admin/InternalProductDetailPage'
+import { ProcurementMatchingPage } from '@/pages/admin/ProcurementMatchingPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
@@ -95,18 +96,7 @@ function AdminDashboardPlaceholder() {
 
 // SalesCatalogPlaceholder removed - now using actual SalesCatalogPage component
 
-function ProcurementPlaceholder() {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-8">
-      <h2 className="text-xl font-semibold text-slate-900 mb-2">
-        Procurement Matching
-      </h2>
-      <p className="text-slate-500">
-        Supplier item matching interface. Coming in Phase 6.
-      </p>
-    </div>
-  )
-}
+// ProcurementPlaceholder removed - now using actual ProcurementMatchingPage component
 
 // AdminProductDetailPlaceholder removed - now using actual InternalProductDetailPage component
 
@@ -247,7 +237,7 @@ export const router = createBrowserRouter([
         path: 'procurement',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'procurement']}>
-            <ProcurementPlaceholder />
+            <ProcurementMatchingPage />
           </ProtectedRoute>
         ),
       },

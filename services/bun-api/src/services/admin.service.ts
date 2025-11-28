@@ -6,7 +6,7 @@ import { supplierRepository, type ISupplierRepository } from '../db/repositories
 import { queueService, RedisUnavailableError } from './queue.service'
 import { eq } from 'drizzle-orm'
 import { products } from '../db/schema/schema'
-import type { AdminQuery, AdminProductsResponse, MatchRequest, MatchResponse, AdminProduct, CreateProductRequest, CreateProductResponse, SyncRequest, SyncResponse } from '../types/admin.types'
+import type { AdminQuery, AdminProductsResponse, MatchRequest, MatchResponse, AdminProduct, CreateProductRequest, CreateProductResponse, SyncRequest, SyncResponse, UnmatchedQuery, UnmatchedResponse } from '../types/admin.types'
 import type { ParseTaskMessage, ParserType } from '../types/queue.types'
 import { createErrorResponse } from '../types/errors'
 import { generateInternalSku } from '../utils/sku-generator'
@@ -23,6 +23,31 @@ export class AdminService {
     private readonly categoryRepo: ICategoryRepository = categoryRepository,
     private readonly supplierRepo: ISupplierRepository = supplierRepository
   ) {}
+
+  /**
+   * Get unmatched supplier items (not linked to any product)
+   * @param query - Query parameters (supplier_id, search, pagination)
+   * @returns Paginated unmatched supplier items response
+   */
+  async getUnmatchedItems(query: UnmatchedQuery): Promise<UnmatchedResponse> {
+    const { page = 1, limit = 50 } = query
+
+    // Fetch unmatched items and total count in parallel
+    const [data, total_count] = await Promise.all([
+      this.supplierItemRepo.findUnmatched(query),
+      this.supplierItemRepo.countUnmatched({
+        supplier_id: query.supplier_id,
+        search: query.search,
+      }),
+    ])
+
+    return {
+      total_count,
+      page,
+      limit,
+      data,
+    }
+  }
 
   /**
    * Get paginated admin products with filters

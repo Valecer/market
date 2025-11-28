@@ -86,6 +86,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/suppliers/unmatched": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get unmatched supplier items
+         * @description Returns supplier items that are not linked to any product. Supports filtering by supplier and search query. Requires procurement or admin role.
+         */
+        get: operations["getApiV1AdminSuppliersUnmatched"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/products/{id}/match": {
         parameters: {
             query?: never;
@@ -1006,6 +1026,246 @@ export interface operations {
                          * @description Creation timestamp
                          */
                         created_at: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminSuppliersUnmatched: {
+        parameters: {
+            query?: {
+                supplier_id?: unknown;
+                search?: unknown;
+                page?: unknown;
+                limit?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        total_count: number;
+                        page: number;
+                        limit: number;
+                        data: {
+                            /**
+                             * Format: uuid
+                             * @description Supplier item UUID
+                             */
+                            id: string;
+                            /**
+                             * Format: uuid
+                             * @description Supplier UUID
+                             */
+                            supplier_id: string;
+                            /** @description Supplier company name */
+                            supplier_name: string;
+                            /** @description SKU used by the supplier */
+                            supplier_sku: string;
+                            /** @description Item name from supplier */
+                            name: string;
+                            /** @description Current price as decimal string (e.g., "19.99") */
+                            current_price: string;
+                            /** @description Flexible JSONB attributes from supplier data */
+                            characteristics: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Format: date-time
+                             * @description ISO-8601 timestamp of last data sync
+                             */
+                            last_ingested_at: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        total_count: number;
+                        page: number;
+                        limit: number;
+                        data: {
+                            /**
+                             * Format: uuid
+                             * @description Supplier item UUID
+                             */
+                            id: string;
+                            /**
+                             * Format: uuid
+                             * @description Supplier UUID
+                             */
+                            supplier_id: string;
+                            /** @description Supplier company name */
+                            supplier_name: string;
+                            /** @description SKU used by the supplier */
+                            supplier_sku: string;
+                            /** @description Item name from supplier */
+                            name: string;
+                            /** @description Current price as decimal string (e.g., "19.99") */
+                            current_price: string;
+                            /** @description Flexible JSONB attributes from supplier data */
+                            characteristics: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Format: date-time
+                             * @description ISO-8601 timestamp of last data sync
+                             */
+                            last_ingested_at: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        total_count: number;
+                        page: number;
+                        limit: number;
+                        data: {
+                            /**
+                             * Format: uuid
+                             * @description Supplier item UUID
+                             */
+                            id: string;
+                            /**
+                             * Format: uuid
+                             * @description Supplier UUID
+                             */
+                            supplier_id: string;
+                            /** @description Supplier company name */
+                            supplier_name: string;
+                            /** @description SKU used by the supplier */
+                            supplier_sku: string;
+                            /** @description Item name from supplier */
+                            name: string;
+                            /** @description Current price as decimal string (e.g., "19.99") */
+                            current_price: string;
+                            /** @description Flexible JSONB attributes from supplier data */
+                            characteristics: {
+                                [key: string]: unknown;
+                            };
+                            /**
+                             * Format: date-time
+                             * @description ISO-8601 timestamp of last data sync
+                             */
+                            last_ingested_at: string;
+                        }[];
                     };
                 };
             };

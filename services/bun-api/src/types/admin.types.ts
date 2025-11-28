@@ -274,3 +274,61 @@ export const SyncResponseSchema = Type.Object(
 
 export type SyncResponse = Static<typeof SyncResponseSchema>
 
+// =============================================================================
+// Unmatched Supplier Items Types
+// =============================================================================
+
+export const UnmatchedQuerySchema = Type.Object({
+  supplier_id: Type.Optional(Type.String({ format: 'uuid' })),
+  search: Type.Optional(Type.String()),
+  page: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
+  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 200, default: 50 })),
+})
+
+export type UnmatchedQuery = Static<typeof UnmatchedQuerySchema>
+
+export const UnmatchedSupplierItemSchema = Type.Object(
+  {
+    id: Type.String({ format: 'uuid', description: 'Supplier item UUID' }),
+    supplier_id: Type.String({ format: 'uuid', description: 'Supplier UUID' }),
+    supplier_name: Type.String({ description: 'Supplier company name' }),
+    supplier_sku: Type.String({ description: 'SKU used by the supplier' }),
+    name: Type.String({ description: 'Item name from supplier' }),
+    current_price: Type.String({
+      description: 'Current price as decimal string (e.g., "19.99")',
+    }),
+    characteristics: Type.Record(Type.String(), Type.Any(), {
+      description: 'Flexible JSONB attributes from supplier data',
+    }),
+    last_ingested_at: Type.String({
+      format: 'date-time',
+      description: 'ISO-8601 timestamp of last data sync',
+    }),
+  },
+  {
+    examples: [
+      {
+        id: '770e8400-e29b-41d4-a716-446655440000',
+        supplier_id: '880e8400-e29b-41d4-a716-446655440000',
+        supplier_name: 'TechSupplier Inc',
+        supplier_sku: 'TS-HDMI-3M',
+        name: 'HDMI Cable 3m',
+        current_price: '12.99',
+        characteristics: { color: 'black', length: '3m' },
+        last_ingested_at: '2025-11-28T10:30:00Z',
+      },
+    ],
+  }
+)
+
+export type UnmatchedSupplierItem = Static<typeof UnmatchedSupplierItemSchema>
+
+export const UnmatchedResponseSchema = Type.Object({
+  total_count: Type.Integer({ minimum: 0 }),
+  page: Type.Integer({ minimum: 1 }),
+  limit: Type.Integer({ minimum: 1 }),
+  data: Type.Array(UnmatchedSupplierItemSchema),
+})
+
+export type UnmatchedResponse = Static<typeof UnmatchedResponseSchema>
+
