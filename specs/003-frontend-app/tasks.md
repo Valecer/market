@@ -51,18 +51,18 @@ This task list implements a React frontend for the Marketbel product catalog sys
 
 ### Tasks
 
-- [ ] T011 Create folder structure (pages/, components/shared/, components/catalog/, components/admin/, components/cart/, hooks/, lib/, types/, contexts/) in `services/frontend/src/`
-- [ ] T012 Create PublicLayout component with header and navigation in `services/frontend/src/components/shared/PublicLayout.tsx`
-- [ ] T013 Create AdminLayout component with sidebar navigation in `services/frontend/src/components/shared/AdminLayout.tsx`
-- [ ] T014 Create ProtectedRoute component that redirects unauthenticated users to /login in `services/frontend/src/components/shared/ProtectedRoute.tsx`
-- [ ] T015 Create AuthContext with user, token, login, logout, and isAuthenticated in `services/frontend/src/contexts/AuthContext.tsx`
-- [ ] T016 Create useAuth hook that consumes AuthContext in `services/frontend/src/hooks/useAuth.ts`
-- [ ] T017 Create LoginPage with username/password form in `services/frontend/src/pages/LoginPage.tsx`
-- [ ] T018 Create router configuration with public and protected routes in `services/frontend/src/routes.tsx`
-- [ ] T019 Setup TanStack Query provider with default options (staleTime 5min, gcTime 10min) in `services/frontend/src/main.tsx`
-- [ ] T020 Setup Radix UI Theme provider with accentColor and grayColor in `services/frontend/src/main.tsx`
-- [ ] T021 Wire App.tsx with RouterProvider in `services/frontend/src/App.tsx`
-- [ ] T022 [P] Create query keys factory for catalog, admin, and auth queries in `services/frontend/src/lib/query-keys.ts`
+- [X] T011 Create folder structure (pages/, components/shared/, components/catalog/, components/admin/, components/cart/, hooks/, lib/, types/, contexts/) in `services/frontend/src/`
+- [X] T012 Create PublicLayout component with header and navigation in `services/frontend/src/components/shared/PublicLayout.tsx`
+- [X] T013 Create AdminLayout component with sidebar navigation in `services/frontend/src/components/shared/AdminLayout.tsx`
+- [X] T014 Create ProtectedRoute component that redirects unauthenticated users to /login in `services/frontend/src/components/shared/ProtectedRoute.tsx`
+- [X] T015 Create AuthContext with user, token, login, logout, and isAuthenticated in `services/frontend/src/contexts/AuthContext.tsx`
+- [X] T016 Create useAuth hook that consumes AuthContext in `services/frontend/src/hooks/useAuth.ts`
+- [X] T017 Create LoginPage with username/password form in `services/frontend/src/pages/LoginPage.tsx`
+- [X] T018 Create router configuration with public and protected routes in `services/frontend/src/routes.tsx`
+- [X] T019 Setup TanStack Query provider with default options (staleTime 5min, gcTime 10min) in `services/frontend/src/main.tsx`
+- [X] T020 Setup Radix UI Theme provider with accentColor and grayColor in `services/frontend/src/main.tsx`
+- [X] T021 Wire App.tsx with RouterProvider in `services/frontend/src/App.tsx`
+- [X] T022 [P] Create query keys factory for catalog, admin, and auth queries in `services/frontend/src/lib/query-keys.ts`
 
 **Independent Test Criteria:**
 - Public routes accessible without authentication
