@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task Result Schema",
+  "description": "Result returned after processing a parse task",
+  "type": "object",
+  "required": [
+    "task_id",
+    "status",
+    "processed_at"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique identifier matching the original task",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "partial_success", "failure"],
+      "description": "Overall task completion status"
+    },
+    "supplier_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID of supplier record created/updated"
+    },
+    "statistics": {
+      "type": "object",
+      "description": "Processing metrics",
+      "required": ["total_rows", "successful_rows", "failed_rows"],
+      "properties": {
+        "total_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total rows found in source"
+        },
+        "successful_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rows successfully inserted/updated"
+        },
+        "failed_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rows that failed validation or insertion"
+        },
+        "processing_time_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total processing duration in seconds"
+        },
+        "items_per_second": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Throughput metric"
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "Summary of errors encountered (full details in parsing_logs table)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "error_type": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sample_message": {
+            "type": "string",
+            "description": "Example error message"
+          }
+        }
+      }
+    },
+    "processed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when processing completed"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of retries required for success"
+    }
+  },
+  "examples": [
+    {
+      "task_id": "task-2025-11-23-001",
+      "status": "partial_success",
+      "supplier_id": "550e8400-e29b-41d4-a716-446655440000",
+      "statistics": {
+        "total_rows": 100,
+        "successful_rows": 95,
+        "failed_rows": 5,
+        "processing_time_seconds": 12.5,
+        "items_per_second": 8.0
+      },
+      "errors": [
+        {
+          "error_type": "ValidationError",
+          "count": 3,
+          "sample_message": "Price must be a non-negative number"
+        },
+        {
+          "error_type": "ParserError",
+          "count": 2,
+          "sample_message": "Unable to parse date format in row 47"
+        }
+      ],
+      "processed_at": "2025-11-23T10:30:45Z",
+      "retry_count": 0
+    },
+    {
+      "task_id": "task-2025-11-23-002",
+      "status": "success",
+      "supplier_id": "660e8400-e29b-41d4-a716-446655440001",
+      "statistics": {
+        "total_rows": 500,
+        "successful_rows": 500,
+        "failed_rows": 0,
+        "processing_time_seconds": 45.2,
+        "items_per_second": 11.06
+      },
+      "errors": [],
+      "processed_at": "2025-11-23T11:15:22Z",
+      "retry_count": 0
+    },
+    {
+      "task_id": "task-2025-11-23-003",
+      "status": "failure",
+      "statistics": {
+        "total_rows": 0,
+        "successful_rows": 0,
+        "failed_rows": 0,
+        "processing_time_seconds": 2.1
+      },
+      "errors": [
+        {
+          "error_type": "AuthenticationError",
+          "count": 1,
+          "sample_message": "Invalid Google Sheets credentials"
+        }
+      ],
+      "processed_at": "2025-11-23T12:00:10Z",
+      "retry_count": 3
+    }
+  ]
+}
+

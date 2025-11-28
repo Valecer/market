@@ -1,0 +1,336 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Admin API Contract",
+  "description": "Protected admin endpoints for sales and procurement roles",
+  "version": "1.0.0",
+  "endpoints": {
+    "getAdminProducts": {
+      "method": "GET",
+      "path": "/admin/products",
+      "description": "Get products with internal pricing data (sales role)",
+      "authentication": "bearer",
+      "authorization": ["sales", "admin"],
+      "request": {
+        "query": {
+          "category": {
+            "type": "string",
+            "required": false
+          },
+          "minPrice": {
+            "type": "number",
+            "required": false
+          },
+          "maxPrice": {
+            "type": "number",
+            "required": false
+          },
+          "minMargin": {
+            "type": "number",
+            "description": "Minimum margin percentage",
+            "required": false,
+            "example": 20
+          },
+          "maxMargin": {
+            "type": "number",
+            "description": "Maximum margin percentage",
+            "required": false,
+            "example": 50
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"],
+            "required": false
+          },
+          "search": {
+            "type": "string",
+            "required": false
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns products with pricing data",
+          "schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ProductWithPricing"
+            }
+          }
+        },
+        "401": {
+          "description": "Unauthorized - missing or invalid token",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    },
+    "getAdminProduct": {
+      "method": "GET",
+      "path": "/admin/products/{id}",
+      "description": "Get single product with supplier items and price history",
+      "authentication": "bearer",
+      "authorization": ["sales", "procurement", "admin"],
+      "request": {
+        "path": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "required": true
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns product details with supplier items",
+          "schema": {
+            "$ref": "#/definitions/ProductDetail"
+          }
+        },
+        "404": {
+          "description": "Product not found",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    },
+    "matchSupplierItem": {
+      "method": "PATCH",
+      "path": "/admin/products/{id}/match",
+      "description": "Link or unlink supplier item to/from product",
+      "authentication": "bearer",
+      "authorization": ["procurement", "admin"],
+      "request": {
+        "path": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product ID",
+            "required": true
+          }
+        },
+        "body": {
+          "type": "object",
+          "required": ["supplier_item_id"],
+          "properties": {
+            "supplier_item_id": {
+              "type": ["string", "null"],
+              "format": "uuid",
+              "description": "Supplier item ID to link, or null to unlink"
+            }
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns updated product",
+          "schema": {
+            "$ref": "#/definitions/Product"
+          },
+          "example": {
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "name": "Dell XPS 15",
+            "sku": "DELL-XPS-15-001",
+            "supplier_items": [
+              {
+                "id": "660e8400-e29b-41d4-a716-446655440111",
+                "supplier_sku": "SUPPLIER-001",
+                "price": 1150.0
+              }
+            ]
+          }
+        },
+        "404": {
+          "description": "Product or supplier item not found",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        },
+        "403": {
+          "description": "Forbidden - insufficient permissions",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    },
+    "getUnmatchedSupplierItems": {
+      "method": "GET",
+      "path": "/admin/suppliers/unmatched",
+      "description": "Get supplier items not yet linked to products",
+      "authentication": "bearer",
+      "authorization": ["procurement", "admin"],
+      "request": {
+        "query": {
+          "supplier_id": {
+            "type": "string",
+            "format": "uuid",
+            "required": false,
+            "description": "Filter by supplier ID"
+          },
+          "search": {
+            "type": "string",
+            "required": false,
+            "description": "Search by supplier SKU or name"
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns unmatched supplier items",
+          "schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SupplierItem"
+            }
+          }
+        }
+      }
+    },
+    "triggerSync": {
+      "method": "POST",
+      "path": "/admin/sync",
+      "description": "Trigger new data parsing job (pushes message to Redis queue)",
+      "authentication": "bearer",
+      "authorization": ["admin"],
+      "request": {
+        "body": {
+          "type": "object",
+          "required": ["supplier_id"],
+          "properties": {
+            "supplier_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Supplier to sync"
+            }
+          }
+        }
+      },
+      "response": {
+        "202": {
+          "description": "Accepted - job enqueued",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Job ID for tracking"
+              },
+              "message": {
+                "type": "string",
+                "example": "Sync job enqueued successfully"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Product": {
+      "type": "object",
+      "required": ["id", "name", "sku", "price", "category_id", "status"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "price": { "type": "number" },
+        "category_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "active", "archived"] },
+        "characteristics": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ProductWithPricing": {
+      "allOf": [
+        { "$ref": "#/definitions/Product" },
+        {
+          "type": "object",
+          "properties": {
+            "cost_price": {
+              "type": "number",
+              "description": "Cost price from lowest-priced supplier item"
+            },
+            "margin": {
+              "type": "number",
+              "description": "Margin percentage ((price - cost_price) / price * 100)"
+            }
+          }
+        }
+      ]
+    },
+    "ProductDetail": {
+      "allOf": [
+        { "$ref": "#/definitions/ProductWithPricing" },
+        {
+          "type": "object",
+          "properties": {
+            "supplier_items": {
+              "type": "array",
+              "description": "All supplier items linked to this product",
+              "items": { "$ref": "#/definitions/SupplierItem" }
+            },
+            "price_history": {
+              "type": "array",
+              "description": "Historical prices",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "price": { "type": "number" },
+                  "recorded_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "SupplierItem": {
+      "type": "object",
+      "required": ["id", "supplier_id", "supplier_sku", "name", "price"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "supplier_id": { "type": "string", "format": "uuid" },
+        "supplier_sku": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "product_id": { "type": ["string", "null"], "format": "uuid" },
+        "characteristics": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" },
+            "details": { "type": "object" }
+          }
+        }
+      }
+    }
+  },
+  "securitySchemes": {
+    "BearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT"
+    }
+  }
+}

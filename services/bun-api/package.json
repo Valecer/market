@@ -1,0 +1,32 @@
+{
+  "name": "bun-api",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "db:introspect": "bun run drizzle-kit introspect",
+    "db:seed": "bun run scripts/seed-users.ts",
+    "db:migrate": "psql $DATABASE_URL -f migrations/001_create_users.sql"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/pg": "^8.15.6",
+    "drizzle-kit": "^0.31.7"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.0",
+    "@elysiajs/jwt": "^1.4.0",
+    "@elysiajs/swagger": "^1.3.1",
+    "drizzle-orm": "^0.44.7",
+    "drizzle-typebox": "^0.3.3",
+    "elysia": "^1.4.16",
+    "ioredis": "^5.8.2",
+    "pg": "^8.16.3"
+  }
+}

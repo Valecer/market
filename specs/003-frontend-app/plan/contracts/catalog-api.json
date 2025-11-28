@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Catalog API Contract",
+  "description": "Public catalog endpoints for browsing products",
+  "version": "1.0.0",
+  "endpoints": {
+    "getCatalog": {
+      "method": "GET",
+      "path": "/catalog",
+      "description": "Get list of products with optional filters",
+      "authentication": "none",
+      "request": {
+        "query": {
+          "category": {
+            "type": "string",
+            "description": "Filter by category ID or name",
+            "required": false,
+            "example": "electronics"
+          },
+          "minPrice": {
+            "type": "number",
+            "description": "Minimum price (inclusive)",
+            "required": false,
+            "example": 100
+          },
+          "maxPrice": {
+            "type": "number",
+            "description": "Maximum price (inclusive)",
+            "required": false,
+            "example": 500
+          },
+          "search": {
+            "type": "string",
+            "description": "Search query for product name, SKU, or description",
+            "required": false,
+            "example": "laptop"
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns array of products",
+          "schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Product"
+            }
+          },
+          "example": [
+            {
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "name": "Dell XPS 15",
+              "sku": "DELL-XPS-15-001",
+              "description": "15-inch laptop with Intel i7",
+              "price": 1299.99,
+              "category_id": "electronics",
+              "status": "active",
+              "characteristics": {
+                "brand": "Dell",
+                "screen_size": "15 inches",
+                "processor": "Intel Core i7"
+              },
+              "created_at": "2025-01-15T10:30:00Z",
+              "updated_at": "2025-01-20T14:45:00Z"
+            }
+          ]
+        },
+        "400": {
+          "description": "Bad request - invalid query parameters",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    },
+    "getProduct": {
+      "method": "GET",
+      "path": "/catalog/{id}",
+      "description": "Get single product by ID",
+      "authentication": "none",
+      "request": {
+        "path": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product ID",
+            "required": true,
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "description": "Success - returns product details",
+          "schema": {
+            "$ref": "#/definitions/Product"
+          }
+        },
+        "404": {
+          "description": "Product not found",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        },
+        "500": {
+          "description": "Internal server error",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Product": {
+      "type": "object",
+      "required": ["id", "name", "sku", "price", "category_id", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique product identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product name",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "sku": {
+          "type": "string",
+          "description": "Product SKU (Stock Keeping Unit)",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": ["string", "null"],
+          "description": "Product description (optional)"
+        },
+        "price": {
+          "type": "number",
+          "description": "Selling price in USD",
+          "minimum": 0
+        },
+        "category_id": {
+          "type": "string",
+          "description": "Category ID or name"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active", "archived"],
+          "description": "Product status"
+        },
+        "characteristics": {
+          "type": "object",
+          "description": "Dynamic product attributes (JSONB)",
+          "additionalProperties": true
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Error code (e.g., VALIDATION_ERROR, NOT_FOUND)"
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error context (optional)",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
