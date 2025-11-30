@@ -14,7 +14,7 @@
  * Roles: sales, admin
  */
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdminProducts } from '@/hooks/useAdminProducts'
 import { SalesTable } from '@/components/admin/SalesTable'

@@ -105,7 +105,7 @@ export function CatalogPage() {
           id: product.id,
           name: product.name,
           sku: product.internal_sku,
-          price: product.min_price, // Use min price for cart
+          price: typeof product.min_price === 'string' ? parseFloat(product.min_price) : product.min_price, // Use min price for cart
           category: product.category_id ?? undefined,
         }
         addItem(cartProduct)

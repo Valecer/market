@@ -6,9 +6,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { apiClient, type AdminProduct } from '@/lib/api-client'
-import { queryKeys } from '@/lib/query-keys'
 
 /**
  * Debounce hook to delay search execution

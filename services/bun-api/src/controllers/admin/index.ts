@@ -87,29 +87,29 @@ const ErrorSchemas = {
 // =============================================================================
 
 export const adminController = (app: Elysia) =>
-  app.group('/api/v1/admin', (app) =>
-  app
+  app.group('/api/v1/admin', (groupApp) =>
+    groupApp
       .use(authMiddleware)
-        .guard({
-    beforeHandle({ user, set }) {
-      if (!user) {
-        set.status = 401
+      .guard({
+        beforeHandle({ user, set }) {
+          if (!user) {
+            set.status = 401
             return { error: { code: 'UNAUTHORIZED' as const, message: 'Unauthorized' } }
           }
-      if (!['sales', 'procurement', 'admin'].includes(user.role)) {
-        set.status = 403
+          if (!['sales', 'procurement', 'admin'].includes(user.role)) {
+            set.status = 403
             return { error: { code: 'FORBIDDEN' as const, message: 'Forbidden: Insufficient permissions' } }
-      }
-    },
-  })
+          }
+        },
+      })
       // GET /products
-  .get(
-    '/products',
+      .get(
+        '/products',
         async ({ query, set }) => {
-        const adminQuery = {
+          const adminQuery = {
             status: ['draft', 'active', 'archived'].includes(query.status as string)
               ? (query.status as 'draft' | 'active' | 'archived')
-            : undefined,
+              : undefined,
             min_margin: parseNum(query.min_margin),
             max_margin: parseNum(query.max_margin),
             supplier_id: typeof query.supplier_id === 'string' ? query.supplier_id : undefined,
@@ -123,40 +123,40 @@ export const adminController = (app: Elysia) =>
             return createErrorResponse('VALIDATION_ERROR', 'supplier_id must be a valid UUID')
           }
           if (adminQuery.min_margin !== undefined && (adminQuery.min_margin < 0 || adminQuery.min_margin > 100)) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'min_margin must be between 0 and 100')
-        }
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'min_margin must be between 0 and 100')
+          }
           if (adminQuery.max_margin !== undefined && (adminQuery.max_margin < 0 || adminQuery.max_margin > 100)) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'max_margin must be between 0 and 100')
-        }
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'max_margin must be between 0 and 100')
+          }
           if (adminQuery.min_margin !== undefined && adminQuery.max_margin !== undefined && adminQuery.min_margin > adminQuery.max_margin) {
             set.status = 400
             return createErrorResponse('VALIDATION_ERROR', 'min_margin must be less than or equal to max_margin')
           }
-        if (adminQuery.page < 1) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'page must be greater than or equal to 1')
-        }
-        if (adminQuery.limit < 1 || adminQuery.limit > 200) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'limit must be between 1 and 200')
-        }
+          if (adminQuery.page < 1) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'page must be greater than or equal to 1')
+          }
+          if (adminQuery.limit < 1 || adminQuery.limit > 200) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'limit must be between 1 and 200')
+          }
 
           return adminService.getAdminProducts(adminQuery)
         },
         {
-      query: t.Object({
-        status: t.Optional(t.Any()),
-        min_margin: t.Optional(t.Any()),
-        max_margin: t.Optional(t.Any()),
-        supplier_id: t.Optional(t.Any()),
-        page: t.Optional(t.Any()),
-        limit: t.Optional(t.Any()),
-      }),
-      error({ code, error, set }) {
-        if (code === 'VALIDATION') {
-          set.status = 400
+          query: t.Object({
+            status: t.Optional(t.Any()),
+            min_margin: t.Optional(t.Any()),
+            max_margin: t.Optional(t.Any()),
+            supplier_id: t.Optional(t.Any()),
+            page: t.Optional(t.Any()),
+            limit: t.Optional(t.Any()),
+          }),
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
               return createErrorResponse('VALIDATION_ERROR', 'Invalid query parameters', { issue: error.message })
             }
           },
@@ -227,38 +227,38 @@ export const adminController = (app: Elysia) =>
         }
       )
       // PATCH /products/:id/match - procurement/admin only
-  .group('/products/:id', (app) =>
-        app
+      .group('/products/:id', (productApp) =>
+        productApp
           .guard({
-      beforeHandle({ user, set }) {
-        if (!user) {
-          set.status = 401
+            beforeHandle({ user, set }) {
+              if (!user) {
+                set.status = 401
                 return { error: { code: 'UNAUTHORIZED' as const, message: 'Unauthorized' } }
-        }
-        if (!['procurement', 'admin'].includes(user.role)) {
-          set.status = 403
+              }
+              if (!['procurement', 'admin'].includes(user.role)) {
+                set.status = 403
                 return { error: { code: 'FORBIDDEN' as const, message: 'Forbidden: Procurement or admin role required.' } }
               }
-      },
-    })
-    .patch(
-      '/match',
+            },
+          })
+          .patch(
+            '/match',
             async ({ params, body, set }) => {
               if (!isValidUUID(params.id)) {
-        set.status = 400
-        return createErrorResponse('VALIDATION_ERROR', 'Product ID must be a valid UUID')
-      }
+                set.status = 400
+                return createErrorResponse('VALIDATION_ERROR', 'Product ID must be a valid UUID')
+              }
               if (!isValidUUID(body.supplier_item_id)) {
-        set.status = 400
-        return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
-      }
+                set.status = 400
+                return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
+              }
               return adminService.matchProduct(params.id, body)
-    },
-    {
-      body: MatchRequestSchema,
-      error({ code, error, set }) {
+            },
+            {
+              body: MatchRequestSchema,
+              error({ code, error, set }) {
                 if (code === 'VALIDATION') {
-          set.status = 400
+                  set.status = 400
                   return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
                 }
                 const customCode = (error as any)?.code as string | undefined
@@ -266,7 +266,7 @@ export const adminController = (app: Elysia) =>
                 if (customCode === 'NOT_FOUND') { set.status = 404; return createErrorResponse('NOT_FOUND', message) }
                 if (customCode === 'CONFLICT') { set.status = 409; return createErrorResponse('CONFLICT', message) }
                 if (customCode === 'VALIDATION_ERROR') { set.status = 400; return createErrorResponse('VALIDATION_ERROR', message) }
-        set.status = 500
+                set.status = 500
                 return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
               },
               response: { 200: MatchResponseSchema, 400: ErrorSchemas.validation, 401: ErrorSchemas.unauthorized, 403: ErrorSchemas.forbidden, 404: ErrorSchemas.notFound, 409: ErrorSchemas.conflict, 500: ErrorSchemas.internal },
@@ -281,35 +281,35 @@ export const adminController = (app: Elysia) =>
           )
       )
       // POST /products - procurement/admin only
-  .post(
-    '/products',
+      .post(
+        '/products',
         async ({ body, set }) => {
           if (body.supplier_item_id && !isValidUUID(body.supplier_item_id)) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
-        }
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'supplier_item_id must be a valid UUID')
+          }
           if (body.category_id && !isValidUUID(body.category_id)) {
-          set.status = 400
-          return createErrorResponse('VALIDATION_ERROR', 'category_id must be a valid UUID')
-        }
-      set.status = 201
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'category_id must be a valid UUID')
+          }
+          set.status = 201
           return adminService.createProduct(body)
-    },
-    {
-      body: CreateProductRequestSchema,
-      beforeHandle({ user, set }) {
-        if (!user) {
-          set.status = 401
+        },
+        {
+          body: CreateProductRequestSchema,
+          beforeHandle({ user, set }) {
+            if (!user) {
+              set.status = 401
               return { error: { code: 'UNAUTHORIZED' as const, message: 'Unauthorized' } }
-        }
-        if (!['procurement', 'admin'].includes(user.role)) {
-          set.status = 403
+            }
+            if (!['procurement', 'admin'].includes(user.role)) {
+              set.status = 403
               return { error: { code: 'FORBIDDEN' as const, message: 'Forbidden: Procurement or admin role required.' } }
-        }
-      },
-      error({ code, error, set }) {
+            }
+          },
+          error({ code, error, set }) {
             if (code === 'VALIDATION') {
-          set.status = 400
+              set.status = 400
               return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
             }
             const customCode = (error as any)?.code as string | undefined
@@ -376,6 +376,6 @@ export const adminController = (app: Elysia) =>
               'Enqueues a background task to synchronize data from a supplier source (Google Sheets, CSV, etc.). Returns immediately with a task_id for tracking. Rate limited to 10 requests per minute per user. Requires admin role.',
             security: [{ bearerAuth: [] }],
           },
-    }
+        }
       )
-    )
+  )

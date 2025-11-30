@@ -265,8 +265,10 @@ export function MatchedItemsSection({
                 {/* Supplier Items - Collapsible */}
                 <div
                   id={`supplier-items-${product.id}`}
-                  className={`overflow-hidden transition-all duration-200 ease-in-out ${
-                    isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                  className={`transition-all duration-200 ease-in-out ${
+                    isExpanded 
+                      ? 'max-h-[400px] opacity-100 overflow-y-auto' 
+                      : 'max-h-0 opacity-0 overflow-hidden'
                   }`}
                 >
                   <div className="px-4 pb-4 pt-1 ml-8 space-y-2">

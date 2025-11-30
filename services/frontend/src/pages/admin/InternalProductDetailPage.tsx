@@ -14,7 +14,7 @@
  * Roles: sales, admin
  */
 
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useAdminProduct } from '@/hooks/useAdminProduct'
 import { SupplierComparison } from '@/components/admin/SupplierComparison'
 import { ErrorState } from '@/components/shared/ErrorState'
@@ -100,7 +100,6 @@ function getMarginDisplay(margin: number | null): { text: string; className: str
 
 export function InternalProductDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const { data: product, isLoading, error, refetch } = useAdminProduct(id)
 
   // Loading state

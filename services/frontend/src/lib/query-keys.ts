@@ -69,13 +69,19 @@ export const queryKeys = {
 } as const
 
 // Type helpers for queryKey types
-export type CatalogQueryKey = ReturnType<
-  (typeof queryKeys.catalog)[keyof typeof queryKeys.catalog]
->
-export type AdminProductQueryKey = ReturnType<
-  (typeof queryKeys.admin.products)[keyof typeof queryKeys.admin.products]
->
-export type AdminSupplierQueryKey = ReturnType<
-  (typeof queryKeys.admin.suppliers)[keyof typeof queryKeys.admin.suppliers]
->
+export type CatalogQueryKey =
+  | typeof queryKeys.catalog.all
+  | ReturnType<typeof queryKeys.catalog.list>
+  | ReturnType<typeof queryKeys.catalog.detail>
+  | ReturnType<typeof queryKeys.catalog.categories>
+
+export type AdminProductQueryKey =
+  | typeof queryKeys.admin.products.all
+  | ReturnType<typeof queryKeys.admin.products.list>
+  | ReturnType<typeof queryKeys.admin.products.detail>
+
+export type AdminSupplierQueryKey =
+  | typeof queryKeys.admin.suppliers.all
+  | ReturnType<typeof queryKeys.admin.suppliers.unmatched>
+  | ReturnType<typeof queryKeys.admin.suppliers.detail>
 
