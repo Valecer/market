@@ -1,12 +1,21 @@
-"""arq worker configuration for processing parse tasks."""
+"""arq worker configuration for processing parse tasks.
+
+This module configures the arq worker with:
+    - parse_task: Data source parsing (Google Sheets, CSV, Excel)
+    - match_items_task: Product matching pipeline
+    - recalc_product_aggregates_task: Aggregate recalculation
+    - enrich_item_task: Feature extraction and enrichment
+    - handle_manual_match_event: Manual link/unlink operations
+    - expire_review_queue_task: Cron job to expire old review items
+"""
 from arq.connections import RedisSettings, ArqRedis
 from arq.worker import Retry
 from arq import cron
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import timedelta, datetime, timezone
 import structlog
 import asyncio
-from src.config import settings, configure_logging
+from src.config import settings, matching_settings, configure_logging
 # Import parsers package to trigger __init__.py registration
 import src.parsers  # noqa: F401
 from src.parsers import create_parser_instance
@@ -18,6 +27,14 @@ from src.db.operations import (
     upsert_supplier_item,
     create_price_history_entry,
     log_parsing_error
+)
+# Import matching pipeline tasks
+from src.tasks.matching_tasks import (
+    match_items_task,
+    recalc_product_aggregates_task,
+    enrich_item_task,
+    handle_manual_match_event,
+    expire_review_queue_task,
 )
 
 # Configure logging
@@ -314,6 +331,29 @@ async def parse_task(ctx: Dict[str, Any], message: Dict[str, Any] = None, **kwar
             duration_seconds=duration_seconds
         )
         
+        # Chain to matching pipeline on successful ingestion
+        if status in ("success", "partial_success") and success_count > 0:
+            redis: Optional[ArqRedis] = ctx.get("redis")
+            if redis:
+                try:
+                    match_task_id = f"match-{task_id}-{int(datetime.now(timezone.utc).timestamp())}"
+                    await redis.enqueue_job(
+                        "match_items_task",
+                        task_id=match_task_id,
+                        batch_size=matching_settings.batch_size,
+                    )
+                    log.info(
+                        "match_task_chained",
+                        match_task_id=match_task_id,
+                        batch_size=matching_settings.batch_size,
+                    )
+                except Exception as chain_err:
+                    # Don't fail parse task if chaining fails
+                    log.warning(
+                        "match_task_chain_failed",
+                        error=str(chain_err),
+                    )
+        
         return {
             "task_id": task_id,
             "status": status,
@@ -551,6 +591,18 @@ class WorkerSettings:
     """arq worker configuration settings.
     
     This class is imported by arq CLI: `python -m arq src.worker.WorkerSettings`
+    
+    Registered Tasks:
+        - parse_task: Parse data sources (Google Sheets, CSV, Excel)
+        - match_items_task: Match supplier items to products
+        - recalc_product_aggregates_task: Recalculate product min_price/availability
+        - enrich_item_task: Extract features from item names
+        - handle_manual_match_event: Process manual link/unlink events
+        - expire_review_queue_task: Expire old review queue items (cron)
+        
+    Cron Jobs:
+        - monitor_queue_depth: Every 5 minutes
+        - expire_review_queue_task: Daily at midnight
     """
     
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
@@ -559,14 +611,26 @@ class WorkerSettings:
     keep_result = 3600  # Keep results for 1 hour
     max_tries = 3  # Maximum retry attempts (matches max_retries in ParseTaskMessage)
     
-    # Register the parse_task function as a worker function
-    functions = [parse_task]
+    # Register all worker functions
+    functions = [
+        # Phase 1: Data ingestion
+        parse_task,
+        # Phase 4: Matching pipeline
+        match_items_task,
+        recalc_product_aggregates_task,
+        enrich_item_task,
+        handle_manual_match_event,
+        expire_review_queue_task,
+    ]
     
     # Register job lifecycle hooks
     on_job_end = on_job_end
     
-    # Register periodic queue monitoring (every 5 minutes)
+    # Register cron jobs
     cron_jobs = [
-        cron(monitor_queue_depth, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55})
+        # Queue monitoring: every 5 minutes
+        cron(monitor_queue_depth, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
+        # Review queue expiration: daily at midnight UTC
+        cron(expire_review_queue_task, hour=0, minute=0),
     ]
 

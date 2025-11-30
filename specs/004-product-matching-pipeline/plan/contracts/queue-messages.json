@@ -1,0 +1,406 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Product Matching Pipeline Queue Messages",
+  "description": "Redis queue message contracts for matching, enrichment, and aggregation tasks",
+  "version": "1.0.0",
+  "messages": {
+    "matchItemsTask": {
+      "description": "Process a batch of unmatched supplier items and attempt to link them to products",
+      "queueName": "arq:queue:default",
+      "taskFunction": "match_items_task",
+      "schema": {
+        "type": "object",
+        "required": ["task_id"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Unique task identifier for tracking and logging"
+          },
+          "category_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Optional category UUID for blocking strategy (limits candidate products to same category)"
+          },
+          "batch_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 100,
+            "description": "Number of unmatched items to process in this batch"
+          },
+          "retry_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Current retry attempt (0 = first attempt)"
+          },
+          "max_retries": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "default": 3,
+            "description": "Maximum retry attempts before moving to DLQ"
+          },
+          "enqueued_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when task was enqueued"
+          }
+        }
+      },
+      "example": {
+        "task_id": "match-2025-11-30-001",
+        "category_id": "660e8400-e29b-41d4-a716-446655440000",
+        "batch_size": 100,
+        "retry_count": 0,
+        "max_retries": 3,
+        "enqueued_at": "2025-11-30T10:00:00Z"
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "partial_success", "error"]
+          },
+          "items_processed": {
+            "type": "integer",
+            "description": "Total items processed in this batch"
+          },
+          "auto_matched": {
+            "type": "integer",
+            "description": "Items automatically linked (score >= 95%)"
+          },
+          "potential_matches": {
+            "type": "integer",
+            "description": "Items flagged for review (score 70-94%)"
+          },
+          "new_products_created": {
+            "type": "integer",
+            "description": "New products created for unmatched items"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "duration_seconds": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "enrichItemTask": {
+      "description": "Extract technical specifications from supplier item text and update characteristics",
+      "queueName": "arq:queue:default",
+      "taskFunction": "enrich_item_task",
+      "schema": {
+        "type": "object",
+        "required": ["task_id", "supplier_item_id"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Unique task identifier"
+          },
+          "supplier_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of supplier item to enrich"
+          },
+          "extractors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["electronics", "dimensions", "storage", "memory"]
+            },
+            "default": ["electronics", "dimensions"],
+            "description": "List of extractor names to apply"
+          },
+          "retry_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_retries": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "default": 3
+          },
+          "enqueued_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "example": {
+        "task_id": "enrich-2025-11-30-001",
+        "supplier_item_id": "770e8400-e29b-41d4-a716-446655440000",
+        "extractors": ["electronics", "dimensions"],
+        "retry_count": 0,
+        "max_retries": 3,
+        "enqueued_at": "2025-11-30T10:00:00Z"
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "no_extraction", "error"]
+          },
+          "supplier_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "extracted_features": {
+            "type": "object",
+            "description": "Dictionary of extracted features that were added to characteristics",
+            "additionalProperties": true
+          },
+          "extractors_applied": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extractors that successfully extracted data"
+          },
+          "duration_seconds": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "recalcAggregatesTask": {
+      "description": "Recalculate min_price and availability aggregates for specified products",
+      "queueName": "arq:queue:default",
+      "taskFunction": "recalc_product_aggregates_task",
+      "schema": {
+        "type": "object",
+        "required": ["task_id", "product_ids", "trigger"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Unique task identifier"
+          },
+          "product_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "List of product UUIDs to recalculate"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": ["auto_match", "manual_link", "manual_unlink", "price_change", "availability_change"],
+            "description": "Event that triggered this recalculation"
+          },
+          "triggered_by": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "User UUID who triggered (for manual actions)"
+          },
+          "retry_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "max_retries": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "default": 3
+          },
+          "enqueued_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "example": {
+        "task_id": "recalc-2025-11-30-001",
+        "product_ids": ["550e8400-e29b-41d4-a716-446655440000"],
+        "trigger": "auto_match",
+        "triggered_by": null,
+        "retry_count": 0,
+        "max_retries": 3,
+        "enqueued_at": "2025-11-30T10:00:00Z"
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "partial_success", "error"]
+          },
+          "products_updated": {
+            "type": "integer"
+          },
+          "updates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "min_price": {
+                  "type": ["string", "null"],
+                  "description": "New min_price value"
+                },
+                "availability": {
+                  "type": "boolean"
+                },
+                "supplier_count": {
+                  "type": "integer",
+                  "description": "Number of linked suppliers"
+                }
+              }
+            }
+          },
+          "duration_seconds": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "manualMatchEvent": {
+      "description": "Event published by Bun API when user manually links/unlinks supplier item",
+      "queueName": "arq:queue:default",
+      "taskFunction": "handle_manual_match_event",
+      "schema": {
+        "type": "object",
+        "required": ["event_id", "action", "supplier_item_id", "user_id"],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "Unique event identifier"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["link", "unlink", "reset_match", "approve_match", "reject_match"],
+            "description": "Type of manual action: link (manual link), unlink (manual unlink), reset_match (admin removes verified_match), approve_match (review queue approval), reject_match (review queue rejection)"
+          },
+          "supplier_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Target product for link action"
+          },
+          "previous_product_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Previous product (for unlink/relink tracking)"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User who performed the action"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "example": {
+        "event_id": "evt-2025-11-30-001",
+        "action": "link",
+        "supplier_item_id": "770e8400-e29b-41d4-a716-446655440000",
+        "product_id": "550e8400-e29b-41d4-a716-446655440000",
+        "previous_product_id": null,
+        "user_id": "880e8400-e29b-41d4-a716-446655440000",
+        "timestamp": "2025-11-30T10:00:00Z"
+      }
+    }
+  },
+  "definitions": {
+    "matchCandidate": {
+      "type": "object",
+      "required": ["product_id", "product_name", "score"],
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "product_name": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Fuzzy match confidence score"
+        }
+      }
+    },
+    "matchStatus": {
+      "type": "string",
+      "enum": ["unmatched", "auto_matched", "potential_match", "verified_match"],
+      "description": "Current matching status of a supplier item"
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Configurable matching thresholds",
+      "properties": {
+        "auto_match": {
+          "type": "number",
+          "default": 95.0,
+          "description": "Score >= this triggers automatic linking"
+        },
+        "potential_match": {
+          "type": "number",
+          "default": 70.0,
+          "description": "Score >= this triggers review queue"
+        }
+      }
+    }
+  },
+  "taskChaining": {
+    "description": "How tasks chain together in the pipeline",
+    "flows": [
+      {
+        "name": "Post-Ingestion Matching",
+        "trigger": "parse_task completion",
+        "chain": [
+          "match_items_task",
+          "enrich_item_task (per matched item)",
+          "recalc_product_aggregates_task"
+        ]
+      },
+      {
+        "name": "Manual Link/Unlink",
+        "trigger": "Bun API PATCH /admin/products/:id/match",
+        "chain": [
+          "handle_manual_match_event",
+          "recalc_product_aggregates_task (for affected products)"
+        ]
+      },
+      {
+        "name": "Price Change",
+        "trigger": "parse_task detects price change on linked item",
+        "chain": [
+          "recalc_product_aggregates_task"
+        ]
+      }
+    ]
+  }
+}
+

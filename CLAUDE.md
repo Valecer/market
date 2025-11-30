@@ -6,7 +6,7 @@ This file provides context to Claude AI when working on this project.
 
 **Name:** Marketbel - Unified Catalog System
 **Type:** Multi-service application for supplier price list management and product catalog
-**Stage:** Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Planning Complete ✅
+**Stage:** Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Planning Complete ✅
 
 Before implementation, use mcp context7 to collect up-to-date documentation.
 
@@ -91,17 +91,25 @@ marketbel/
 │   │           ├── admin-api.json
 │   │           ├── auth-api.json
 │   │           └── queue-messages.json
-│   └── 003-frontend-app/              # Phase 3 (React Frontend)
+│   ├── 003-frontend-app/              # Phase 3 (React Frontend)
+│   │   ├── spec.md
+│   │   └── plan/
+│   │       ├── research.md
+│   │       ├── data-model.md
+│   │       ├── quickstart.md
+│   │       ├── constitutional-compliance.md
+│   │       └── contracts/
+│   │           ├── catalog-api.json
+│   │           ├── auth-api.json
+│   │           └── admin-api.json
+│   └── 004-product-matching-pipeline/ # Phase 4 (Product Matching)
 │       ├── spec.md
 │       └── plan/
 │           ├── research.md
 │           ├── data-model.md
 │           ├── quickstart.md
-│           ├── constitutional-compliance.md
 │           └── contracts/
-│               ├── catalog-api.json
-│               ├── auth-api.json
-│               └── admin-api.json
+│               └── queue-messages.json
 ├── services/
 │   ├── python-ingestion/              # Phase 1: Data Ingestion
 │   │   ├── src/
@@ -501,11 +509,152 @@ bun run generate-api-types  # Requires Bun API running on port 3000
 
 ---
 
+## Phase 4: Product Matching Pipeline (Python Worker Extension)
+
+**Status:** Planning Complete ✅ (Ready for implementation)
+
+### Technology Stack
+
+- **Runtime:** Python 3.12+ (extends Phase 1 worker)
+- **Matching Engine:** RapidFuzz (C++ implementation, MIT license)
+- **Queue Tasks:** arq (extends existing worker)
+- **ORM:** SQLAlchemy 2.0+ (extends Phase 1 models)
+- **Validation:** Pydantic 2.x
+- **Concurrency:** PostgreSQL SELECT FOR UPDATE SKIP LOCKED
+
+### Design Patterns
+
+1. **Strategy Pattern:** `MatcherStrategy` interface for swappable matching algorithms
+2. **Strategy Pattern:** `FeatureExtractor` interface for pluggable extraction patterns
+3. **Event-Driven:** Queue tasks chain together (match → enrich → recalculate)
+4. **Blocking Strategy:** Category-based candidate filtering for performance
+5. **Pessimistic Locking:** Prevents duplicate matches in concurrent processing
+
+### New Database Objects
+
+**Modified Tables:**
+- `products` - Add `min_price`, `availability`, `mrp` columns
+- `supplier_items` - Add `match_status`, `match_score`, `match_candidates` columns
+
+**New Tables:**
+- `match_review_queue` - Pending matches for human review
+
+**New Enums:**
+- `match_status`: unmatched, auto_matched, potential_match, verified_match
+- `review_status`: pending, approved, rejected, expired, needs_category
+
+### New Services
+
+```
+services/python-ingestion/
+├── src/
+│   ├── services/
+│   │   ├── matching/
+│   │   │   ├── __init__.py
+│   │   │   └── matcher.py         # MatcherStrategy, RapidFuzzMatcher
+│   │   └── extraction/
+│   │       ├── __init__.py
+│   │       └── extractors.py      # FeatureExtractor, ElectronicsExtractor, DimensionsExtractor
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   └── matching_tasks.py      # match_items_task, enrich_item_task, recalc_product_aggregates_task
+│   └── models/
+│       ├── matching.py            # MatchCandidate, MatchResult
+│       └── review_queue.py        # ReviewQueueItem, ReviewAction
+```
+
+### New Queue Tasks
+
+| Task | Description | Trigger |
+|------|-------------|---------|
+| `match_items_task` | Process batch of unmatched items | After `parse_task`, scheduled |
+| `enrich_item_task` | Extract features from item text | After matching |
+| `recalc_product_aggregates_task` | Update min_price/availability | After match/link/price change |
+
+### Commands
+
+```bash
+# Navigate to Python service
+cd services/python-ingestion
+
+# Install new dependency
+pip install "rapidfuzz>=3.5.0"
+
+# Run migration
+alembic upgrade head
+
+# Test matching
+pytest tests/ -v -k "matching"
+
+# Enqueue matching task
+python -c "
+import asyncio
+from arq import create_pool
+from arq.connections import RedisSettings
+
+async def main():
+    redis = await create_pool(RedisSettings())
+    await redis.enqueue_job('match_items_task', task_id='test-match-001', batch_size=100)
+    await redis.close()
+
+asyncio.run(main())
+"
+```
+
+### Key References
+
+- Feature Spec: `/specs/004-product-matching-pipeline/spec.md`
+- Implementation Plan: `/specs/004-product-matching-pipeline/plan.md`
+- Research: `/specs/004-product-matching-pipeline/plan/research.md`
+- Data Model: `/specs/004-product-matching-pipeline/plan/data-model.md`
+- Queue Contracts: `/specs/004-product-matching-pipeline/plan/contracts/queue-messages.json`
+- Quickstart: `/specs/004-product-matching-pipeline/plan/quickstart.md`
+
+**External Documentation:**
+- [RapidFuzz](https://maxbachmann.github.io/RapidFuzz/)
+- [arq Documentation](https://arq-docs.helpmanual.io/)
+
+### Notes for Claude
+
+**Key Design Decisions:**
+- **RapidFuzz over ML:** Start simple (KISS), ML deferred to Phase 5
+- **Regex in code:** Hardcoded patterns in Python classes (no DB complexity)
+- **Category blocking:** Compare only within same category (10x performance)
+- **95%/70% thresholds:** ≥95% auto-match, 70-94% review queue, <70% new product
+
+**Matching Flow:**
+```
+Unmatched Item → Find Candidates (same category) → Fuzzy Match
+  │
+  ├─ Score ≥95% → Auto-link + Recalc Aggregates
+  │
+  ├─ Score 70-94% → Add to Review Queue
+  │
+  └─ Score <70% → Create New Product (draft) + Link
+```
+
+**State Transitions:**
+- `verified_match` items are SKIPPED by auto-matcher (protected)
+- Only admin role can reset `verified_match` → `unmatched`
+- All transitions are audit-logged
+
+**When implementing Phase 4:**
+1. Start with `quickstart.md` for 15-minute setup
+2. Reference `research.md` for RapidFuzz best practices
+3. Reference `data-model.md` for SQLAlchemy model extensions
+4. Use `contracts/queue-messages.json` for task message schemas
+5. Follow Strategy pattern for matcher and extractor services
+6. Use `SELECT FOR UPDATE SKIP LOCKED` for concurrent processing
+7. Chain tasks: parse → match → enrich → recalculate
+
+---
+
 ## Workflow State
 
-**Current Branch:** 003-frontend-app
+**Current Branch:** 004-product-matching-pipeline
 **Phase 1 Status:** Complete ✅ (Implemented and tested)
 **Phase 2 Status:** Complete ✅ (Implemented and tested)
-**Phase 3 Status:** Planning Complete ✅ (Ready for implementation)
+**Phase 3 Status:** Complete ✅ (Implemented and tested)
+**Phase 4 Status:** Planning Complete ✅ (Ready for implementation)
 
-**Next Step:** Generate tasks for Phase 3 implementation (`/speckit.tasks`) or start implementation (`/speckit.implement`)
+**Next Step:** Generate tasks for Phase 4 implementation (`/speckit.tasks`) or start implementation (`/speckit.implement`)

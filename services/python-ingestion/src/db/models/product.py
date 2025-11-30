@@ -1,10 +1,15 @@
-"""Product ORM model with status enum."""
-from sqlalchemy import String, ForeignKey, Enum as SQLEnum
+"""Product ORM model with status enum and aggregate fields."""
+from sqlalchemy import String, ForeignKey, Enum as SQLEnum, Numeric, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base, UUIDMixin, TimestampMixin
 from enum import Enum as PyEnum
-from typing import List, Optional
+from decimal import Decimal
+from typing import List, Optional, TYPE_CHECKING
 import uuid
+
+if TYPE_CHECKING:
+    from src.db.models.category import Category
+    from src.db.models.supplier_item import SupplierItem
 
 
 class ProductStatus(PyEnum):
@@ -15,7 +20,21 @@ class ProductStatus(PyEnum):
 
 
 class Product(Base, UUIDMixin, TimestampMixin):
-    """Product model representing internal unified catalog."""
+    """Product model representing internal unified catalog.
+    
+    Attributes:
+        internal_sku: Unique internal SKU for the product
+        name: Product display name
+        category_id: Reference to category (optional)
+        status: Product lifecycle status (draft, active, archived)
+        min_price: Lowest price among linked active supplier items (Phase 4)
+        availability: TRUE if any linked supplier has stock (Phase 4)
+        mrp: Manufacturer's recommended price placeholder (Phase 4)
+    
+    Relationships:
+        category: Reference to Category
+        supplier_items: All linked supplier items
+    """
     
     __tablename__ = "products"
     
@@ -38,6 +57,25 @@ class Product(Base, UUIDMixin, TimestampMixin):
         index=True
     )
     
+    # Phase 4: Aggregate fields calculated from linked supplier items
+    min_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True,
+        index=True,
+        doc="Lowest price among linked active supplier items"
+    )
+    availability: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default='false',
+        doc="TRUE if any linked supplier has stock"
+    )
+    mrp: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True,
+        doc="Manufacturer's recommended price (placeholder)"
+    )
+    
     # Relationships
     category: Mapped[Optional["Category"]] = relationship(back_populates="products")
     supplier_items: Mapped[List["SupplierItem"]] = relationship(
@@ -46,4 +84,3 @@ class Product(Base, UUIDMixin, TimestampMixin):
     
     def __repr__(self) -> str:
         return f"<Product(id={self.id}, sku='{self.internal_sku}', status='{self.status.value}')>"
-

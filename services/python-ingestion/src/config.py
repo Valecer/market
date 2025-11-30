@@ -1,7 +1,59 @@
 """Configuration management using pydantic-settings."""
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 from typing import Optional
 import structlog
+
+
+class MatchingSettings(BaseSettings):
+    """Matching pipeline configuration loaded from environment variables.
+    
+    All settings prefixed with MATCH_ (e.g., MATCH_AUTO_THRESHOLD=95.0)
+    """
+    
+    # Matching Thresholds
+    auto_threshold: float = Field(
+        default=95.0,
+        ge=0,
+        le=100,
+        description="Score >= this triggers automatic linking (default: 95%)"
+    )
+    potential_threshold: float = Field(
+        default=70.0,
+        ge=0,
+        le=100,
+        description="Score >= this triggers review queue (default: 70%)"
+    )
+    
+    # Processing Configuration
+    batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=1000,
+        description="Number of items to process per matching batch"
+    )
+    max_candidates: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum candidate matches to store for review"
+    )
+    
+    # Review Queue Configuration
+    review_expiration_days: int = Field(
+        default=30,
+        ge=1,
+        le=365,
+        description="Days until pending review items expire"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="MATCH_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 class Settings(BaseSettings):
@@ -44,8 +96,9 @@ class Settings(BaseSettings):
             self.redis_url = f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/0"
 
 
-# Global settings instance
+# Global settings instances
 settings = Settings()
+matching_settings = MatchingSettings()
 
 
 def configure_logging(log_level: str = "INFO") -> None:
