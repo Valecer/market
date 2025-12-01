@@ -9,6 +9,7 @@ This file provides context to Claude AI when working on this project.
 **Stage:** Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Planning Complete ✅
 
 Before implementation, use mcp context7 to collect up-to-date documentation.
+For frontend use a i18n (add text to translation files).
 
 ---
 

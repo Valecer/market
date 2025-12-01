@@ -1,0 +1,413 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Admin Ingestion API Contract",
+  "description": "API contracts for Admin Control Panel & Master Sync Scheduler",
+  "version": "1.0.0",
+  "endpoints": {
+    "POST /api/v1/admin/ingestion/sync": {
+      "description": "Trigger the master sync pipeline. Reads Master Google Sheet, syncs suppliers, and enqueues parsing tasks for all active suppliers.",
+      "authentication": "Required - Bearer JWT",
+      "authorization": "Admin role only",
+      "rateLimit": "10 requests per minute per user",
+      "request": {
+        "body": null,
+        "headers": {
+          "Authorization": {
+            "type": "string",
+            "required": true,
+            "pattern": "^Bearer .+$",
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        }
+      },
+      "responses": {
+        "202": {
+          "description": "Sync job successfully queued",
+          "schema": {
+            "type": "object",
+            "required": ["task_id", "status", "message"],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "description": "Unique identifier for tracking the sync job",
+                "example": "sync-manual-1701388800123"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["queued"],
+                "description": "Always 'queued' on success"
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable confirmation",
+                "example": "Master sync pipeline started"
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Missing or invalid authentication token",
+          "schema": {
+            "$ref": "#/definitions/errorResponse",
+            "properties": {
+              "error": {
+                "properties": {
+                  "code": { "const": "UNAUTHORIZED" }
+                }
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "User does not have admin role",
+          "schema": {
+            "$ref": "#/definitions/errorResponse",
+            "properties": {
+              "error": {
+                "properties": {
+                  "code": { "const": "FORBIDDEN" }
+                }
+              }
+            }
+          }
+        },
+        "409": {
+          "description": "Sync is already in progress",
+          "schema": {
+            "type": "object",
+            "required": ["error"],
+            "properties": {
+              "error": {
+                "type": "object",
+                "required": ["code", "message", "current_task_id"],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "const": "SYNC_IN_PROGRESS"
+                  },
+                  "message": {
+                    "type": "string",
+                    "example": "A sync operation is already in progress"
+                  },
+                  "current_task_id": {
+                    "type": "string",
+                    "description": "Task ID of the running sync",
+                    "example": "sync-manual-1701388700000"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "429": {
+          "description": "Rate limit exceeded",
+          "schema": {
+            "$ref": "#/definitions/errorResponse",
+            "properties": {
+              "error": {
+                "properties": {
+                  "code": { "const": "RATE_LIMIT_EXCEEDED" }
+                }
+              }
+            }
+          }
+        },
+        "503": {
+          "description": "Redis queue service unavailable",
+          "schema": {
+            "$ref": "#/definitions/errorResponse",
+            "properties": {
+              "error": {
+                "properties": {
+                  "code": { "const": "REDIS_UNAVAILABLE" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "GET /api/v1/admin/ingestion/status": {
+      "description": "Get current ingestion pipeline status including sync state, suppliers, and recent logs. Designed for polling at 3-5 second intervals.",
+      "authentication": "Required - Bearer JWT",
+      "authorization": "Admin role only",
+      "rateLimit": "None (designed for polling)",
+      "request": {
+        "query": {
+          "log_limit": {
+            "type": "integer",
+            "required": false,
+            "default": 50,
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of recent logs to return"
+          }
+        },
+        "headers": {
+          "Authorization": {
+            "type": "string",
+            "required": true,
+            "pattern": "^Bearer .+$"
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Current ingestion status",
+          "schema": {
+            "type": "object",
+            "required": ["sync_state", "progress", "last_sync_at", "next_scheduled_at", "suppliers", "recent_logs"],
+            "properties": {
+              "sync_state": {
+                "type": "string",
+                "enum": ["idle", "syncing_master", "processing_suppliers"],
+                "description": "Current state of the sync pipeline"
+              },
+              "progress": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["current", "total"],
+                    "properties": {
+                      "current": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Number of suppliers processed"
+                      },
+                      "total": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Total suppliers to process"
+                      }
+                    }
+                  },
+                  { "type": "null" }
+                ],
+                "description": "Progress when processing_suppliers, null otherwise"
+              },
+              "last_sync_at": {
+                "oneOf": [
+                  { "type": "string", "format": "date-time" },
+                  { "type": "null" }
+                ],
+                "description": "Timestamp of last completed sync, null if never synced",
+                "example": "2025-12-01T08:00:00Z"
+              },
+              "next_scheduled_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp of next scheduled automatic sync",
+                "example": "2025-12-01T16:00:00Z"
+              },
+              "suppliers": {
+                "type": "array",
+                "description": "List of all suppliers with sync status",
+                "items": {
+                  "$ref": "#/definitions/supplierStatus"
+                }
+              },
+              "recent_logs": {
+                "type": "array",
+                "description": "Recent parsing log entries",
+                "items": {
+                  "$ref": "#/definitions/parsingLogEntry"
+                }
+              }
+            }
+          },
+          "example": {
+            "sync_state": "processing_suppliers",
+            "progress": { "current": 5, "total": 20 },
+            "last_sync_at": "2025-12-01T08:00:00Z",
+            "next_scheduled_at": "2025-12-01T16:00:00Z",
+            "suppliers": [
+              {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "name": "Acme Corp",
+                "source_type": "google_sheets",
+                "last_sync_at": "2025-12-01T08:15:00Z",
+                "status": "success",
+                "items_count": 1523
+              }
+            ],
+            "recent_logs": [
+              {
+                "id": "660e8400-e29b-41d4-a716-446655440001",
+                "task_id": "sync-manual-1701388800123",
+                "supplier_id": "550e8400-e29b-41d4-a716-446655440000",
+                "supplier_name": "Acme Corp",
+                "error_type": "INFO",
+                "error_message": "Parse completed: 1523 items processed",
+                "row_number": null,
+                "created_at": "2025-12-01T08:15:00Z"
+              }
+            ]
+          }
+        },
+        "401": {
+          "description": "Missing or invalid authentication token",
+          "schema": { "$ref": "#/definitions/errorResponse" }
+        },
+        "403": {
+          "description": "User does not have admin role",
+          "schema": { "$ref": "#/definitions/errorResponse" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "errorResponse": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "VALIDATION_ERROR",
+                "UNAUTHORIZED",
+                "FORBIDDEN",
+                "NOT_FOUND",
+                "CONFLICT",
+                "SYNC_IN_PROGRESS",
+                "RATE_LIMIT_EXCEEDED",
+                "REDIS_UNAVAILABLE",
+                "INTERNAL_ERROR"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error context (optional)"
+            }
+          }
+        }
+      }
+    },
+    "supplierStatus": {
+      "type": "object",
+      "required": ["id", "name", "source_type", "last_sync_at", "status", "items_count"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Supplier UUID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Supplier display name"
+        },
+        "source_type": {
+          "type": "string",
+          "enum": ["google_sheets", "csv", "excel"],
+          "description": "Data source format"
+        },
+        "last_sync_at": {
+          "oneOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ],
+          "description": "Last successful sync timestamp"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["success", "error", "pending", "inactive"],
+          "description": "Current sync status derived from parsing logs"
+        },
+        "items_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of supplier items in database"
+        }
+      }
+    },
+    "parsingLogEntry": {
+      "type": "object",
+      "required": ["id", "task_id", "supplier_id", "supplier_name", "error_type", "error_message", "row_number", "created_at"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Log entry UUID"
+        },
+        "task_id": {
+          "type": "string",
+          "description": "Task that generated this log"
+        },
+        "supplier_id": {
+          "oneOf": [
+            { "type": "string", "format": "uuid" },
+            { "type": "null" }
+          ],
+          "description": "Associated supplier ID"
+        },
+        "supplier_name": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "null" }
+          ],
+          "description": "Supplier name (joined from suppliers table)"
+        },
+        "error_type": {
+          "type": "string",
+          "description": "Log level/category (INFO, WARNING, ERROR, ValidationError, ParserError)"
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Log message content"
+        },
+        "row_number": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "null" }
+          ],
+          "description": "Source row number if applicable"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Log entry timestamp"
+        }
+      }
+    }
+  },
+  "queueMessages": {
+    "trigger_master_sync": {
+      "description": "Message to trigger master sync pipeline (Bun API -> Python Worker)",
+      "queue": "arq:queue:price-ingestion-queue",
+      "schema": {
+        "type": "object",
+        "required": ["task_id", "triggered_by", "triggered_at"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "Unique task identifier",
+            "example": "sync-manual-1701388800123"
+          },
+          "triggered_by": {
+            "type": "string",
+            "enum": ["manual", "scheduled"],
+            "description": "What initiated the sync"
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the sync was triggered"
+          },
+          "master_sheet_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Override default Master Sheet URL (optional)"
+          }
+        }
+      }
+    }
+  }
+}
+
