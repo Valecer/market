@@ -1,0 +1,220 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "retry": "Повторить",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "submit": "Отправить",
+    "back": "Назад",
+    "next": "Далее",
+    "search": "Поиск",
+    "clear": "Очистить",
+    "close": "Закрыть",
+    "all": "Все",
+    "remove": "Удалить",
+    "free": "Бесплатно",
+    "each": "шт.",
+    "searching": "Поиск...",
+    "noResults": "Ничего не найдено",
+    "sku": "Артикул",
+    "price": "Цена",
+    "category": "Категория",
+    "supplier": "Поставщик"
+  },
+
+  "header": {
+    "catalog": "Каталог",
+    "cart": "Корзина",
+    "admin": "Админ",
+    "login": "Войти",
+    "logout": "Выйти",
+    "languageSelect": "Сменить язык",
+    "openMenu": "Открыть меню"
+  },
+
+  "footer": {
+    "copyright": "© {{year}} Marketbel. Все права защищены.",
+    "privacy": "Конфиденциальность",
+    "terms": "Условия",
+    "contact": "Контакты"
+  },
+
+  "catalog": {
+    "title": "Каталог товаров",
+    "subtitle": "Просмотрите наш ассортимент товаров от различных поставщиков",
+    "searchPlaceholder": "Поиск товаров по названию или артикулу...",
+    "allCategories": "Все категории",
+    "minPrice": "Мин ₽",
+    "maxPrice": "Макс ₽",
+    "clearFilters": "Сбросить",
+    "updating": "Обновление...",
+    "paginationInfo": "Показано {{start}}-{{end}} из {{total}} товаров",
+    "noResults": {
+      "title": "Ничего не найдено",
+      "message": "Попробуйте изменить фильтры или поисковый запрос."
+    },
+    "filters": {
+      "search": "Поиск: \"{{query}}\"",
+      "category": "Категория: {{name}}",
+      "minPrice": "Мин: ₽{{price}}",
+      "maxPrice": "Макс: ₽{{price}}"
+    }
+  },
+
+  "product": {
+    "addToCart": "Добавить",
+    "addToCartFull": "В корзину",
+    "viewDetails": "Подробнее",
+    "supplierCount_one": "{{count}} поставщик",
+    "supplierCount_few": "{{count}} поставщика",
+    "supplierCount_many": "{{count}} поставщиков",
+    "suppliersLinked_one": "{{count}} поставщик привязан",
+    "suppliersLinked_few": "{{count}} поставщика привязано",
+    "suppliersLinked_many": "{{count}} поставщиков привязано",
+    "priceRange": "{{min}} - {{max}}",
+    "outOfStock": "Нет в наличии",
+    "inStock": "В наличии"
+  },
+
+  "cart": {
+    "title": "Корзина",
+    "subtitle_one": "{{count}} товар в корзине",
+    "subtitle_few": "{{count}} товара в корзине",
+    "subtitle_many": "{{count}} товаров в корзине",
+    "emptySubtitle": "Корзина пуста",
+    "empty": {
+      "title": "Корзина пуста",
+      "message": "Похоже, вы ещё ничего не добавили в корзину. Загляните в каталог, чтобы найти нужные товары."
+    },
+    "itemCount_one": "{{count}} товар",
+    "itemCount_few": "{{count}} товара",
+    "itemCount_many": "{{count}} товаров",
+    "ariaLabel_one": "Корзина с {{count}} товаром",
+    "ariaLabel_few": "Корзина с {{count}} товарами",
+    "ariaLabel_many": "Корзина с {{count}} товарами",
+    "total": "Итого",
+    "subtotal": "Подытог",
+    "shipping": "Доставка",
+    "tax": "Налог (8%)",
+    "checkout": "Оформить заказ",
+    "continueShopping": "Продолжить покупки",
+    "browseProducts": "Перейти в каталог",
+    "removeItemLabel": "Удалить {{name}} из корзины",
+    "quantity": "Количество",
+    "clearCart": "Очистить корзину",
+    "orderSummary": "Сумма заказа",
+    "increaseQuantity": "Увеличить количество",
+    "decreaseQuantity": "Уменьшить количество"
+  },
+
+  "auth": {
+    "welcomeBack": "С возвращением",
+    "signInSubtitle": "Войдите в свой аккаунт",
+    "username": "Имя пользователя",
+    "usernamePlaceholder": "Введите имя пользователя",
+    "password": "Пароль",
+    "passwordPlaceholder": "Введите пароль",
+    "loginButton": "Войти",
+    "loggingIn": "Вход...",
+    "loginError": "Неверное имя пользователя или пароль",
+    "loginRequired": "Пожалуйста, войдите в систему",
+    "sessionExpired": "Сессия истекла. Пожалуйста, войдите снова.",
+    "backToCatalog": "← Вернуться в каталог",
+    "demoCredentials": "Демо-данные (для тестирования)"
+  },
+
+  "error": {
+    "title": "Что-то пошло не так",
+    "message": "Произошла непредвиденная ошибка. Попробуйте ещё раз.",
+    "notFound": "Страница не найдена",
+    "networkError": "Ошибка сети. Проверьте подключение.",
+    "serverError": "Ошибка сервера. Попробуйте позже.",
+    "failedToLoad": "Не удалось загрузить товары",
+    "loadingData": "Ошибка загрузки данных"
+  },
+
+  "loading": {
+    "products": "Загрузка товаров...",
+    "product": "Загрузка товара...",
+    "cart": "Загрузка корзины...",
+    "translations": "Загрузка...",
+    "table": "Загрузка данных..."
+  },
+
+  "pagination": {
+    "previous": "← Назад",
+    "next": "Далее →",
+    "pageInfo": "Страница {{page}} из {{total}}",
+    "previousPage": "Предыдущая страница",
+    "nextPage": "Следующая страница"
+  },
+
+  "admin": {
+    "dashboard": "Dashboard",
+    "salesCatalog": "Каталог продаж",
+    "salesCatalogSubtitle": "Просмотр товаров с ценами, маржой и информацией о поставщиках",
+    "procurement": "Закупки",
+    "procurementSubtitle": "Привязка товаров поставщиков к внутренним продуктам для отслеживания цен и наличия.",
+    "viewCatalog": "Каталог",
+    "collapseSidebar": "Свернуть панель",
+    "expandSidebar": "Развернуть панель",
+    "welcome": "Привет, {{name}}",
+
+    "sales": {
+      "status": "Статус",
+      "allStatuses": "Все статусы",
+      "active": "Активный",
+      "draft": "Черновик",
+      "archived": "В архиве",
+      "marginRange": "Маржа (%)",
+      "min": "Мин",
+      "max": "Макс",
+      "clearFilters": "Сбросить",
+      "products": "товаров",
+      "productName": "Название товара",
+      "sellingPrice": "Цена продажи",
+      "costPrice": "Себестоимость",
+      "margin": "Маржа",
+      "noProductsFound": "Товары не найдены",
+      "tryAdjustingFilters": "Попробуйте изменить фильтры или критерии поиска."
+    },
+
+    "procurementPage": {
+      "unmatchedItems": "Непривязанные товары",
+      "productsWithLinks": "Товары с привязками",
+      "totalAssociations": "Всего связей",
+      "itemCount_one": "{{count}} товар",
+      "itemCount_few": "{{count}} товара",
+      "itemCount_many": "{{count}} товаров",
+      "selectToLinkMultiple": "Выберите товары для массовой привязки",
+      "itemName": "Название товара",
+      "lastSynced": "Последняя синхронизация",
+      "linkToProduct": "Привязать к товару",
+      "linkAriaLabel": "Привязать {{name}} к товару",
+      "selectAllItems": "Выбрать все",
+      "selectItem": "Выбрать {{name}}",
+      "itemsSelected_one": "{{count}} товар выбран",
+      "itemsSelected_few": "{{count}} товара выбрано",
+      "itemsSelected_many": "{{count}} товаров выбрано",
+      "linkSelectedToProduct": "Привязать выбранные к товару",
+      "allItemsMatched": "Все товары привязаны!",
+      "allItemsMatchedDesc": "Все товары поставщиков привязаны к продуктам.",
+      "matchedProducts": "Привязанные товары",
+      "noMatchedItems": "Нет привязанных товаров",
+      "noMatchedItemsDesc": "Привяжите товары поставщиков к продуктам, используя таблицу выше.",
+      "unlink": "Отвязать",
+      "unlinkAriaLabel": "Отвязать {{supplier}} от {{product}}",
+      "unlinkTitle": "Отвязать товар поставщика?",
+      "unlinkDescription": "Вы уверены, что хотите отвязать {{supplier}} от {{product}}? Это удалит связь между ними.",
+      "unlinking": "Отвязка...",
+      "linkToProductTitle": "Привязать к товару",
+      "linkMultipleTitle": "Привязать {{count}} товаров к продукту",
+      "linkingItems": "Привязка товара поставщика:",
+      "linkingItemsMultiple": "Привязка {{count}} товаров поставщика:",
+      "searchProductsPlaceholder": "Поиск товаров по названию или артикулу...",
+      "typeToSearch": "Введите минимум 2 символа для поиска",
+      "noProductsForQuery": "Товары не найдены по запросу \"{{query}}\""
+    }
+  }
+}

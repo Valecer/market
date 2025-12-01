@@ -13,6 +13,7 @@ import {
   useReducer,
   useEffect,
   useCallback,
+  useState,
   type ReactNode,
 } from 'react'
 import { apiClient, type User } from '@/lib/api-client'
@@ -67,6 +68,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialState)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Load auth state from localStorage on mount
   useEffect(() => {
@@ -83,6 +85,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.removeItem('user')
       }
     }
+    
+    // Done checking localStorage
+    setIsLoading(false)
   }, [])
 
   // Login function
@@ -129,6 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     isAuthenticated: state.isAuthenticated,
+    isLoading,
     user: state.user,
     userRole: state.user?.role ?? null,
   }

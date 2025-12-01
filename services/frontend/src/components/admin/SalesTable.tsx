@@ -7,9 +7,11 @@
  *
  * Design System: Tailwind CSS with clean, professional table styling
  * Accessibility: Semantic HTML table, keyboard navigation for sorting
+ * i18n: All text content is translatable
  */
 
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useReactTable,
   getCoreRowModel,
@@ -103,21 +105,21 @@ function formatMargin(margin: number | null): { text: string; className: string 
 /**
  * Get status badge styling
  */
-function getStatusBadge(status: AdminProduct['status']): { text: string; className: string } {
+function getStatusBadge(status: AdminProduct['status'], t: (key: string) => string): { text: string; className: string } {
   switch (status) {
     case 'active':
       return { 
-        text: 'Active', 
+        text: t('admin.sales.active'), 
         className: 'bg-success/10 text-success border-success/20' 
       }
     case 'draft':
       return { 
-        text: 'Draft', 
+        text: t('admin.sales.draft'), 
         className: 'bg-slate-100 text-slate-600 border-slate-200' 
       }
     case 'archived':
       return { 
-        text: 'Archived', 
+        text: t('admin.sales.archived'), 
         className: 'bg-slate-100 text-slate-400 border-slate-200' 
       }
     default:
@@ -133,6 +135,7 @@ function getStatusBadge(status: AdminProduct['status']): { text: string; classNa
 // =============================================================================
 
 export function SalesTable({ products, isLoading = false, onRowClick }: SalesTableProps) {
+  const { t } = useTranslation()
   const [sorting, setSorting] = useState<SortingState>([])
 
   // Define columns with sorting
@@ -140,12 +143,12 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
     () => [
       {
         accessorKey: 'name',
-        header: 'Product Name',
+        header: t('admin.sales.productName'),
         cell: ({ row }) => (
           <div className="flex flex-col">
             <span className="font-medium text-slate-900">{row.original.name}</span>
             <span className="text-xs text-slate-500 mt-0.5">
-              {row.original.supplier_items?.length || 0} supplier{row.original.supplier_items?.length !== 1 ? 's' : ''}
+              {t('product.supplierCount', { count: row.original.supplier_items?.length || 0 })}
             </span>
           </div>
         ),
@@ -153,7 +156,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
       },
       {
         accessorKey: 'internal_sku',
-        header: 'SKU',
+        header: t('common.sku'),
         cell: ({ row }) => (
           <span className="font-mono text-sm text-slate-600">
             {row.original.internal_sku}
@@ -163,7 +166,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
       },
       {
         id: 'selling_price',
-        header: 'Selling Price',
+        header: t('admin.sales.sellingPrice'),
         accessorFn: (row) => getLowestPrice(row),
         cell: ({ row }) => {
           const price = getLowestPrice(row.original)
@@ -177,7 +180,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
       },
       {
         id: 'cost_price',
-        header: 'Cost Price',
+        header: t('admin.sales.costPrice'),
         accessorFn: (row) => getLowestPrice(row),
         cell: ({ row }) => {
           const price = getLowestPrice(row.original)
@@ -191,7 +194,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
       },
       {
         accessorKey: 'margin_percentage',
-        header: 'Margin',
+        header: t('admin.sales.margin'),
         cell: ({ row }) => {
           const { text, className } = formatMargin(row.original.margin_percentage)
           return <span className={className}>{text}</span>
@@ -200,7 +203,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
       },
       {
         accessorKey: 'category_id',
-        header: 'Category',
+        header: t('common.category'),
         cell: ({ row }) => (
           <span className="text-slate-600 text-sm">
             {row.original.category_id || '—'}
@@ -210,9 +213,9 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.sales.status'),
         cell: ({ row }) => {
-          const { text, className } = getStatusBadge(row.original.status)
+          const { text, className } = getStatusBadge(row.original.status, t)
           return (
             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${className}`}>
               {text}
@@ -222,7 +225,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
         enableSorting: true,
       },
     ],
-    []
+    [t]
   )
 
   // Initialize TanStack Table
@@ -243,7 +246,7 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-slate-50">
               <tr>
-                {['Product Name', 'SKU', 'Selling Price', 'Cost Price', 'Margin', 'Category', 'Status'].map((header) => (
+                {[t('admin.sales.productName'), t('common.sku'), t('admin.sales.sellingPrice'), t('admin.sales.costPrice'), t('admin.sales.margin'), t('common.category'), t('admin.sales.status')].map((header) => (
                   <th key={header} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     {header}
                   </th>
@@ -276,8 +279,8 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-slate-900 mb-1">No products found</h3>
-        <p className="text-slate-500">Try adjusting your filters or search criteria.</p>
+        <h3 className="text-lg font-medium text-slate-900 mb-1">{t('admin.sales.noProductsFound')}</h3>
+        <p className="text-slate-500">{t('admin.sales.tryAdjustingFilters')}</p>
       </div>
     )
   }
@@ -350,4 +353,3 @@ export function SalesTable({ products, isLoading = false, onRowClick }: SalesTab
     </div>
   )
 }
-

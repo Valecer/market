@@ -7,11 +7,14 @@
  * Design System: Radix UI + Tailwind CSS
  * Inspired by: 21st.dev Dashboard with Collapsible Sidebar
  * Accessibility: Semantic HTML, keyboard navigation, ARIA labels
+ * i18n: All text content is translatable
  */
 
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 // Icons (inline SVGs to avoid additional dependencies)
 const icons = {
@@ -52,28 +55,28 @@ const icons = {
   ),
 }
 
-interface NavItem {
-  name: string
+interface NavItemConfig {
+  nameKey: string
   href: string
   icon: React.ReactNode
   roles: ('admin' | 'sales' | 'procurement')[]
 }
 
-const navItems: NavItem[] = [
+const navItemsConfig: NavItemConfig[] = [
   {
-    name: 'Dashboard',
+    nameKey: 'admin.dashboard',
     href: '/admin',
     icon: icons.dashboard,
     roles: ['admin', 'sales', 'procurement'],
   },
   {
-    name: 'Sales Catalog',
+    nameKey: 'admin.salesCatalog',
     href: '/admin/sales',
     icon: icons.sales,
     roles: ['admin', 'sales'],
   },
   {
-    name: 'Procurement',
+    nameKey: 'admin.procurement',
     href: '/admin/procurement',
     icon: icons.procurement,
     roles: ['admin', 'procurement'],
@@ -81,6 +84,7 @@ const navItems: NavItem[] = [
 ]
 
 export function AdminLayout() {
+  const { t } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { user, logout } = useAuth()
   const location = useLocation()
@@ -99,7 +103,7 @@ export function AdminLayout() {
   }
 
   // Filter nav items by user role
-  const filteredNavItems = navItems.filter(
+  const filteredNavItems = navItemsConfig.filter(
     (item) => user?.role && item.roles.includes(user.role)
   )
 
@@ -140,23 +144,26 @@ export function AdminLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          {filteredNavItems.map((item) => (
+          {filteredNavItems.map((item) => {
+            const name = t(item.nameKey)
+            return (
             <Link
-              key={item.name}
+                key={item.nameKey}
               to={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                 isActive(item.href)
                   ? 'bg-primary text-white'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
-              title={!sidebarOpen ? item.name : undefined}
+                title={!sidebarOpen ? name : undefined}
             >
               {item.icon}
               {sidebarOpen && (
-                <span className="font-medium">{item.name}</span>
+                  <span className="font-medium">{name}</span>
               )}
             </Link>
-          ))}
+            )
+          })}
 
           {/* Separator */}
           <div className="my-4 border-t border-slate-700" />
@@ -165,10 +172,10 @@ export function AdminLayout() {
           <Link
             to="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-            title={!sidebarOpen ? 'View Catalog' : undefined}
+            title={!sidebarOpen ? t('admin.viewCatalog') : undefined}
           >
             {icons.catalog}
-            {sidebarOpen && <span className="font-medium">View Catalog</span>}
+            {sidebarOpen && <span className="font-medium">{t('admin.viewCatalog')}</span>}
           </Link>
         </nav>
 
@@ -185,10 +192,10 @@ export function AdminLayout() {
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-            title={!sidebarOpen ? 'Logout' : undefined}
+            title={!sidebarOpen ? t('header.logout') : undefined}
           >
             {icons.logout}
-            {sidebarOpen && <span className="font-medium">Logout</span>}
+            {sidebarOpen && <span className="font-medium">{t('header.logout')}</span>}
           </button>
         </div>
 
@@ -196,7 +203,7 @@ export function AdminLayout() {
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white transition-colors shadow-md"
-          aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-label={sidebarOpen ? t('admin.collapseSidebar') : t('admin.expandSidebar')}
         >
           <div
             className={`transition-transform duration-300 ${
@@ -218,12 +225,13 @@ export function AdminLayout() {
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between bg-white border-b border-border px-6 shadow-sm">
           <div>
             <h1 className="text-lg font-semibold text-slate-900">
-              Admin Dashboard
+              {t('admin.dashboard')}
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <span className="text-sm text-slate-500">
-              Welcome, {user?.username}
+              {t('admin.welcome', { name: user?.username })}
             </span>
           </div>
         </header>
@@ -236,4 +244,3 @@ export function AdminLayout() {
     </div>
   )
 }
-

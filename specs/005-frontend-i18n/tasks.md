@@ -47,10 +47,10 @@
 
 ### Tasks
 
-- [ ] T001 Install i18next packages via `bun add i18next react-i18next i18next-http-backend i18next-browser-languagedetector` in `services/frontend/`
-- [ ] T002 [P] Create i18n TypeScript types in `services/frontend/src/types/i18n.ts`
-- [ ] T003 Create i18n configuration file in `services/frontend/src/i18n.ts`
-- [ ] T004 Update app entry to import i18n and wrap with Suspense in `services/frontend/src/main.tsx`
+- [X] T001 Install i18next packages via `bun add i18next react-i18next i18next-http-backend i18next-browser-languagedetector` in `services/frontend/`
+- [X] T002 [P] Create i18n TypeScript types in `services/frontend/src/types/i18n.ts`
+- [X] T003 Create i18n configuration file in `services/frontend/src/i18n.ts`
+- [X] T004 Update app entry to import i18n and wrap with Suspense in `services/frontend/src/main.tsx`
 
 ---
 
@@ -64,10 +64,10 @@
 
 ### Tasks
 
-- [ ] T005 Create directory structure for locales via `mkdir -p public/locales/en public/locales/ru` in `services/frontend/`
-- [ ] T006 [P] Create English translation file with all keys in `services/frontend/public/locales/en/translation.json`
-- [ ] T007 [P] Create Russian translation file with all keys in `services/frontend/public/locales/ru/translation.json`
-- [ ] T008 Verify translations load correctly by checking browser console for i18next debug messages
+- [X] T005 Create directory structure for locales via `mkdir -p public/locales/en public/locales/ru` in `services/frontend/`
+- [X] T006 [P] Create English translation file with all keys in `services/frontend/public/locales/en/translation.json`
+- [X] T007 [P] Create Russian translation file with all keys in `services/frontend/public/locales/ru/translation.json`
+- [X] T008 Verify translations load correctly by checking browser console for i18next debug messages
 
 ---
 
@@ -80,19 +80,19 @@
 **User Story:** As a user viewing the catalog, I want to manually switch between English and Russian so that I can use my preferred language regardless of browser settings.
 
 **Acceptance Criteria:**
-- [ ] Language switcher visible in header on all pages
-- [ ] Switcher indicates currently active language
-- [ ] Click changes language instantly (no page reload)
-- [ ] All visible text updates to selected language
+- [X] Language switcher visible in header on all pages
+- [X] Switcher indicates currently active language
+- [X] Click changes language instantly (no page reload)
+- [X] All visible text updates to selected language
 
 **Independent Test:** After Phase 3, clicking EN/RU buttons in header immediately changes hardcoded test text.
 
 ### Tasks
 
-- [ ] T009 [US-3] Create LanguageSwitcher component with accessible button group in `services/frontend/src/components/shared/LanguageSwitcher.tsx`
-- [ ] T010 [US-3] Export LanguageSwitcher from barrel file in `services/frontend/src/components/shared/index.ts`
-- [ ] T011 [US-3] Add aria-label, aria-pressed, and role="group" for accessibility in `services/frontend/src/components/shared/LanguageSwitcher.tsx`
-- [ ] T012 [US-3] Import and place LanguageSwitcher in header right section in `services/frontend/src/components/shared/PublicLayout.tsx`
+- [X] T009 [US-3] Create LanguageSwitcher component with accessible button group in `services/frontend/src/components/shared/LanguageSwitcher.tsx`
+- [X] T010 [US-3] Export LanguageSwitcher from barrel file in `services/frontend/src/components/shared/index.ts`
+- [X] T011 [US-3] Add aria-label, aria-pressed, and role="group" for accessibility in `services/frontend/src/components/shared/LanguageSwitcher.tsx`
+- [X] T012 [US-3] Import and place LanguageSwitcher in header right section in `services/frontend/src/components/shared/PublicLayout.tsx`
 
 ---
 
@@ -105,21 +105,21 @@
 **Functional Requirement:** FR-4 (Priority: Critical) - All static text in the global application shell must be translated.
 
 **Acceptance Criteria:**
-- [ ] Header navigation items display in selected language
-- [ ] User menu items (if logged in) display in selected language
-- [ ] Footer content (copyright, links) displays in selected language
-- [ ] No untranslated strings visible in shell components
+- [X] Header navigation items display in selected language
+- [X] User menu items (if logged in) display in selected language
+- [X] Footer content (copyright, links) displays in selected language
+- [X] No untranslated strings visible in shell components
 
 **Independent Test:** After Phase 4, switching language updates Header, Footer, and error states.
 
 ### Tasks
 
-- [ ] T013 [P] Add useTranslation hook and translate header navigation (Catalog, Cart, Admin, Login, Logout) in `services/frontend/src/components/shared/PublicLayout.tsx`
-- [ ] T014 [P] Translate footer content (copyright with year interpolation, Privacy, Terms, Contact) in `services/frontend/src/components/shared/PublicLayout.tsx`
-- [ ] T015 [P] Translate mobile menu aria-label in `services/frontend/src/components/shared/PublicLayout.tsx`
-- [ ] T016 [P] Add useTranslation hook and translate error messages and retry button in `services/frontend/src/components/shared/ErrorState.tsx`
-- [ ] T017 [P] Translate EmptyState default title and message in `services/frontend/src/components/shared/ErrorState.tsx`
-- [ ] T018 [P] Translate loading aria-labels and sr-only text in `services/frontend/src/components/shared/LoadingSkeleton.tsx`
+- [X] T013 [P] Add useTranslation hook and translate header navigation (Catalog, Cart, Admin, Login, Logout) in `services/frontend/src/components/shared/PublicLayout.tsx`
+- [X] T014 [P] Translate footer content (copyright with year interpolation, Privacy, Terms, Contact) in `services/frontend/src/components/shared/PublicLayout.tsx`
+- [X] T015 [P] Translate mobile menu aria-label in `services/frontend/src/components/shared/PublicLayout.tsx`
+- [X] T016 [P] Add useTranslation hook and translate error messages and retry button in `services/frontend/src/components/shared/ErrorState.tsx`
+- [X] T017 [P] Translate EmptyState default title and message in `services/frontend/src/components/shared/ErrorState.tsx`
+- [X] T018 [P] Translate loading aria-labels and sr-only text in `services/frontend/src/components/shared/LoadingSkeleton.tsx`
 
 ---
 
@@ -132,22 +132,22 @@
 **Functional Requirement:** FR-5 (Priority: High) - All static text on the public catalog page must be translated.
 
 **Acceptance Criteria:**
-- [ ] Page headings and titles display in selected language
-- [ ] Filter labels and placeholders display in selected language
-- [ ] Pagination controls display in selected language
-- [ ] Empty state messages display in selected language
-- [ ] "Add to Cart" and similar action buttons display in selected language
+- [X] Page headings and titles display in selected language
+- [X] Filter labels and placeholders display in selected language
+- [X] Pagination controls display in selected language
+- [X] Empty state messages display in selected language
+- [X] "Add to Cart" and similar action buttons display in selected language
 
 **Independent Test:** After Phase 5, entire catalog page text changes when switching language.
 
 ### Tasks
 
-- [ ] T019 [P] Add useTranslation hook and translate page title, subtitle, and updating indicator in `services/frontend/src/pages/CatalogPage.tsx`
-- [ ] T020 [P] Translate search placeholder, category dropdown label, price range labels in `services/frontend/src/components/catalog/FilterBar.tsx`
-- [ ] T021 [P] Translate "Clear" button and filter tag labels in `services/frontend/src/components/catalog/FilterBar.tsx`
-- [ ] T022 [P] Translate "Add" button and supplier count with pluralization in `services/frontend/src/components/catalog/ProductCard.tsx`
-- [ ] T023 [P] Translate pagination info with interpolation (Showing X-Y of Z) in `services/frontend/src/components/catalog/ProductGrid.tsx`
-- [ ] T024 [P] Translate cart icon aria-label with item count pluralization in `services/frontend/src/components/cart/CartIcon.tsx`
+- [X] T019 [P] Add useTranslation hook and translate page title, subtitle, and updating indicator in `services/frontend/src/pages/CatalogPage.tsx`
+- [X] T020 [P] Translate search placeholder, category dropdown label, price range labels in `services/frontend/src/components/catalog/FilterBar.tsx`
+- [X] T021 [P] Translate "Clear" button and filter tag labels in `services/frontend/src/components/catalog/FilterBar.tsx`
+- [X] T022 [P] Translate "Add" button and supplier count with pluralization in `services/frontend/src/components/catalog/ProductCard.tsx`
+- [X] T023 [P] Translate pagination info with interpolation (Showing X-Y of Z) in `services/frontend/src/components/catalog/ProductGrid.tsx`
+- [X] T024 [P] Translate cart icon aria-label with item count pluralization in `services/frontend/src/components/cart/CartIcon.tsx`
 
 ---
 
@@ -161,10 +161,10 @@
 
 ### Tasks
 
-- [ ] T025 Verify language detection works for Russian browser (test with browser DevTools → Sensors → Locale) - validates US-1, US-2
-- [ ] T026 Verify language preference persists after browser close/reopen (check localStorage for i18nextLng) - validates US-4
-- [ ] T027 Verify keyboard navigation of LanguageSwitcher (Tab, Enter/Space) and screen reader announcements - validates US-5
-- [ ] T028 Test Russian text layout in all components and fix any overflow/truncation issues
+- [X] T025 Verify language detection works for Russian browser (test with browser DevTools → Sensors → Locale) - validates US-1, US-2
+- [X] T026 Verify language preference persists after browser close/reopen (check localStorage for i18nextLng) - validates US-4
+- [X] T027 Verify keyboard navigation of LanguageSwitcher (Tab, Enter/Space) and screen reader announcements - validates US-5
+- [X] T028 Test Russian text layout in all components and fix any overflow/truncation issues
 
 ---
 
@@ -270,24 +270,24 @@ Delivers:
 
 ### New Files (5)
 
-- [ ] `services/frontend/src/types/i18n.ts`
-- [ ] `services/frontend/src/i18n.ts`
-- [ ] `services/frontend/src/components/shared/LanguageSwitcher.tsx`
-- [ ] `services/frontend/public/locales/en/translation.json`
-- [ ] `services/frontend/public/locales/ru/translation.json`
+- [X] `services/frontend/src/types/i18n.ts`
+- [X] `services/frontend/src/i18n.ts`
+- [X] `services/frontend/src/components/shared/LanguageSwitcher.tsx`
+- [X] `services/frontend/public/locales/en/translation.json`
+- [X] `services/frontend/public/locales/ru/translation.json`
 
 ### Modified Files (10)
 
-- [ ] `services/frontend/src/main.tsx`
-- [ ] `services/frontend/src/components/shared/index.ts`
-- [ ] `services/frontend/src/components/shared/PublicLayout.tsx`
-- [ ] `services/frontend/src/components/shared/ErrorState.tsx`
-- [ ] `services/frontend/src/components/shared/LoadingSkeleton.tsx`
-- [ ] `services/frontend/src/pages/CatalogPage.tsx`
-- [ ] `services/frontend/src/components/catalog/FilterBar.tsx`
-- [ ] `services/frontend/src/components/catalog/ProductCard.tsx`
-- [ ] `services/frontend/src/components/catalog/ProductGrid.tsx`
-- [ ] `services/frontend/src/components/cart/CartIcon.tsx`
+- [X] `services/frontend/src/main.tsx`
+- [X] `services/frontend/src/components/shared/index.ts`
+- [X] `services/frontend/src/components/shared/PublicLayout.tsx`
+- [X] `services/frontend/src/components/shared/ErrorState.tsx`
+- [X] `services/frontend/src/components/shared/LoadingSkeleton.tsx`
+- [X] `services/frontend/src/pages/CatalogPage.tsx`
+- [X] `services/frontend/src/components/catalog/FilterBar.tsx`
+- [X] `services/frontend/src/components/catalog/ProductCard.tsx`
+- [X] `services/frontend/src/components/catalog/ProductGrid.tsx`
+- [X] `services/frontend/src/components/cart/CartIcon.tsx`
 
 ---
 

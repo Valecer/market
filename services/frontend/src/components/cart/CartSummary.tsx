@@ -3,9 +3,12 @@
  *
  * Order summary with subtotal, tax, shipping, and total calculations.
  * Includes proceed to checkout button.
+ * 
+ * i18n: All text content is translatable
  */
 
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useCart } from '@/hooks/useCart'
 import { calculateCartTotals, formatCurrency } from '@/types/cart'
 
@@ -14,6 +17,7 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({ showCheckoutButton = true }: CartSummaryProps) {
+  const { t } = useTranslation()
   const { cart, itemCount } = useCart()
   const { subtotal, tax, shipping, total } = calculateCartTotals(cart.items)
 
@@ -22,13 +26,13 @@ export function CartSummary({ showCheckoutButton = true }: CartSummaryProps) {
   return (
     <div className="bg-white rounded-lg border border-border shadow-sm p-6">
       <h2 className="text-lg font-semibold text-slate-900 mb-4">
-        Order Summary
+        {t('cart.orderSummary')}
       </h2>
 
       <div className="space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-slate-600">
-            Subtotal ({itemCount} {itemCount === 1 ? 'item' : 'items'})
+            {t('cart.subtotal')} ({t('cart.itemCount', { count: itemCount })})
           </span>
           <span className="font-medium text-slate-900">
             {formatCurrency(subtotal)}
@@ -36,14 +40,14 @@ export function CartSummary({ showCheckoutButton = true }: CartSummaryProps) {
         </div>
 
         <div className="flex justify-between">
-          <span className="text-slate-600">Shipping</span>
+          <span className="text-slate-600">{t('cart.shipping')}</span>
           <span className="font-medium text-slate-900">
-            {shipping > 0 ? formatCurrency(shipping) : 'Free'}
+            {shipping > 0 ? formatCurrency(shipping) : t('common.free')}
           </span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-slate-600">Tax (8%)</span>
+          <span className="text-slate-600">{t('cart.tax')}</span>
           <span className="font-medium text-slate-900">
             {formatCurrency(tax)}
           </span>
@@ -52,7 +56,7 @@ export function CartSummary({ showCheckoutButton = true }: CartSummaryProps) {
         <hr className="border-border my-3" />
 
         <div className="flex justify-between text-base font-semibold">
-          <span className="text-slate-900">Total</span>
+          <span className="text-slate-900">{t('cart.total')}</span>
           <span className="text-slate-900">{formatCurrency(total)}</span>
         </div>
       </div>
@@ -69,18 +73,17 @@ export function CartSummary({ showCheckoutButton = true }: CartSummaryProps) {
             onClick={(e) => isEmpty && e.preventDefault()}
             aria-disabled={isEmpty}
           >
-            Proceed to Checkout
+            {t('cart.checkout')}
           </Link>
 
           <Link
             to="/"
             className="block w-full py-3 px-4 text-center font-medium text-slate-600 border border-border rounded-lg hover:bg-slate-50 transition-colors"
           >
-            Continue Shopping
+            {t('cart.continueShopping')}
           </Link>
         </div>
       )}
     </div>
   )
 }
-

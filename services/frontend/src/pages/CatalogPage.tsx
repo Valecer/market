@@ -9,10 +9,13 @@
  * - URL-based filter state (shareable links)
  * - Pagination
  * - Responsive grid layout
+ * 
+ * i18n: All text content is translatable
  */
 
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useCatalog } from '@/hooks/useCatalog'
 import { useCategories } from '@/hooks/useCategories'
 import { useCart } from '@/hooks/useCart'
@@ -57,6 +60,7 @@ function filtersToURLParams(filters: CatalogFilters): Record<string, string> {
  * Catalog page component
  */
 export function CatalogPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { addItem } = useCart()
 
@@ -127,10 +131,10 @@ export function CatalogPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
-                Product Catalog
+                {t('catalog.title')}
               </h1>
               <p className="mt-1 text-slate-500">
-                Browse our selection of products from multiple suppliers
+                {t('catalog.subtitle')}
               </p>
             </div>
 
@@ -156,7 +160,7 @@ export function CatalogPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Updating...
+                {t('catalog.updating')}
               </div>
             )}
           </div>
@@ -216,4 +220,3 @@ export function CatalogPage() {
     </div>
   )
 }
-

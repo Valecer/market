@@ -5,9 +5,11 @@
  * Features debounced search with fuzzy matching results.
  *
  * Uses Radix UI Dialog for accessible modal behavior.
+ * i18n: All text content is translatable
  */
 
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, Flex, Text, TextField, Button } from '@radix-ui/themes'
 import { useProductSearch, type ProductSearchResult } from '@/hooks/useProductSearch'
 import type { UnmatchedSupplierItem } from '@/hooks/useUnmatchedItems'
@@ -59,21 +61,21 @@ interface ProductSearchModalProps {
 /**
  * Get status badge styling
  */
-function getStatusBadge(status: ProductSearchResult['status']): { text: string; className: string } {
+function getStatusBadge(status: ProductSearchResult['status'], t: (key: string) => string): { text: string; className: string } {
   switch (status) {
     case 'active':
       return { 
-        text: 'Active', 
+        text: t('admin.sales.active'), 
         className: 'bg-emerald-50 text-emerald-700' 
       }
     case 'draft':
       return { 
-        text: 'Draft', 
+        text: t('admin.sales.draft'), 
         className: 'bg-slate-100 text-slate-600' 
       }
     case 'archived':
       return { 
-        text: 'Archived', 
+        text: t('admin.sales.archived'), 
         className: 'bg-slate-100 text-slate-400' 
       }
     default:
@@ -95,6 +97,7 @@ export function ProductSearchModal({
   onSelectProduct,
   isMatching = false,
 }: ProductSearchModalProps) {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
   const { data: products, isSearching, searchQuery: debouncedQuery } = useProductSearch(searchQuery)
 
@@ -124,19 +127,23 @@ export function ProductSearchModal({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Content maxWidth="600px" aria-describedby={undefined}>
         <Dialog.Title>
-          {isMultiple ? `Link ${itemsArray.length} Items to Product` : 'Link to Product'}
+          {isMultiple 
+            ? t('admin.procurementPage.linkMultipleTitle', { count: itemsArray.length }) 
+            : t('admin.procurementPage.linkToProductTitle')}
         </Dialog.Title>
         
         {itemsArray.length > 0 && (
           <div className="mt-2 mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
             <Text size="1" className="text-slate-500 block mb-1">
-              Linking {isMultiple ? `${itemsArray.length} supplier items` : 'supplier item'}:
+              {isMultiple 
+                ? t('admin.procurementPage.linkingItemsMultiple', { count: itemsArray.length })
+                : t('admin.procurementPage.linkingItems')}
             </Text>
             {isMultiple ? (
               <div className="max-h-32 overflow-y-auto mt-2 space-y-2">
                 {itemsArray.map((item) => (
                   <div key={item.id} className="flex items-center gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                     <span className="font-medium text-slate-900 truncate">{item.name}</span>
                     <span className="text-slate-400">•</span>
                     <span className="text-slate-500 text-xs font-mono truncate">{item.supplier_sku}</span>
@@ -161,7 +168,7 @@ export function ProductSearchModal({
           </div>
           <TextField.Root
             size="2"
-            placeholder="Search products by name or SKU..."
+            placeholder={t('admin.procurementPage.searchProductsPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -176,7 +183,7 @@ export function ProductSearchModal({
             <div className="p-8 text-center text-slate-500">
               <SearchIcon />
               <Text size="2" className="mt-2 block">
-                Type at least 2 characters to search
+                {t('admin.procurementPage.typeToSearch')}
               </Text>
             </div>
           )}
@@ -186,7 +193,7 @@ export function ProductSearchModal({
             <div className="p-8 text-center text-slate-500">
               <LoadingIcon />
               <Text size="2" className="mt-2 block">
-                Searching...
+                {t('common.searching')}
               </Text>
             </div>
           )}
@@ -195,7 +202,7 @@ export function ProductSearchModal({
           {debouncedQuery && !isSearching && products && products.length === 0 && (
             <div className="p-8 text-center text-slate-500">
               <Text size="2">
-                No products found for "{debouncedQuery}"
+                {t('admin.procurementPage.noProductsForQuery', { query: debouncedQuery })}
               </Text>
             </div>
           )}
@@ -204,7 +211,7 @@ export function ProductSearchModal({
           {!isSearching && products && products.length > 0 && (
             <ul className="divide-y divide-border" role="listbox">
               {products.map((product) => {
-                const statusBadge = getStatusBadge(product.status)
+                const statusBadge = getStatusBadge(product.status, t)
                 return (
                   <li key={product.id}>
                     <button
@@ -216,7 +223,7 @@ export function ProductSearchModal({
                       aria-selected="false"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
+                        <div className="shrink-0 mt-0.5">
                           <ProductIcon />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -232,10 +239,10 @@ export function ProductSearchModal({
                             {product.internal_sku}
                           </Text>
                           <Text size="1" className="text-slate-400 mt-1 block">
-                            {product.supplier_count} supplier{product.supplier_count !== 1 ? 's' : ''} linked
+                            {t('product.suppliersLinked', { count: product.supplier_count })}
                           </Text>
                         </div>
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
@@ -253,7 +260,7 @@ export function ProductSearchModal({
         <Flex gap="3" mt="4" justify="end">
           <Dialog.Close>
             <Button variant="soft" color="gray" disabled={isMatching}>
-              Cancel
+              {t('common.cancel')}
             </Button>
           </Dialog.Close>
         </Flex>
@@ -261,4 +268,3 @@ export function ProductSearchModal({
     </Dialog.Root>
   )
 }
-

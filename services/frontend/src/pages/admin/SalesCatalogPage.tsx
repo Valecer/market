@@ -12,10 +12,12 @@
  *
  * Route: /admin/sales
  * Roles: sales, admin
+ * i18n: All text content is translatable
  */
 
 import { useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAdminProducts } from '@/hooks/useAdminProducts'
 import { SalesTable } from '@/components/admin/SalesTable'
 import { SalesFilterBar } from '@/components/admin/SalesFilterBar'
@@ -68,6 +70,7 @@ function filtersToParams(filters: AdminProductFilters): URLSearchParams {
 // =============================================================================
 
 export function SalesCatalogPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   
@@ -98,7 +101,7 @@ export function SalesCatalogPage() {
       <div className="space-y-4">
         <PageHeader />
         <ErrorState
-          message={error.message || 'Failed to load products'}
+          message={error.message || t('error.failedToLoad')}
           onRetry={() => refetch()}
         />
       </div>
@@ -146,12 +149,13 @@ export function SalesCatalogPage() {
 // =============================================================================
 
 function PageHeader() {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Sales Catalog</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('admin.salesCatalog')}</h1>
         <p className="text-slate-500 mt-1">
-          View products with pricing, margins, and supplier information
+          {t('admin.salesCatalogSubtitle')}
         </p>
       </div>
     </div>
@@ -165,6 +169,7 @@ interface PaginationProps {
 }
 
 function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  const { t } = useTranslation()
   const canGoPrev = currentPage > 1
   const canGoNext = currentPage < totalPages
 
@@ -198,7 +203,7 @@ function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) 
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!canGoPrev}
           className="p-2 rounded-md border border-border text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          aria-label="Previous page"
+          aria-label={t('pagination.previousPage')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -230,7 +235,7 @@ function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) 
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!canGoNext}
           className="p-2 rounded-md border border-border text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          aria-label="Next page"
+          aria-label={t('pagination.nextPage')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -239,9 +244,8 @@ function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) 
       </div>
 
       <span className="text-sm text-slate-500">
-        Page {currentPage} of {totalPages}
+        {t('pagination.pageInfo', { page: currentPage, total: totalPages })}
       </span>
     </nav>
   )
 }
-
