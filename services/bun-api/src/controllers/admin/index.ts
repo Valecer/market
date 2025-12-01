@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { adminService } from '../../services/admin.service'
+import { ingestionService } from '../../services/ingestion.service'
 import {
   AdminProductsResponseSchema,
   MatchRequestSchema,
@@ -10,6 +11,11 @@ import {
   SyncResponseSchema,
   UnmatchedResponseSchema,
 } from '../../types/admin.types'
+import {
+  TriggerSyncResponseSchema,
+  IngestionStatusResponseSchema,
+  SyncAlreadyRunningResponseSchema,
+} from '../../types/ingestion.types'
 import { createErrorResponse } from '../../types/errors'
 import { authMiddleware } from '../../middleware/auth'
 import { rateLimiter } from '../../middleware/rate-limiter'
@@ -329,7 +335,125 @@ export const adminController = (app: Elysia) =>
           },
         }
       )
-      // POST /sync - admin only with rate limiting
+      // =============================================================================
+      // Ingestion Control Panel Endpoints (Phase 6)
+      // =============================================================================
+      // GET /ingestion/status - Get current ingestion pipeline status
+      .get(
+        '/ingestion/status',
+        async ({ query, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for ingestion status')
+          }
+
+          const logLimit = parseNum(query.log_limit) || 50
+          if (logLimit < 1 || logLimit > 100) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'log_limit must be between 1 and 100')
+          }
+
+          return ingestionService.getStatus(logLimit)
+        },
+        {
+          query: t.Object({
+            log_limit: t.Optional(t.Any()),
+          }),
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'Invalid query parameters')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'REDIS_UNAVAILABLE') {
+              set.status = 503
+              return createErrorResponse('REDIS_UNAVAILABLE', 'Redis service is temporarily unavailable')
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: IngestionStatusResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            500: ErrorSchemas.internal,
+            503: ErrorSchemas.redisUnavailable,
+          },
+          detail: {
+            tags: ['admin', 'ingestion'],
+            summary: 'Get current ingestion pipeline status',
+            description:
+              'Returns current sync state, progress, timestamps, supplier list, and recent logs. Designed for polling at 3-5 second intervals. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // POST /ingestion/sync - Trigger master sync pipeline (admin only, rate limited)
+      .use(rateLimiter({ limit: 10, windowSeconds: 60 }))
+      .post(
+        '/ingestion/sync',
+        async ({ set, user, checkRateLimit }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for sync operations')
+          }
+
+          const rateLimitError = checkRateLimit()
+          if (rateLimitError) return rateLimitError
+
+          set.status = 202
+          return ingestionService.triggerSync()
+        },
+        {
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'Invalid request')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+
+            if (customCode === 'SYNC_IN_PROGRESS') {
+              set.status = 409
+              return {
+                error: {
+                  code: 'SYNC_IN_PROGRESS' as const,
+                  message: message,
+                  current_task_id: (error as any)?.current_task_id || 'unknown',
+                },
+              }
+            }
+            if (customCode === 'REDIS_UNAVAILABLE') {
+              set.status = 503
+              return createErrorResponse('REDIS_UNAVAILABLE', 'Queue service is temporarily unavailable')
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            202: TriggerSyncResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            409: SyncAlreadyRunningResponseSchema,
+            429: ErrorSchemas.rateLimited,
+            500: ErrorSchemas.internal,
+            503: ErrorSchemas.redisUnavailable,
+          },
+          detail: {
+            tags: ['admin', 'ingestion'],
+            summary: 'Trigger master sync pipeline',
+            description:
+              'Reads Master Google Sheet, syncs suppliers, and enqueues parsing tasks for all active suppliers. Returns immediately with task_id. Rate limited to 10 requests per minute. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // POST /sync - admin only with rate limiting (legacy single-supplier sync)
       .use(rateLimiter({ limit: 10, windowSeconds: 60 }))
       .post(
         '/sync',

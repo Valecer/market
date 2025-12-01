@@ -3,6 +3,21 @@ from src.models.parsed_item import ParsedSupplierItem
 from src.models.queue_message import ParseTaskMessage
 from src.models.google_sheets_config import GoogleSheetsConfig
 
+# Master sync pipeline models
+from src.models.master_sheet_config import (
+    SourceFormat,
+    SupplierConfigRow,
+    MasterSheetConfig,
+    MasterSyncResult,
+)
+from src.models.sync_messages import (
+    SyncState,
+    TriggerMasterSyncMessage,
+    SyncStatusMessage,
+    SyncProgressUpdate,
+    SyncCompletedMessage,
+)
+
 # Matching pipeline models
 from src.models.matching import (
     MatchStatusEnum,
@@ -32,6 +47,16 @@ __all__ = [
     "ParsedSupplierItem",
     "ParseTaskMessage",
     "GoogleSheetsConfig",
+    # Master sync models
+    "SourceFormat",
+    "SupplierConfigRow",
+    "MasterSheetConfig",
+    "MasterSyncResult",
+    "SyncState",
+    "TriggerMasterSyncMessage",
+    "SyncStatusMessage",
+    "SyncProgressUpdate",
+    "SyncCompletedMessage",
     # Matching models
     "MatchStatusEnum",
     "MatchCandidate",

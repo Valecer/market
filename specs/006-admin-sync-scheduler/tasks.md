@@ -40,28 +40,28 @@ This task list implements the Admin Control Panel & Master Sync Scheduler featur
 
 ### Pydantic Models
 
-- [ ] T003 [P] Create Pydantic models for Master Sheet config in services/python-ingestion/src/models/master_sheet_config.py
-- [ ] T004 [P] Create Pydantic models for sync messages in services/python-ingestion/src/models/sync_messages.py
+- [X] T003 [P] Create Pydantic models for Master Sheet config in services/python-ingestion/src/models/master_sheet_config.py
+- [X] T004 [P] Create Pydantic models for sync messages in services/python-ingestion/src/models/sync_messages.py
 
 ### MasterSheetIngestor Service
 
-- [ ] T005 Create MasterSheetIngestor class with ingest() method in services/python-ingestion/src/services/master_sheet_ingestor.py
-- [ ] T006 Implement sync_suppliers() method for database upsert in services/python-ingestion/src/services/master_sheet_ingestor.py
-- [ ] T007 Implement column mapping and row parsing logic in services/python-ingestion/src/services/master_sheet_ingestor.py
+- [X] T005 Create MasterSheetIngestor class with ingest() method in services/python-ingestion/src/services/master_sheet_ingestor.py
+- [X] T006 Implement sync_suppliers() method for database upsert in services/python-ingestion/src/services/master_sheet_ingestor.py
+- [X] T007 Implement column mapping and row parsing logic in services/python-ingestion/src/services/master_sheet_ingestor.py
 
 ### Redis State Management
 
-- [ ] T008 Create sync state helper functions in services/python-ingestion/src/services/sync_state.py
-- [ ] T009 Implement acquire_sync_lock() with Redis SET NX in services/python-ingestion/src/services/sync_state.py
-- [ ] T010 Implement release_sync_lock() and get_sync_status() in services/python-ingestion/src/services/sync_state.py
-- [ ] T011 Implement update_sync_progress() for UI feedback in services/python-ingestion/src/services/sync_state.py
+- [X] T008 Create sync state helper functions in services/python-ingestion/src/services/sync_state.py
+- [X] T009 Implement acquire_sync_lock() with Redis SET NX in services/python-ingestion/src/services/sync_state.py
+- [X] T010 Implement release_sync_lock() and get_sync_status() in services/python-ingestion/src/services/sync_state.py
+- [X] T011 Implement update_sync_progress() for UI feedback in services/python-ingestion/src/services/sync_state.py
 
 ### Sync Tasks
 
-- [ ] T012 Create trigger_master_sync_task arq function in services/python-ingestion/src/tasks/sync_tasks.py
-- [ ] T013 Implement sync pipeline orchestration: lock → parse → upsert → enqueue in services/python-ingestion/src/tasks/sync_tasks.py
-- [ ] T014 Add cascading parse_task enqueue for active suppliers in services/python-ingestion/src/tasks/sync_tasks.py
-- [ ] T015 Register trigger_master_sync_task in WorkerSettings.functions in services/python-ingestion/src/worker.py
+- [X] T012 Create trigger_master_sync_task arq function in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T013 Implement sync pipeline orchestration: lock → parse → upsert → enqueue in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T014 Add cascading parse_task enqueue for active suppliers in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T015 Register trigger_master_sync_task in WorkerSettings.functions in services/python-ingestion/src/worker.py
 
 ---
 
@@ -80,49 +80,49 @@ This task list implements the Admin Control Panel & Master Sync Scheduler featur
 
 ### Bun API - Types & Schemas
 
-- [ ] T016 [P] [US1] Create TypeBox schemas for ingestion types in services/bun-api/src/types/ingestion.types.ts
-- [ ] T017 [P] [US1] Export ingestion types from services/bun-api/src/types/ingestion.types.ts
+- [X] T016 [P] [US1] Create TypeBox schemas for ingestion types in services/bun-api/src/types/ingestion.types.ts
+- [X] T017 [P] [US1] Export ingestion types from services/bun-api/src/types/ingestion.types.ts
 
 ### Bun API - Service Layer
 
-- [ ] T018 [US1] Create IngestionService class skeleton in services/bun-api/src/services/ingestion.service.ts
-- [ ] T019 [US1] Implement triggerSync() method with Redis lock check in services/bun-api/src/services/ingestion.service.ts
-- [ ] T020 [US1] Implement getStatus() method for polling in services/bun-api/src/services/ingestion.service.ts
+- [X] T018 [US1] Create IngestionService class skeleton in services/bun-api/src/services/ingestion.service.ts
+- [X] T019 [US1] Implement triggerSync() method with Redis lock check in services/bun-api/src/services/ingestion.service.ts
+- [X] T020 [US1] Implement getStatus() method for polling in services/bun-api/src/services/ingestion.service.ts
 
 ### Bun API - Controller
 
-- [ ] T021 [US1] Add POST /api/v1/admin/ingestion/sync endpoint in services/bun-api/src/controllers/admin/index.ts
-- [ ] T022 [US1] Add GET /api/v1/admin/ingestion/status endpoint in services/bun-api/src/controllers/admin/index.ts
-- [ ] T023 [US1] Add admin role guard and rate limiting to sync endpoint in services/bun-api/src/controllers/admin/index.ts
+- [X] T021 [US1] Add POST /api/v1/admin/ingestion/sync endpoint in services/bun-api/src/controllers/admin/index.ts
+- [X] T022 [US1] Add GET /api/v1/admin/ingestion/status endpoint in services/bun-api/src/controllers/admin/index.ts
+- [X] T023 [US1] Add admin role guard and rate limiting to sync endpoint in services/bun-api/src/controllers/admin/index.ts
 
 ### Frontend - Types
 
-- [ ] T024 [P] [US1] Create ingestion types in services/frontend/src/types/ingestion.ts
+- [X] T024 [P] [US1] Create ingestion types in services/frontend/src/types/ingestion.ts
 
 ### Frontend - Hooks
 
-- [ ] T025 [US1] Create useIngestionStatus hook with 3s polling in services/frontend/src/hooks/useIngestionStatus.ts
-- [ ] T026 [US1] Create useTriggerSync mutation hook in services/frontend/src/hooks/useTriggerSync.ts
-- [ ] T027 [US1] Export hooks from services/frontend/src/hooks/index.ts
+- [X] T025 [US1] Create useIngestionStatus hook with 3s polling in services/frontend/src/hooks/useIngestionStatus.ts
+- [X] T026 [US1] Create useTriggerSync mutation hook in services/frontend/src/hooks/useTriggerSync.ts
+- [X] T027 [US1] Export hooks from services/frontend/src/hooks/index.ts
 
 ### Frontend - Components
 
-- [ ] T028 [US1] Create SyncControlCard component skeleton in services/frontend/src/components/admin/SyncControlCard.tsx
-- [ ] T029 [US1] Implement sync state display (idle/syncing_master/processing_suppliers) in services/frontend/src/components/admin/SyncControlCard.tsx
-- [ ] T030 [US1] Implement "Sync Now" button with loading state in services/frontend/src/components/admin/SyncControlCard.tsx
-- [ ] T031 [US1] Add progress display for processing_suppliers state in services/frontend/src/components/admin/SyncControlCard.tsx
-- [ ] T032 [US1] Export SyncControlCard from services/frontend/src/components/admin/index.ts
+- [X] T028 [US1] Create SyncControlCard component skeleton in services/frontend/src/components/admin/SyncControlCard.tsx
+- [X] T029 [US1] Implement sync state display (idle/syncing_master/processing_suppliers) in services/frontend/src/components/admin/SyncControlCard.tsx
+- [X] T030 [US1] Implement "Sync Now" button with loading state in services/frontend/src/components/admin/SyncControlCard.tsx
+- [X] T031 [US1] Add progress display for processing_suppliers state in services/frontend/src/components/admin/SyncControlCard.tsx
+- [X] T032 [US1] Export SyncControlCard from services/frontend/src/components/admin/index.ts
 
 ### Frontend - Page & Routing
 
-- [ ] T033 [US1] Create IngestionPage component in services/frontend/src/pages/admin/IngestionPage.tsx
-- [ ] T034 [US1] Add /admin/ingestion route in services/frontend/src/routes.tsx
-- [ ] T035 [US1] Add navigation link to ingestion page (if applicable) in services/frontend/src/components/shared/Navbar.tsx
+- [X] T033 [US1] Create IngestionPage component in services/frontend/src/pages/admin/IngestionPage.tsx
+- [X] T034 [US1] Add /admin/ingestion route in services/frontend/src/routes.tsx
+- [X] T035 [US1] Add navigation link to ingestion page in services/frontend/src/components/shared/AdminLayout.tsx
 
 ### Frontend - i18n
 
-- [ ] T036 [P] [US1] Add English translations for ingestion page in services/frontend/public/locales/en/translation.json
-- [ ] T037 [P] [US1] Add Russian translations for ingestion page in services/frontend/public/locales/ru/translation.json
+- [X] T036 [P] [US1] Add English translations for ingestion page in services/frontend/public/locales/en/translation.json
+- [X] T037 [P] [US1] Add Russian translations for ingestion page in services/frontend/public/locales/ru/translation.json
 
 ---
 

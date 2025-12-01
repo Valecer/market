@@ -16,3 +16,7 @@ export { useUnmatchedItems, type UnmatchedSupplierItem, type UnmatchedItemsRespo
 export { useMatchSupplier, type MatchParams, type MatchResponse, type MatchAction } from './useMatchSupplier'
 export { useProductSearch, type ProductSearchResult } from './useProductSearch'
 
+// Phase 6: Ingestion hooks
+export { useIngestionStatus, type IngestionStatus } from './useIngestionStatus'
+export { useTriggerSync, type TriggerSyncResponse } from './useTriggerSync'
+

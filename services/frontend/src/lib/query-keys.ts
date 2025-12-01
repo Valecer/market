@@ -60,6 +60,17 @@ export const queryKeys = {
   },
 
   // =============================================================================
+  // Ingestion (Admin Control Panel)
+  // =============================================================================
+  ingestion: {
+    /** All ingestion queries - use for broad invalidation */
+    all: ['ingestion'] as const,
+    /** Ingestion status with log limit */
+    status: (logLimit?: number) =>
+      ['ingestion', 'status', { logLimit: logLimit ?? 50 }] as const,
+  },
+
+  // =============================================================================
   // Authentication
   // =============================================================================
   auth: {

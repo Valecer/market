@@ -36,6 +36,12 @@ from src.tasks.matching_tasks import (
     handle_manual_match_event,
     expire_review_queue_task,
 )
+# Import sync pipeline tasks
+from src.tasks.sync_tasks import (
+    trigger_master_sync_task,
+    scheduled_sync_task,
+    get_sync_interval_hours,
+)
 
 # Configure logging
 configure_logging(settings.log_level)
@@ -621,6 +627,9 @@ class WorkerSettings:
         enrich_item_task,
         handle_manual_match_event,
         expire_review_queue_task,
+        # Phase 6: Master sync pipeline
+        trigger_master_sync_task,
+        scheduled_sync_task,
     ]
     
     # Register job lifecycle hooks
@@ -632,5 +641,14 @@ class WorkerSettings:
         cron(monitor_queue_depth, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         # Review queue expiration: daily at midnight UTC
         cron(expire_review_queue_task, hour=0, minute=0),
+        # Master sync: at configurable interval (default every 8 hours)
+        # Hours are calculated from SYNC_INTERVAL_HOURS env var
+        cron(
+            scheduled_sync_task,
+            hour=set(range(0, 24, get_sync_interval_hours())),
+            minute=0,
+            unique=True,
+            run_at_startup=False,
+        ),
     ]
 

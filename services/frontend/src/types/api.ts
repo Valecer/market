@@ -126,6 +126,46 @@ export interface paths {
         patch: operations["patchApiV1AdminProductsByIdMatch"];
         trace?: never;
     };
+    "/api/v1/admin/ingestion/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get current ingestion pipeline status
+         * @description Returns current sync state, progress, timestamps, supplier list, and recent logs. Designed for polling at 3-5 second intervals. Requires admin role.
+         */
+        get: operations["getApiV1AdminIngestionStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ingestion/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger master sync pipeline
+         * @description Reads Master Google Sheet, syncs suppliers, and enqueues parsing tasks for all active suppliers. Returns immediately with task_id. Rate limited to 10 requests per minute. Requires admin role.
+         */
+        post: operations["postApiV1AdminIngestionSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/sync": {
         parameters: {
             query?: never;
@@ -1811,6 +1851,590 @@ export interface operations {
                         error: {
                             /** @constant */
                             code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminIngestionStatus: {
+        parameters: {
+            query?: {
+                log_limit?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sync_state: "idle" | "syncing_master" | "processing_suppliers";
+                        /** @description Progress when processing_suppliers, null otherwise */
+                        progress: {
+                            /** @description Number of suppliers processed */
+                            current: number;
+                            /** @description Total suppliers to process */
+                            total: number;
+                        } | null;
+                        /** @description Timestamp of last completed sync (ISO 8601) */
+                        last_sync_at: string | null;
+                        /** @description Timestamp of next scheduled automatic sync (ISO 8601) */
+                        next_scheduled_at: string;
+                        /** @description List of all suppliers with sync status */
+                        suppliers: {
+                            /**
+                             * Format: uuid
+                             * @description Supplier UUID
+                             */
+                            id: string;
+                            /** @description Supplier display name */
+                            name: string;
+                            /** @description Data source format (google_sheets, csv, excel) */
+                            source_type: string;
+                            /** @description Last successful sync timestamp (ISO 8601) */
+                            last_sync_at: string | null;
+                            status: "success" | "error" | "pending" | "inactive";
+                            /** @description Number of supplier items in database */
+                            items_count: number;
+                        }[];
+                        /** @description Recent parsing log entries */
+                        recent_logs: {
+                            /**
+                             * Format: uuid
+                             * @description Log entry UUID
+                             */
+                            id: string;
+                            /** @description Task that generated this log */
+                            task_id: string;
+                            /** @description Associated supplier ID */
+                            supplier_id: string | null;
+                            /** @description Supplier name (joined from suppliers table) */
+                            supplier_name: string | null;
+                            /** @description Log level/category (INFO, WARNING, ERROR, ValidationError, ParserError) */
+                            error_type: string;
+                            /** @description Log message content */
+                            error_message: string;
+                            /** @description Source row number if applicable */
+                            row_number: number | null;
+                            /** @description Log entry timestamp (ISO 8601) */
+                            created_at: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        sync_state: "idle" | "syncing_master" | "processing_suppliers";
+                        /** @description Progress when processing_suppliers, null otherwise */
+                        progress: {
+                            /** @description Number of suppliers processed */
+                            current: number;
+                            /** @description Total suppliers to process */
+                            total: number;
+                        } | null;
+                        /** @description Timestamp of last completed sync (ISO 8601) */
+                        last_sync_at: string | null;
+                        /** @description Timestamp of next scheduled automatic sync (ISO 8601) */
+                        next_scheduled_at: string;
+                        /** @description List of all suppliers with sync status */
+                        suppliers: {
+                            /**
+                             * Format: uuid
+                             * @description Supplier UUID
+                             */
+                            id: string;
+                            /** @description Supplier display name */
+                            name: string;
+                            /** @description Data source format (google_sheets, csv, excel) */
+                            source_type: string;
+                            /** @description Last successful sync timestamp (ISO 8601) */
+                            last_sync_at: string | null;
+                            status: "success" | "error" | "pending" | "inactive";
+                            /** @description Number of supplier items in database */
+                            items_count: number;
+                        }[];
+                        /** @description Recent parsing log entries */
+                        recent_logs: {
+                            /**
+                             * Format: uuid
+                             * @description Log entry UUID
+                             */
+                            id: string;
+                            /** @description Task that generated this log */
+                            task_id: string;
+                            /** @description Associated supplier ID */
+                            supplier_id: string | null;
+                            /** @description Supplier name (joined from suppliers table) */
+                            supplier_name: string | null;
+                            /** @description Log level/category (INFO, WARNING, ERROR, ValidationError, ParserError) */
+                            error_type: string;
+                            /** @description Log message content */
+                            error_message: string;
+                            /** @description Source row number if applicable */
+                            row_number: number | null;
+                            /** @description Log entry timestamp (ISO 8601) */
+                            created_at: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        sync_state: "idle" | "syncing_master" | "processing_suppliers";
+                        /** @description Progress when processing_suppliers, null otherwise */
+                        progress: {
+                            /** @description Number of suppliers processed */
+                            current: number;
+                            /** @description Total suppliers to process */
+                            total: number;
+                        } | null;
+                        /** @description Timestamp of last completed sync (ISO 8601) */
+                        last_sync_at: string | null;
+                        /** @description Timestamp of next scheduled automatic sync (ISO 8601) */
+                        next_scheduled_at: string;
+                        /** @description List of all suppliers with sync status */
+                        suppliers: {
+                            /**
+                             * Format: uuid
+                             * @description Supplier UUID
+                             */
+                            id: string;
+                            /** @description Supplier display name */
+                            name: string;
+                            /** @description Data source format (google_sheets, csv, excel) */
+                            source_type: string;
+                            /** @description Last successful sync timestamp (ISO 8601) */
+                            last_sync_at: string | null;
+                            status: "success" | "error" | "pending" | "inactive";
+                            /** @description Number of supplier items in database */
+                            items_count: number;
+                        }[];
+                        /** @description Recent parsing log entries */
+                        recent_logs: {
+                            /**
+                             * Format: uuid
+                             * @description Log entry UUID
+                             */
+                            id: string;
+                            /** @description Task that generated this log */
+                            task_id: string;
+                            /** @description Associated supplier ID */
+                            supplier_id: string | null;
+                            /** @description Supplier name (joined from suppliers table) */
+                            supplier_name: string | null;
+                            /** @description Log level/category (INFO, WARNING, ERROR, ValidationError, ParserError) */
+                            error_type: string;
+                            /** @description Log message content */
+                            error_message: string;
+                            /** @description Source row number if applicable */
+                            row_number: number | null;
+                            /** @description Log entry timestamp (ISO 8601) */
+                            created_at: string;
+                        }[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminIngestionSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Unique identifier for tracking the sync job */
+                        task_id: string;
+                        /**
+                         * @description Always 'queued' on success
+                         * @constant
+                         */
+                        status: "queued";
+                        /** @description Human-readable confirmation */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Unique identifier for tracking the sync job */
+                        task_id: string;
+                        /**
+                         * @description Always 'queued' on success
+                         * @constant
+                         */
+                        status: "queued";
+                        /** @description Human-readable confirmation */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @description Unique identifier for tracking the sync job */
+                        task_id: string;
+                        /**
+                         * @description Always 'queued' on success
+                         * @constant
+                         */
+                        status: "queued";
+                        /** @description Human-readable confirmation */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "SYNC_IN_PROGRESS";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Task ID of the running sync */
+                            current_task_id: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "SYNC_IN_PROGRESS";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Task ID of the running sync */
+                            current_task_id: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "SYNC_IN_PROGRESS";
+                            /** @description Human-readable error message */
+                            message: string;
+                            /** @description Task ID of the running sync */
+                            current_task_id: string;
+                        };
+                    };
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "RATE_LIMIT_EXCEEDED";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "RATE_LIMIT_EXCEEDED";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "RATE_LIMIT_EXCEEDED";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
                             message: string;
                         };
                     };

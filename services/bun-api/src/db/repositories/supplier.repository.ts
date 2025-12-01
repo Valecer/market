@@ -1,6 +1,6 @@
 import { db } from '../client'
-import { suppliers } from '../schema/schema'
-import { eq } from 'drizzle-orm'
+import { suppliers, supplierItems } from '../schema/schema'
+import { eq, sql, count } from 'drizzle-orm'
 import type { PostgresJsTransaction } from 'drizzle-orm/postgres-js'
 
 /**
@@ -23,10 +23,23 @@ export interface Supplier {
 }
 
 /**
+ * Supplier with item count for ingestion status
+ */
+export interface SupplierWithItemCount {
+  id: string
+  name: string
+  sourceType: string | null
+  metadata: Record<string, unknown> | null
+  updatedAt: Date | null
+  itemsCount: number
+}
+
+/**
  * Repository interface for supplier data access
  */
 export interface ISupplierRepository {
   findById(id: string): Promise<Supplier | null>
+  findAllWithItemCounts(): Promise<SupplierWithItemCount[]>
 }
 
 class SupplierRepository implements ISupplierRepository {
@@ -55,6 +68,38 @@ class SupplierRepository implements ISupplierRepository {
       createdAt: result[0].createdAt,
       updatedAt: result[0].updatedAt,
     }
+  }
+
+  /**
+   * Find all suppliers with their item counts
+   * Used by ingestion service for status display
+   * @returns Array of suppliers with item counts
+   */
+  async findAllWithItemCounts(): Promise<SupplierWithItemCount[]> {
+    // Use a subquery to count items per supplier
+    const result = await db
+      .select({
+        id: suppliers.id,
+        name: suppliers.name,
+        sourceType: suppliers.sourceType,
+        metadata: suppliers.metadata,
+        updatedAt: suppliers.updatedAt,
+        itemsCount: sql<number>`(
+          SELECT COUNT(*)::integer FROM supplier_items 
+          WHERE supplier_items.supplier_id = ${suppliers.id}
+        )`.as('items_count'),
+      })
+      .from(suppliers)
+      .orderBy(suppliers.name)
+
+    return result.map((row) => ({
+      id: row.id,
+      name: row.name,
+      sourceType: row.sourceType,
+      metadata: row.metadata as Record<string, unknown> | null,
+      updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
+      itemsCount: row.itemsCount || 0,
+    }))
   }
 }
 

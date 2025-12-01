@@ -20,7 +20,9 @@
     "sku": "SKU",
     "price": "Price",
     "category": "Category",
-    "supplier": "Supplier"
+    "supplier": "Supplier",
+    "complete": "complete",
+    "name": "Name"
   },
 
   "header": {
@@ -208,6 +210,39 @@
       "searchProductsPlaceholder": "Search products by name or SKU...",
       "typeToSearch": "Type at least 2 characters to search",
       "noProductsForQuery": "No products found for \"{{query}}\""
+    },
+
+    "ingestion": "Ingestion"
+  },
+
+  "ingestion": {
+    "title": "Data Ingestion Control Panel",
+    "subtitle": "Manage and monitor supplier data synchronization",
+    "syncControl": "Sync Control",
+    "syncControlDescription": "Trigger and monitor sync operations",
+    "syncNow": "Sync Now",
+    "syncing": "Syncing...",
+    "processingSuppliers": "Processing suppliers",
+    "lastSync": "Last Sync",
+    "nextScheduled": "Next Scheduled",
+    "howItWorks": "How it works",
+    "step1": "Click \"Sync Now\" to read the Master Google Sheet and update supplier configurations.",
+    "step2": "The system syncs supplier data and enqueues parsing tasks for active suppliers.",
+    "step3": "View progress as each supplier's price list is processed.",
+    "suppliers": "Suppliers",
+    "sourceType": "Source Type",
+    "status": "Status",
+    "itemsCount": "Items",
+    "state": {
+      "idle": "Idle",
+      "syncing_master": "Syncing Master Sheet",
+      "processing_suppliers": "Processing Suppliers"
+    },
+    "supplierStatus": {
+      "success": "Success",
+      "error": "Error",
+      "pending": "Pending",
+      "inactive": "Inactive"
     }
   }
 }
