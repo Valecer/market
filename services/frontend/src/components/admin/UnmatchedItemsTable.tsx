@@ -6,9 +6,11 @@
  *
  * Design System: Tailwind CSS with clean, professional table styling
  * Accessibility: Semantic HTML table, keyboard navigation, checkbox selection
+ * i18n: All text content is translatable
  */
 
 import { useMemo, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   useReactTable,
   getCoreRowModel,
@@ -109,6 +111,7 @@ export function UnmatchedItemsTable({
   onLinkClick,
   onLinkSelectedClick,
 }: UnmatchedItemsTableProps) {
+  const { t } = useTranslation()
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
@@ -147,7 +150,7 @@ export function UnmatchedItemsTable({
               }}
               onChange={table.getToggleAllPageRowsSelectedHandler()}
               className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/50 cursor-pointer"
-              aria-label="Select all items"
+              aria-label={t('admin.procurementPage.selectAllItems')}
             />
           </div>
         ),
@@ -160,7 +163,7 @@ export function UnmatchedItemsTable({
               onChange={row.getToggleSelectedHandler()}
               onClick={(e) => e.stopPropagation()}
               className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/50 cursor-pointer disabled:opacity-50"
-              aria-label={`Select ${row.original.name}`}
+              aria-label={t('admin.procurementPage.selectItem', { name: row.original.name })}
             />
           </div>
         ),
@@ -169,7 +172,7 @@ export function UnmatchedItemsTable({
       },
       {
         accessorKey: 'name',
-        header: 'Item Name',
+        header: t('admin.procurementPage.itemName'),
         cell: ({ row }) => (
           <div className="flex flex-col">
             <span className="font-medium text-slate-900">{row.original.name}</span>
@@ -182,7 +185,7 @@ export function UnmatchedItemsTable({
       },
       {
         accessorKey: 'supplier_name',
-        header: 'Supplier',
+        header: t('admin.procurementPage.supplier'),
         cell: ({ row }) => (
           <span className="text-slate-700">{row.original.supplier_name}</span>
         ),
@@ -190,7 +193,7 @@ export function UnmatchedItemsTable({
       },
       {
         accessorKey: 'current_price',
-        header: 'Price',
+        header: t('admin.procurementPage.price'),
         cell: ({ row }) => (
           <span className="font-medium text-slate-900">
             {formatCurrency(row.original.current_price)}
@@ -200,7 +203,7 @@ export function UnmatchedItemsTable({
       },
       {
         accessorKey: 'last_ingested_at',
-        header: 'Last Synced',
+        header: t('admin.procurementPage.lastSynced'),
         cell: ({ row }) => (
           <span className="text-sm text-slate-500">
             {formatDate(row.original.last_ingested_at)}
@@ -219,16 +222,16 @@ export function UnmatchedItemsTable({
               onLinkClick?.(row.original)
             }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary bg-primary/5 hover:bg-primary/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
-            aria-label={`Link ${row.original.name} to a product`}
+            aria-label={t('admin.procurementPage.linkAriaLabel', { name: row.original.name })}
           >
             <LinkIcon />
-            Link to Product
+            {t('admin.procurementPage.linkToProduct')}
           </button>
         ),
         enableSorting: false,
       },
     ],
-    [onLinkClick]
+    [onLinkClick, t]
   )
 
   // Initialize TanStack Table with row selection
@@ -251,7 +254,7 @@ export function UnmatchedItemsTable({
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-slate-50">
               <tr>
-                {['', 'Item Name', 'Supplier', 'Price', 'Last Synced', ''].map((header, i) => (
+                {['', t('admin.procurementPage.itemName'), t('admin.procurementPage.supplier'), t('admin.procurementPage.price'), t('admin.procurementPage.lastSynced'), ''].map((header, i) => (
                   <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     {header}
                   </th>
@@ -284,8 +287,8 @@ export function UnmatchedItemsTable({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-slate-900 mb-1">All items matched!</h3>
-        <p className="text-slate-500">All supplier items have been linked to products.</p>
+        <h3 className="text-lg font-medium text-slate-900 mb-1">{t('admin.procurementPage.allItemsMatched')}</h3>
+        <p className="text-slate-500">{t('admin.procurementPage.allItemsMatchedDesc')}</p>
       </div>
     )
   }
@@ -300,7 +303,7 @@ export function UnmatchedItemsTable({
               <CheckIcon />
             </div>
             <span className="font-medium">
-              {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
+              {t('admin.procurementPage.itemsSelected', { count: selectedItems.length })}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -309,7 +312,7 @@ export function UnmatchedItemsTable({
               onClick={clearSelection}
               className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
             >
-              Clear
+              {t('common.clear')}
             </button>
             <button
               type="button"
@@ -317,7 +320,7 @@ export function UnmatchedItemsTable({
               className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-white text-primary hover:bg-white/90 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
             >
               <LinkIcon />
-              Link Selected to Product
+              {t('admin.procurementPage.linkSelectedToProduct')}
             </button>
           </div>
         </div>
@@ -326,14 +329,14 @@ export function UnmatchedItemsTable({
       <div className="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
         <div className="px-4 py-3 bg-slate-50 border-b border-border flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700">
-            Unmatched Items
+            {t('admin.procurementPage.unmatchedItemsTable')}
             <span className="ml-2 text-xs font-normal text-slate-500">
-              ({items.length} item{items.length !== 1 ? 's' : ''})
+              ({t('admin.procurementPage.itemCount', { count: items.length })})
             </span>
           </h3>
           {items.length > 0 && (
             <span className="text-xs text-slate-500">
-              Select items to link multiple at once
+              {t('admin.procurementPage.selectToLinkMultiple')}
             </span>
           )}
         </div>
@@ -402,4 +405,3 @@ export function UnmatchedItemsTable({
     </div>
   )
 }
-

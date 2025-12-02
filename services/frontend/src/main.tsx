@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Theme } from '@radix-ui/themes'
@@ -6,6 +6,8 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { ToastProvider } from '@/components/shared/Toast'
 import '@radix-ui/themes/styles.css'
 import './index.css'
+// Initialize i18n before App renders
+import './i18n'
 import App from './App'
 
 /**
@@ -26,6 +28,21 @@ const queryClient = new QueryClient({
   }
 })
 
+/**
+ * Loading fallback for i18n Suspense
+ * Shows while translations are loading
+ */
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-slate-500">Loading...</span>
+      </div>
+    </div>
+  )
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary
@@ -40,11 +57,13 @@ createRoot(document.getElementById('root')!).render(
       }}
     >
       <QueryClientProvider client={queryClient}>
+        <Suspense fallback={<LoadingFallback />}>
         <Theme accentColor="blue" grayColor="slate" radius="medium" scaling="100%">
           <ToastProvider>
             <App />
           </ToastProvider>
         </Theme>
+        </Suspense>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>

@@ -8,10 +8,14 @@ from src.parsers.parser_registry import (
 )
 from src.parsers.stub_parser import StubParser
 from src.parsers.google_sheets_parser import GoogleSheetsParser
+from src.parsers.csv_parser import CsvParser
+from src.parsers.excel_parser import ExcelParser
 
 # Register parsers
 register_parser("stub", StubParser)
 register_parser("google_sheets", GoogleSheetsParser)
+register_parser("csv", CsvParser)
+register_parser("excel", ExcelParser)
 
 __all__ = [
     "ParserInterface",
@@ -21,5 +25,7 @@ __all__ = [
     "list_registered_parsers",
     "StubParser",
     "GoogleSheetsParser",
+    "CsvParser",
+    "ExcelParser",
 ]
 

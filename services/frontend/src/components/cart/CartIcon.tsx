@@ -3,9 +3,12 @@
  *
  * Shopping cart icon with item count badge for header navigation.
  * Uses Tailwind CSS for styling, accessible with aria-label.
+ * 
+ * i18n: Aria-label is translatable with pluralization support
  */
 
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useCart } from '@/hooks/useCart'
 
 interface CartIconProps {
@@ -13,13 +16,14 @@ interface CartIconProps {
 }
 
 export function CartIcon({ className = '' }: CartIconProps) {
+  const { t } = useTranslation()
   const { itemCount } = useCart()
 
   return (
     <Link
       to="/cart"
       className={`relative p-2 text-slate-600 hover:text-slate-900 transition-colors ${className}`}
-      aria-label={`Shopping cart with ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+      aria-label={t('cart.ariaLabel', { count: itemCount })}
     >
       {/* Cart Icon SVG */}
       <svg
@@ -49,4 +53,3 @@ export function CartIcon({ className = '' }: CartIconProps) {
     </Link>
   )
 }
-

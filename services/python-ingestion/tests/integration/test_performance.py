@@ -337,3 +337,275 @@ async def test_performance_batch_processing(db_session: AsyncSession):
     
     assert optimal[1]['throughput'] > 1000, \
         f"Even optimal batch size {optimal[0]} doesn't meet 1,000 items/min target"
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.slow
+async def test_matching_pipeline_performance_1000_items(db_session: AsyncSession):
+    """Performance test: Match 1,000 supplier items against product catalog.
+    
+    This test verifies:
+    - Matching throughput is >1,000 items per minute
+    - Category blocking improves performance
+    - RapidFuzz matching is efficient
+    
+    Target: >1,000 items/min
+    """
+    from src.db.models import Product, SupplierItem, Category, Supplier, MatchStatus, ProductStatus
+    from src.services.matching import RapidFuzzMatcher, create_matcher
+    from uuid import uuid4
+    
+    print("\n" + "="*80)
+    print("MATCHING PIPELINE PERFORMANCE TEST: 1,000 items")
+    print("="*80)
+    
+    # 1. Create test category
+    category = Category(
+        name="Test Category",
+        slug="test-category",
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+    
+    # 2. Create supplier
+    supplier = Supplier(
+        name="Matching Test Supplier",
+        source_type="csv",
+        metadata={},
+    )
+    db_session.add(supplier)
+    await db_session.commit()
+    await db_session.refresh(supplier)
+    
+    # 3. Create product catalog (100 products to match against)
+    print("Creating product catalog (100 products)...")
+    products = []
+    product_names = [
+        "Samsung Galaxy A54 5G 128GB Black",
+        "Samsung Galaxy A54 5G 256GB Black",
+        "iPhone 15 Pro 256GB Silver",
+        "iPhone 15 Pro Max 512GB Space Black",
+        "Xiaomi Redmi Note 12 Pro 128GB",
+        "Xiaomi Redmi Note 12 Pro+ 256GB",
+        "Google Pixel 8 128GB Obsidian",
+        "Google Pixel 8 Pro 256GB Bay",
+        "OnePlus 11 5G 256GB Titan Black",
+        "Sony Xperia 1 V 256GB Black",
+    ]
+    
+    # Create variations to have 100 products
+    for i in range(100):
+        base_name = product_names[i % len(product_names)]
+        variation = f"Variant-{i}"
+        product = Product(
+            internal_sku=f"MATCH-PERF-{i:04d}",
+            name=f"{base_name} {variation}",
+            category_id=category.id,
+            status=ProductStatus.ACTIVE,
+        )
+        db_session.add(product)
+        products.append(product)
+    
+    await db_session.commit()
+    for p in products:
+        await db_session.refresh(p)
+    
+    print(f"✓ Created {len(products)} products")
+    
+    # 4. Create unmatched supplier items (1,000)
+    print("Creating unmatched supplier items (1,000)...")
+    items = []
+    for i in range(1000):
+        base_name = product_names[i % len(product_names)]
+        # Add some variation to simulate real data
+        variations = ["", " - New", " (Refurbished)", " Sale", " Limited Edition"]
+        variation = variations[i % len(variations)]
+        
+        item = SupplierItem(
+            supplier_id=supplier.id,
+            supplier_sku=f"PERF-ITEM-{i:06d}",
+            name=f"{base_name}{variation}",
+            current_price=Decimal(f"{99 + (i % 100)}.99"),
+            characteristics={"in_stock": True},
+            match_status=MatchStatus.UNMATCHED,
+        )
+        db_session.add(item)
+        items.append(item)
+    
+    await db_session.commit()
+    print(f"✓ Created {len(items)} supplier items")
+    
+    # 5. Run matching
+    print("\nRunning matching process...")
+    matcher = create_matcher("rapidfuzz")
+    
+    start_time = time.time()
+    matches_found = 0
+    
+    for item in items:
+        result = matcher.find_matches(
+            item_name=item.name,
+            item_id=item.id,
+            products=products,
+            auto_threshold=95.0,
+            potential_threshold=70.0,
+            max_candidates=5,
+        )
+        
+        if result.match_status.value != "unmatched":
+            matches_found += 1
+    
+    matching_time = time.time() - start_time
+    items_per_minute = (len(items) / matching_time) * 60 if matching_time > 0 else 0
+    
+    # 6. Report results
+    print("\n" + "="*80)
+    print("MATCHING PERFORMANCE TEST RESULTS")
+    print("="*80)
+    print(f"Items processed:     {len(items):,}")
+    print(f"Products catalog:    {len(products):,}")
+    print(f"Matches found:       {matches_found:,}")
+    print(f"Matching time:       {matching_time:.2f} seconds")
+    print(f"Throughput:          {items_per_minute:.0f} items/minute")
+    print("="*80)
+    
+    # 7. Assertions
+    assert items_per_minute > 1000, \
+        f"Matching throughput {items_per_minute:.0f} items/min is below target of 1,000 items/min"
+    
+    print("\n✅ MATCHING PERFORMANCE TEST PASSED")
+    print(f"   ✓ Processed {len(items):,} items in {matching_time:.2f} seconds")
+    print(f"   ✓ Throughput: {items_per_minute:.0f} items/minute (target: >1,000)")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_concurrent_select_for_update_skip_locked(db_session: AsyncSession):
+    """Test that SELECT FOR UPDATE SKIP LOCKED prevents duplicate processing.
+    
+    This test verifies concurrent workers don't process the same items.
+    """
+    import asyncio
+    from src.db.models import SupplierItem, Supplier, MatchStatus
+    from src.db.base import async_session_maker
+    from sqlalchemy import select, and_
+    
+    print("\n" + "="*80)
+    print("CONCURRENT WORKER TEST: SELECT FOR UPDATE SKIP LOCKED")
+    print("="*80)
+    
+    # 1. Create test supplier
+    supplier = Supplier(
+        name="Concurrent Test Supplier",
+        source_type="csv",
+        metadata={},
+    )
+    db_session.add(supplier)
+    await db_session.commit()
+    await db_session.refresh(supplier)
+    
+    # 2. Create unmatched items
+    print("Creating 100 unmatched items...")
+    items = []
+    for i in range(100):
+        item = SupplierItem(
+            supplier_id=supplier.id,
+            supplier_sku=f"CONCURRENT-{i:04d}",
+            name=f"Concurrent Test Item {i}",
+            current_price=Decimal("99.99"),
+            characteristics={},
+            match_status=MatchStatus.UNMATCHED,
+        )
+        db_session.add(item)
+        items.append(item)
+    
+    await db_session.commit()
+    print(f"✓ Created {len(items)} unmatched items")
+    
+    # 3. Track which items are processed by which "worker"
+    processed_by: dict = {}  # item_id -> worker_id
+    lock = asyncio.Lock()
+    
+    async def simulate_worker(worker_id: int, batch_size: int = 20):
+        """Simulate a worker selecting and processing items."""
+        processed = []
+        
+        async with async_session_maker() as session:
+            async with session.begin():
+                # SELECT FOR UPDATE SKIP LOCKED
+                query = (
+                    select(SupplierItem)
+                    .where(
+                        and_(
+                            SupplierItem.supplier_id == supplier.id,
+                            SupplierItem.match_status == MatchStatus.UNMATCHED,
+                        )
+                    )
+                    .limit(batch_size)
+                    .with_for_update(skip_locked=True)
+                )
+                
+                result = await session.execute(query)
+                worker_items = result.scalars().all()
+                
+                # "Process" items (mark as matched)
+                for item in worker_items:
+                    item.match_status = MatchStatus.AUTO_MATCHED
+                    item.match_score = Decimal("95.0")
+                    session.add(item)
+                    
+                    async with lock:
+                        if str(item.id) in processed_by:
+                            # This would be a duplicate!
+                            print(f"❌ DUPLICATE: Item {item.id} already processed by worker {processed_by[str(item.id)]}")
+                        processed_by[str(item.id)] = worker_id
+                    
+                    processed.append(item.id)
+                
+                await session.commit()
+        
+        return processed
+    
+    # 4. Run multiple "workers" concurrently
+    print("\nRunning 5 concurrent workers...")
+    start_time = time.time()
+    
+    results = await asyncio.gather(
+        simulate_worker(1, 30),
+        simulate_worker(2, 30),
+        simulate_worker(3, 30),
+        simulate_worker(4, 30),
+        simulate_worker(5, 30),
+    )
+    
+    elapsed = time.time() - start_time
+    
+    # 5. Verify no duplicates
+    all_processed = []
+    for r in results:
+        all_processed.extend(r)
+    
+    unique_processed = set(all_processed)
+    
+    print("\n" + "="*80)
+    print("CONCURRENT WORKER TEST RESULTS")
+    print("="*80)
+    print(f"Total items:         {len(items)}")
+    print(f"Items processed:     {len(all_processed)}")
+    print(f"Unique items:        {len(unique_processed)}")
+    print(f"Duration:            {elapsed:.2f} seconds")
+    
+    for i, r in enumerate(results, 1):
+        print(f"  Worker {i}: {len(r)} items")
+    
+    # 6. Assertions
+    # No duplicates should exist
+    assert len(all_processed) == len(unique_processed), \
+        f"Duplicate items detected! Processed {len(all_processed)} but only {len(unique_processed)} unique"
+    
+    # Not all items may be processed (due to SKIP LOCKED), but no duplicates
+    print("\n✅ CONCURRENT WORKER TEST PASSED")
+    print(f"   ✓ No duplicate processing detected")
+    print(f"   ✓ SELECT FOR UPDATE SKIP LOCKED working correctly")

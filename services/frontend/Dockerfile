@@ -76,6 +76,29 @@ server {
         access_log off;
     }
     
+    # Proxy API requests to backend
+    # Must be BEFORE the SPA routing location block
+    location /api {
+        proxy_pass http://bun-api:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # CRITICAL: Forward Authorization header for JWT authentication
+        # Only set if present to avoid sending empty header
+        proxy_set_header Authorization $http_authorization;
+        # Ensure all request headers are passed through
+        proxy_pass_request_headers on;
+        proxy_cache_bypass $http_upgrade;
+        # Increase timeouts for long-running requests
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
     # SPA routing - serve index.html for all non-file requests
     location / {
         try_files $uri $uri/ /index.html;

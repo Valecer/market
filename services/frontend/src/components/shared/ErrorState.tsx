@@ -6,14 +6,16 @@
  *
  * Design System: Tailwind CSS with danger color theme
  * Accessibility: Uses role="alert" for screen readers
+ * i18n: All text content is translatable
  */
 
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 interface ErrorStateProps {
   /** Error message to display */
   message?: string
-  /** Title for the error (default: "Something went wrong") */
+  /** Title for the error */
   title?: string
   /** Callback for retry button */
   onRetry?: () => void
@@ -27,12 +29,18 @@ interface ErrorStateProps {
  * Error state component with retry functionality
  */
 export function ErrorState({
-  message = 'An unexpected error occurred. Please try again.',
-  title = 'Something went wrong',
+  message,
+  title,
   onRetry,
   className,
   variant = 'section',
 }: ErrorStateProps) {
+  const { t } = useTranslation()
+  
+  // Use translated defaults if not provided
+  const displayTitle = title || t('error.title')
+  const displayMessage = message || t('error.message')
+
   if (variant === 'inline') {
     return (
       <div
@@ -43,7 +51,7 @@ export function ErrorState({
         )}
       >
         <svg
-          className="w-5 h-5 text-danger flex-shrink-0"
+          className="w-5 h-5 text-danger shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -56,13 +64,13 @@ export function ErrorState({
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span className="text-sm text-danger flex-1">{message}</span>
+        <span className="text-sm text-danger flex-1">{displayMessage}</span>
         {onRetry && (
           <button
             onClick={onRetry}
             className="text-sm font-medium text-danger hover:text-danger/80 underline underline-offset-2"
           >
-            Retry
+            {t('common.retry')}
           </button>
         )}
       </div>
@@ -94,9 +102,9 @@ export function ErrorState({
         </svg>
       </div>
 
-      <h2 className="text-xl font-semibold text-slate-900 mb-2">{title}</h2>
+      <h2 className="text-xl font-semibold text-slate-900 mb-2">{displayTitle}</h2>
 
-      <p className="text-slate-500 text-center max-w-md mb-6">{message}</p>
+      <p className="text-slate-500 text-center max-w-md mb-6">{displayMessage}</p>
 
       {onRetry && (
         <button
@@ -117,7 +125,7 @@ export function ErrorState({
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Try Again
+          {t('common.retry')}
         </button>
       )}
     </div>
@@ -126,10 +134,11 @@ export function ErrorState({
 
 /**
  * Empty state component (when no data matches filters)
+ * i18n: Uses translated defaults
  */
 export function EmptyState({
-  title = 'No results found',
-  message = 'Try adjusting your filters or search terms.',
+  title,
+  message,
   icon,
   className,
 }: {
@@ -138,6 +147,12 @@ export function EmptyState({
   icon?: React.ReactNode
   className?: string
 }) {
+  const { t } = useTranslation()
+  
+  // Use translated defaults if not provided
+  const displayTitle = title || t('catalog.noResults.title')
+  const displayMessage = message || t('catalog.noResults.message')
+
   return (
     <div
       className={cn(
@@ -164,9 +179,8 @@ export function EmptyState({
         </div>
       )}
 
-      <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
-      <p className="text-slate-500 text-center max-w-sm">{message}</p>
+      <h3 className="text-lg font-semibold text-slate-900 mb-2">{displayTitle}</h3>
+      <p className="text-slate-500 text-center max-w-sm">{displayMessage}</p>
     </div>
   )
 }
-

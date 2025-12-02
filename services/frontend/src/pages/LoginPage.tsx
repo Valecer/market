@@ -6,14 +6,18 @@
  *
  * Design System: Radix UI + Tailwind CSS
  * Accessibility: Form labels, error messages, focus management
+ * i18n: All text content is translatable
  */
 
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { getErrorMessage } from '@/lib/api-client'
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -45,7 +49,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 px-4 py-12">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -71,10 +75,15 @@ export function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-border p-8">
+          {/* Language Switcher */}
+          <div className="flex justify-end mb-4">
+            <LanguageSwitcher />
+          </div>
+
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{t('auth.welcomeBack')}</h1>
             <p className="text-sm text-muted mt-1">
-              Sign in to access your account
+              {t('auth.signInSubtitle')}
             </p>
           </div>
 
@@ -96,7 +105,7 @@ export function LoginPage() {
                   />
                 </svg>
                 <p className="text-sm text-warning font-medium">
-                  Your session has expired. Please sign in again.
+                  {t('auth.sessionExpired')}
                 </p>
               </div>
             </div>
@@ -132,7 +141,7 @@ export function LoginPage() {
                 htmlFor="username"
                 className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                Username
+                {t('auth.username')}
               </label>
               <input
                 id="username"
@@ -143,7 +152,7 @@ export function LoginPage() {
                 autoComplete="username"
                 autoFocus
                 className="w-full px-4 py-2.5 border border-border rounded-lg text-slate-900 placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                placeholder="Enter your username"
+                placeholder={t('auth.usernamePlaceholder')}
               />
             </div>
 
@@ -153,7 +162,7 @@ export function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-slate-700 mb-1.5"
               >
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -163,7 +172,7 @@ export function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="w-full px-4 py-2.5 border border-border rounded-lg text-slate-900 placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                placeholder="Enter your password"
+                placeholder={t('auth.passwordPlaceholder')}
               />
             </div>
 
@@ -194,10 +203,10 @@ export function LoginPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Signing in...
+                  {t('auth.loggingIn')}
                 </span>
               ) : (
-                'Sign in'
+                t('auth.loginButton')
               )}
             </button>
           </form>
@@ -208,7 +217,7 @@ export function LoginPage() {
               to="/"
               className="text-sm text-muted hover:text-primary transition-colors"
             >
-              ← Back to catalog
+              {t('auth.backToCatalog')}
             </Link>
           </div>
         </div>
@@ -216,7 +225,7 @@ export function LoginPage() {
         {/* Demo Credentials */}
         <div className="mt-6 p-4 bg-slate-100 rounded-lg border border-slate-200">
           <p className="text-xs text-center text-slate-500 mb-2">
-            Demo credentials (for testing)
+            {t('auth.demoCredentials')}
           </p>
           <div className="grid grid-cols-3 gap-2 text-xs text-slate-600">
             <div className="text-center p-2 bg-white rounded">
@@ -237,4 +246,3 @@ export function LoginPage() {
     </div>
   )
 }
-

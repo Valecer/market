@@ -10,6 +10,7 @@ export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from '.
 export { ErrorBoundary, type ErrorBoundaryProps, type FallbackProps } from './ErrorBoundary'
 export { ErrorState } from './ErrorState'
 export { Input, type InputProps } from './Input'
+export { LanguageSwitcher } from './LanguageSwitcher'
 export { LoadingSkeleton } from './LoadingSkeleton'
 export { ProtectedRoute } from './ProtectedRoute'
 export { PublicLayout } from './PublicLayout'

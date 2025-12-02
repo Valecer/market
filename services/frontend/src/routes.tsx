@@ -16,7 +16,7 @@
  * - /admin/procurement (protected, procurement|admin) → ProcurementMatchingPage
  */
 
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 import { PublicLayout } from '@/components/shared/PublicLayout'
 import { AdminLayout } from '@/components/shared/AdminLayout'
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute'
@@ -29,43 +29,11 @@ import { OrderSuccessPage } from '@/pages/OrderSuccessPage'
 import { SalesCatalogPage } from '@/pages/admin/SalesCatalogPage'
 import { InternalProductDetailPage } from '@/pages/admin/InternalProductDetailPage'
 import { ProcurementMatchingPage } from '@/pages/admin/ProcurementMatchingPage'
+import { IngestionPage } from '@/pages/admin/IngestionPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
 // =============================================================================
-
-function CatalogPlaceholder() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-lg shadow-md p-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-          <svg
-            className="w-8 h-8 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-            />
-          </svg>
-        </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">
-          Product Catalog
-        </h2>
-        <p className="text-slate-500 mb-4">
-          This page will display the product catalog. Coming in Phase 3.
-        </p>
-        <p className="text-sm text-muted">
-          Phase 2 (Routing & Authentication) is complete!
-        </p>
-      </div>
-    </div>
-  )
-}
 
 function AdminDashboardPlaceholder() {
   return (
@@ -238,6 +206,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin', 'procurement']}>
             <ProcurementMatchingPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'ingestion',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <IngestionPage />
           </ProtectedRoute>
         ),
       },

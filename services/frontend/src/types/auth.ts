@@ -25,6 +25,8 @@ export interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
+  /** True while checking localStorage for existing auth */
+  isLoading: boolean
   user: User | null
   userRole: UserRole | null
 }

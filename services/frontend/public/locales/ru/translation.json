@@ -1,0 +1,334 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "retry": "Повторить",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "cancel": "Отмена",
+    "submit": "Отправить",
+    "back": "Назад",
+    "next": "Далее",
+    "search": "Поиск",
+    "clear": "Очистить",
+    "close": "Закрыть",
+    "all": "Все",
+    "remove": "Удалить",
+    "free": "Бесплатно",
+    "each": "шт.",
+    "searching": "Поиск...",
+    "noResults": "Ничего не найдено",
+    "sku": "Артикул",
+    "price": "Цена",
+    "category": "Категория",
+    "supplier": "Поставщик",
+    "complete": "завершено",
+    "name": "Название",
+    "actions": "Действия",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "configure": "Настроить",
+    "activating": "Активация..."
+  },
+
+  "header": {
+    "catalog": "Каталог",
+    "cart": "Корзина",
+    "admin": "Админ",
+    "login": "Войти",
+    "logout": "Выйти",
+    "languageSelect": "Сменить язык",
+    "openMenu": "Открыть меню"
+  },
+
+  "footer": {
+    "copyright": "© {{year}} Marketbel. Все права защищены.",
+    "privacy": "Конфиденциальность",
+    "terms": "Условия",
+    "contact": "Контакты"
+  },
+
+  "catalog": {
+    "title": "Каталог товаров",
+    "subtitle": "Просмотрите наш ассортимент товаров от различных поставщиков",
+    "searchPlaceholder": "Поиск товаров по названию или артикулу...",
+    "allCategories": "Все категории",
+    "minPrice": "Мин ₽",
+    "maxPrice": "Макс ₽",
+    "clearFilters": "Сбросить",
+    "updating": "Обновление...",
+    "paginationInfo": "Показано {{start}}-{{end}} из {{total}} товаров",
+    "noResults": {
+      "title": "Ничего не найдено",
+      "message": "Попробуйте изменить фильтры или поисковый запрос."
+    },
+    "filters": {
+      "search": "Поиск: \"{{query}}\"",
+      "category": "Категория: {{name}}",
+      "minPrice": "Мин: ₽{{price}}",
+      "maxPrice": "Макс: ₽{{price}}"
+    }
+  },
+
+  "product": {
+    "addToCart": "Добавить",
+    "addToCartFull": "В корзину",
+    "viewDetails": "Подробнее",
+    "supplierCount_one": "{{count}} поставщик",
+    "supplierCount_few": "{{count}} поставщика",
+    "supplierCount_many": "{{count}} поставщиков",
+    "suppliersLinked_one": "{{count}} поставщик привязан",
+    "suppliersLinked_few": "{{count}} поставщика привязано",
+    "suppliersLinked_many": "{{count}} поставщиков привязано",
+    "priceRange": "{{min}} - {{max}}",
+    "outOfStock": "Нет в наличии",
+    "inStock": "В наличии"
+  },
+
+  "cart": {
+    "title": "Корзина",
+    "subtitle_one": "{{count}} товар в корзине",
+    "subtitle_few": "{{count}} товара в корзине",
+    "subtitle_many": "{{count}} товаров в корзине",
+    "emptySubtitle": "Корзина пуста",
+    "empty": {
+      "title": "Корзина пуста",
+      "message": "Похоже, вы ещё ничего не добавили в корзину. Загляните в каталог, чтобы найти нужные товары."
+    },
+    "itemCount_one": "{{count}} товар",
+    "itemCount_few": "{{count}} товара",
+    "itemCount_many": "{{count}} товаров",
+    "ariaLabel_one": "Корзина с {{count}} товаром",
+    "ariaLabel_few": "Корзина с {{count}} товарами",
+    "ariaLabel_many": "Корзина с {{count}} товарами",
+    "total": "Итого",
+    "subtotal": "Подытог",
+    "shipping": "Доставка",
+    "tax": "Налог (8%)",
+    "checkout": "Оформить заказ",
+    "continueShopping": "Продолжить покупки",
+    "browseProducts": "Перейти в каталог",
+    "removeItemLabel": "Удалить {{name}} из корзины",
+    "quantity": "Количество",
+    "clearCart": "Очистить корзину",
+    "orderSummary": "Сумма заказа",
+    "increaseQuantity": "Увеличить количество",
+    "decreaseQuantity": "Уменьшить количество"
+  },
+
+  "auth": {
+    "welcomeBack": "С возвращением",
+    "signInSubtitle": "Войдите в свой аккаунт",
+    "username": "Имя пользователя",
+    "usernamePlaceholder": "Введите имя пользователя",
+    "password": "Пароль",
+    "passwordPlaceholder": "Введите пароль",
+    "loginButton": "Войти",
+    "loggingIn": "Вход...",
+    "loginError": "Неверное имя пользователя или пароль",
+    "loginRequired": "Пожалуйста, войдите в систему",
+    "sessionExpired": "Сессия истекла. Пожалуйста, войдите снова.",
+    "backToCatalog": "← Вернуться в каталог",
+    "demoCredentials": "Демо-данные (для тестирования)"
+  },
+
+  "error": {
+    "title": "Что-то пошло не так",
+    "message": "Произошла непредвиденная ошибка. Попробуйте ещё раз.",
+    "notFound": "Страница не найдена",
+    "networkError": "Ошибка сети. Проверьте подключение.",
+    "serverError": "Ошибка сервера. Попробуйте позже.",
+    "failedToLoad": "Не удалось загрузить товары",
+    "loadingData": "Ошибка загрузки данных"
+  },
+
+  "loading": {
+    "products": "Загрузка товаров...",
+    "product": "Загрузка товара...",
+    "cart": "Загрузка корзины...",
+    "translations": "Загрузка...",
+    "table": "Загрузка данных..."
+  },
+
+  "pagination": {
+    "previous": "← Назад",
+    "next": "Далее →",
+    "pageInfo": "Страница {{page}} из {{total}}",
+    "previousPage": "Предыдущая страница",
+    "nextPage": "Следующая страница"
+  },
+
+  "admin": {
+    "dashboard": "Dashboard",
+    "salesCatalog": "Каталог продаж",
+    "salesCatalogSubtitle": "Просмотр товаров с ценами, маржой и информацией о поставщиках",
+    "procurement": "Закупки",
+    "procurementSubtitle": "Привязка товаров поставщиков к внутренним продуктам для отслеживания цен и наличия.",
+    "viewCatalog": "Каталог",
+    "collapseSidebar": "Свернуть панель",
+    "expandSidebar": "Развернуть панель",
+    "welcome": "Привет, {{name}}",
+
+    "sales": {
+      "status": "Статус",
+      "allStatuses": "Все статусы",
+      "active": "Активный",
+      "draft": "Черновик",
+      "archived": "В архиве",
+      "marginRange": "Маржа (%)",
+      "min": "Мин",
+      "max": "Макс",
+      "clearFilters": "Сбросить",
+      "products": "товаров",
+      "productName": "Название товара",
+      "sellingPrice": "Цена продажи",
+      "costPrice": "Себестоимость",
+      "margin": "Маржа",
+      "noProductsFound": "Товары не найдены",
+      "tryAdjustingFilters": "Попробуйте изменить фильтры или критерии поиска."
+    },
+
+    "procurementPage": {
+      "unmatchedItems": "Непривязанные товары",
+      "productsWithLinks": "Товары с привязками",
+      "totalAssociations": "Всего связей",
+      "itemCount_one": "{{count}} товар",
+      "itemCount_few": "{{count}} товара",
+      "itemCount_many": "{{count}} товаров",
+      "selectToLinkMultiple": "Выберите товары для массовой привязки",
+      "itemName": "Название товара",
+      "lastSynced": "Последняя синхронизация",
+      "linkToProduct": "Привязать к товару",
+      "linkAriaLabel": "Привязать {{name}} к товару",
+      "selectAllItems": "Выбрать все",
+      "selectItem": "Выбрать {{name}}",
+      "itemsSelected_one": "{{count}} товар выбран",
+      "itemsSelected_few": "{{count}} товара выбрано",
+      "itemsSelected_many": "{{count}} товаров выбрано",
+      "linkSelectedToProduct": "Привязать выбранные к товару",
+      "allItemsMatched": "Все товары привязаны!",
+      "allItemsMatchedDesc": "Все товары поставщиков привязаны к продуктам.",
+      "matchedProducts": "Привязанные товары",
+      "noMatchedItems": "Нет привязанных товаров",
+      "noMatchedItemsDesc": "Привяжите товары поставщиков к продуктам, используя таблицу выше.",
+      "unlink": "Отвязать",
+      "unlinkAriaLabel": "Отвязать {{supplier}} от {{product}}",
+      "unlinkTitle": "Отвязать товар поставщика?",
+      "unlinkDescription": "Вы уверены, что хотите отвязать {{supplier}} от {{product}}? Это удалит связь между ними.",
+      "unlinking": "Отвязка...",
+      "linkToProductTitle": "Привязать к товару",
+      "linkMultipleTitle": "Привязать {{count}} товаров к продукту",
+      "linkingItems": "Привязка товара поставщика:",
+      "linkingItemsMultiple": "Привязка {{count}} товаров поставщика:",
+      "searchProductsPlaceholder": "Поиск товаров по названию или артикулу...",
+      "typeToSearch": "Введите минимум 2 символа для поиска",
+      "noProductsForQuery": "Товары не найдены по запросу \"{{query}}\"",
+      "createNewProduct": "Создать новый товар",
+      "createNewProductTitle": "Создать новый товар",
+      "createNewProductDescription": "Создайте новый товар и автоматически привяжите к нему товар поставщика.",
+      "createNewProductHint": "Не можете найти нужный товар?",
+      "orCreateNew": "Или создайте новый товар",
+      "productName": "Название товара",
+      "productNamePlaceholder": "Введите название товара",
+      "createAndLink": "Создать и привязать",
+      "productCreatedSuccess": "Товар \"{{name}}\" создан и успешно привязан"
+    },
+
+    "ingestion": "Синхронизация",
+    
+    "status": {
+      "draft": "Черновик",
+      "active": "Активный",
+      "archived": "Архив"
+    },
+    
+    "statusUpdateSuccess": "Статус товара успешно обновлён",
+    "statusUpdateError": "Не удалось обновить статус товара",
+    "bulkStatusUpdateError": "Не удалось обновить статусы товаров",
+    "noDraftProducts": "Нет черновиков для активации",
+    "activateAllDraft": "Активировать {{count}} черновиков"
+  },
+
+  "ingestion": {
+    "title": "Панель управления синхронизацией данных",
+    "subtitle": "Управление и мониторинг синхронизации данных поставщиков",
+    "syncControl": "Управление синхронизацией",
+    "syncControlDescription": "Запуск и мониторинг операций синхронизации",
+    "syncNow": "Синхронизировать",
+    "syncing": "Синхронизация...",
+    "processingSuppliers": "Обработка поставщиков",
+    "lastSync": "Последняя синхронизация",
+    "nextScheduled": "Следующая запланированная",
+    "howItWorks": "Как это работает",
+    "step1": "Нажмите \"Синхронизировать\" для чтения мастер-таблицы Google и обновления конфигурации поставщиков.",
+    "step2": "Система синхронизирует данные поставщиков и ставит в очередь задачи парсинга для активных поставщиков.",
+    "step3": "Отслеживайте прогресс обработки прайс-листов каждого поставщика.",
+    "suppliers": "Поставщики",
+    "sourceType": "Тип источника",
+    "status": "Статус",
+    "itemsCount": "Товары",
+    "state": {
+      "idle": "Ожидание",
+      "syncing_master": "Синхронизация мастер-таблицы",
+      "processing_suppliers": "Обработка поставщиков"
+    },
+    "supplierStatus": {
+      "success": "Успешно",
+      "error": "Ошибка",
+      "pending": "Ожидание",
+      "inactive": "Неактивен"
+    }
+  },
+
+  "settings": {
+    "masterSheetUrl": {
+      "title": "URL мастер-таблицы",
+      "description": "URL Google Таблицы для синхронизации конфигурации поставщиков",
+      "label": "URL мастер-таблицы",
+      "placeholder": "https://docs.google.com/spreadsheets/d/...",
+      "sheetNameLabel": "Название листа",
+      "sheetNamePlaceholder": "Suppliers",
+      "sheetNameHint": "Название вкладки листа для парсинга (по умолчанию: Suppliers)",
+      "notConfigured": "URL мастер-таблицы не настроен",
+      "lastUpdated": "Последнее обновление:",
+      "invalidUrl": "Введите корректный URL Google Таблицы",
+      "fetchError": "Не удалось загрузить настройки",
+      "saveSuccess": "Конфигурация мастер-таблицы успешно сохранена"
+    }
+  },
+
+  "suppliers": {
+    "addSupplier": "Добавить поставщика",
+    "count_one": "{{count}} поставщик",
+    "count_few": "{{count}} поставщика",
+    "count_many": "{{count}} поставщиков",
+    "noSuppliers": "Поставщики ещё не настроены",
+    "addFirst": "Добавить первого поставщика",
+    "delete": "Удалить поставщика",
+    "deleteConfirm": "Вы уверены, что хотите удалить \"{{name}}\"? Это также удалит все связанные товары.",
+    "sourceTypes": {
+      "google_sheets": "Google Таблицы",
+      "csv": "CSV файл",
+      "excel": "Excel файл"
+    },
+    "modal": {
+      "title": "Добавить нового поставщика",
+      "name": "Название поставщика",
+      "namePlaceholder": "Введите название поставщика",
+      "sourceType": "Тип источника данных",
+      "sourceUrl": "URL источника (опционально)",
+      "sourceUrlPlaceholder": "https://docs.google.com/spreadsheets/d/...",
+      "sourceUrlHint": "URL Google Таблицы или внешнего файла. Можно добавить позже.",
+      "uploadFile": "Загрузить прайс-лист (опционально)",
+      "dropzoneText": "Перетащите файл сюда или нажмите для выбора",
+      "dropzoneHint": "Поддерживаются CSV, XLSX, XLS (максимум 50МБ)",
+      "invalidFileType": "Неверный тип файла. Загрузите CSV или Excel файл.",
+      "fileTooLarge": "Файл слишком большой. Максимальный размер — 50МБ.",
+      "uploadError": "Не удалось обработать файл",
+      "activeLabel": "Поставщик активен для синхронизации",
+      "notes": "Заметки",
+      "notesPlaceholder": "Необязательные заметки о поставщике...",
+      "create": "Создать поставщика"
+    }
+  }
+}

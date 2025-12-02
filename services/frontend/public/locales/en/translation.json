@@ -1,0 +1,326 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Try Again",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "clear": "Clear",
+    "close": "Close",
+    "all": "All",
+    "remove": "Remove",
+    "free": "Free",
+    "each": "each",
+    "searching": "Searching...",
+    "noResults": "No results found",
+    "sku": "SKU",
+    "price": "Price",
+    "category": "Category",
+    "supplier": "Supplier",
+    "complete": "complete",
+    "name": "Name",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "configure": "Configure",
+    "activating": "Activating..."
+  },
+
+  "header": {
+    "catalog": "Catalog",
+    "cart": "Cart",
+    "admin": "Admin",
+    "login": "Login",
+    "logout": "Logout",
+    "languageSelect": "Switch language",
+    "openMenu": "Open menu"
+  },
+
+  "footer": {
+    "copyright": "© {{year}} Marketbel. All rights reserved.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact"
+  },
+
+  "catalog": {
+    "title": "Product Catalog",
+    "subtitle": "Browse our selection of products from multiple suppliers",
+    "searchPlaceholder": "Search products by name or SKU...",
+    "allCategories": "All Categories",
+    "minPrice": "Min $",
+    "maxPrice": "Max $",
+    "clearFilters": "Clear",
+    "updating": "Updating...",
+    "paginationInfo": "Showing {{start}}-{{end}} of {{total}} products",
+    "noResults": {
+      "title": "No products found",
+      "message": "Try adjusting your filters or search terms to find what you're looking for."
+    },
+    "filters": {
+      "search": "Search: \"{{query}}\"",
+      "category": "Category: {{name}}",
+      "minPrice": "Min: ${{price}}",
+      "maxPrice": "Max: ${{price}}"
+    }
+  },
+
+  "product": {
+    "addToCart": "Add",
+    "addToCartFull": "Add to Cart",
+    "viewDetails": "View Details",
+    "supplierCount": "{{count}} supplier",
+    "supplierCount_plural": "{{count}} suppliers",
+    "suppliersLinked": "{{count}} supplier linked",
+    "suppliersLinked_plural": "{{count}} suppliers linked",
+    "priceRange": "{{min}} - {{max}}",
+    "outOfStock": "Out of Stock",
+    "inStock": "In Stock"
+  },
+
+  "cart": {
+    "title": "Shopping Cart",
+    "subtitle": "{{count}} item in your cart",
+    "subtitle_plural": "{{count}} items in your cart",
+    "emptySubtitle": "Your cart is empty",
+    "empty": {
+      "title": "Your cart is empty",
+      "message": "Looks like you haven't added anything to your cart yet. Browse our catalog to find products you'll love."
+    },
+    "itemCount": "{{count}} item",
+    "itemCount_plural": "{{count}} items",
+    "ariaLabel": "Shopping cart with {{count}} item",
+    "ariaLabel_plural": "Shopping cart with {{count}} items",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "tax": "Tax (8%)",
+    "checkout": "Proceed to Checkout",
+    "continueShopping": "Continue Shopping",
+    "browseProducts": "Browse Products",
+    "removeItemLabel": "Remove {{name}} from cart",
+    "quantity": "Quantity",
+    "clearCart": "Clear Cart",
+    "orderSummary": "Order Summary",
+    "increaseQuantity": "Increase quantity",
+    "decreaseQuantity": "Decrease quantity"
+  },
+
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "signInSubtitle": "Sign in to access your account",
+    "username": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "loginButton": "Sign In",
+    "loggingIn": "Signing in...",
+    "loginError": "Invalid username or password",
+    "loginRequired": "Please log in to continue",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "backToCatalog": "← Back to catalog",
+    "demoCredentials": "Demo credentials (for testing)"
+  },
+
+  "error": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try again.",
+    "notFound": "Page not found",
+    "networkError": "Network error. Please check your connection.",
+    "serverError": "Server error. Please try again later.",
+    "failedToLoad": "Failed to load products",
+    "loadingData": "Error loading data"
+  },
+
+  "loading": {
+    "products": "Loading products...",
+    "product": "Loading product...",
+    "cart": "Loading cart...",
+    "translations": "Loading...",
+    "table": "Loading table data..."
+  },
+
+  "pagination": {
+    "previous": "← Previous",
+    "next": "Next →",
+    "pageInfo": "Page {{page}} of {{total}}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
+  },
+
+  "admin": {
+    "dashboard": "Dashboard",
+    "salesCatalog": "Sales Catalog",
+    "salesCatalogSubtitle": "View products with pricing, margins, and supplier information",
+    "procurement": "Procurement",
+    "procurementSubtitle": "Link supplier items to internal products to track pricing and inventory.",
+    "viewCatalog": "View Catalog",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "welcome": "Welcome, {{name}}",
+
+    "sales": {
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "active": "Active",
+      "draft": "Draft",
+      "archived": "Archived",
+      "marginRange": "Margin (%)",
+      "min": "Min",
+      "max": "Max",
+      "clearFilters": "Clear",
+      "products": "products",
+      "productName": "Product Name",
+      "sellingPrice": "Selling Price",
+      "costPrice": "Cost Price",
+      "margin": "Margin",
+      "noProductsFound": "No products found",
+      "tryAdjustingFilters": "Try adjusting your filters or search criteria."
+    },
+
+    "procurementPage": {
+      "unmatchedItems": "Unmatched Items",
+      "productsWithLinks": "Products with Links",
+      "totalAssociations": "Total Associations",
+      "itemCount": "{{count}} item",
+      "itemCount_plural": "{{count}} items",
+      "selectToLinkMultiple": "Select items to link multiple at once",
+      "itemName": "Item Name",
+      "lastSynced": "Last Synced",
+      "linkToProduct": "Link to Product",
+      "linkAriaLabel": "Link {{name}} to a product",
+      "selectAllItems": "Select all items",
+      "selectItem": "Select {{name}}",
+      "itemsSelected": "{{count}} item selected",
+      "itemsSelected_plural": "{{count}} items selected",
+      "linkSelectedToProduct": "Link Selected to Product",
+      "allItemsMatched": "All items matched!",
+      "allItemsMatchedDesc": "All supplier items have been linked to products.",
+      "matchedProducts": "Matched Products",
+      "noMatchedItems": "No matched items",
+      "noMatchedItemsDesc": "Link supplier items to products using the unmatched items table above.",
+      "unlink": "Unlink",
+      "unlinkAriaLabel": "Unlink {{supplier}} from {{product}}",
+      "unlinkTitle": "Unlink Supplier Item?",
+      "unlinkDescription": "Are you sure you want to unlink {{supplier}} from {{product}}? This will remove the association between them.",
+      "unlinking": "Unlinking...",
+      "linkToProductTitle": "Link to Product",
+      "linkMultipleTitle": "Link {{count}} Items to Product",
+      "linkingItems": "Linking supplier item:",
+      "linkingItemsMultiple": "Linking {{count}} supplier items:",
+      "searchProductsPlaceholder": "Search products by name or SKU...",
+      "typeToSearch": "Type at least 2 characters to search",
+      "noProductsForQuery": "No products found for \"{{query}}\"",
+      "createNewProduct": "Create New Product",
+      "createNewProductTitle": "Create New Product",
+      "createNewProductDescription": "Create a new product and automatically link the supplier item to it.",
+      "createNewProductHint": "Can't find the right product?",
+      "orCreateNew": "Or create a new product",
+      "productName": "Product Name",
+      "productNamePlaceholder": "Enter product name",
+      "createAndLink": "Create & Link",
+      "productCreatedSuccess": "Product \"{{name}}\" created and linked successfully"
+    },
+
+    "ingestion": "Ingestion",
+    
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "archived": "Archived"
+    },
+    
+    "statusUpdateSuccess": "Product status updated successfully",
+    "statusUpdateError": "Failed to update product status",
+    "bulkStatusUpdateError": "Failed to update product statuses",
+    "noDraftProducts": "No draft products to activate",
+    "activateAllDraft": "Activate {{count}} Draft"
+  },
+
+  "ingestion": {
+    "title": "Data Ingestion Control Panel",
+    "subtitle": "Manage and monitor supplier data synchronization",
+    "syncControl": "Sync Control",
+    "syncControlDescription": "Trigger and monitor sync operations",
+    "syncNow": "Sync Now",
+    "syncing": "Syncing...",
+    "processingSuppliers": "Processing suppliers",
+    "lastSync": "Last Sync",
+    "nextScheduled": "Next Scheduled",
+    "howItWorks": "How it works",
+    "step1": "Click \"Sync Now\" to read the Master Google Sheet and update supplier configurations.",
+    "step2": "The system syncs supplier data and enqueues parsing tasks for active suppliers.",
+    "step3": "View progress as each supplier's price list is processed.",
+    "suppliers": "Suppliers",
+    "sourceType": "Source Type",
+    "status": "Status",
+    "itemsCount": "Items",
+    "state": {
+      "idle": "Idle",
+      "syncing_master": "Syncing Master Sheet",
+      "processing_suppliers": "Processing Suppliers"
+    },
+    "supplierStatus": {
+      "success": "Success",
+      "error": "Error",
+      "pending": "Pending",
+      "inactive": "Inactive"
+    }
+  },
+
+  "settings": {
+    "masterSheetUrl": {
+      "title": "Master Sheet URL",
+      "description": "Google Sheets URL used to sync supplier configurations",
+      "label": "Master Sheet URL",
+      "placeholder": "https://docs.google.com/spreadsheets/d/...",
+      "sheetNameLabel": "Worksheet Name",
+      "sheetNamePlaceholder": "Suppliers",
+      "sheetNameHint": "Name of the worksheet tab to parse (default: Suppliers)",
+      "notConfigured": "No master sheet URL configured",
+      "lastUpdated": "Last updated:",
+      "invalidUrl": "Please enter a valid Google Sheets URL",
+      "fetchError": "Failed to load settings",
+      "saveSuccess": "Master sheet configuration saved successfully"
+    }
+  },
+
+  "suppliers": {
+    "addSupplier": "Add Supplier",
+    "count": "{{count}} supplier",
+    "count_plural": "{{count}} suppliers",
+    "noSuppliers": "No suppliers configured yet",
+    "addFirst": "Add your first supplier",
+    "delete": "Delete supplier",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This will also delete all associated items.",
+    "sourceTypes": {
+      "google_sheets": "Google Sheets",
+      "csv": "CSV File",
+      "excel": "Excel File"
+    },
+    "modal": {
+      "title": "Add New Supplier",
+      "name": "Supplier Name",
+      "namePlaceholder": "Enter supplier name",
+      "sourceType": "Data Source Type",
+      "sourceUrl": "Source URL (optional)",
+      "sourceUrlPlaceholder": "https://docs.google.com/spreadsheets/d/...",
+      "sourceUrlHint": "URL to Google Sheets or external file. Can be added later.",
+      "uploadFile": "Upload Price List (optional)",
+      "dropzoneText": "Drag & drop a file here, or click to select",
+      "dropzoneHint": "Supports CSV, XLSX, XLS (max 50MB)",
+      "invalidFileType": "Invalid file type. Please upload CSV or Excel files.",
+      "fileTooLarge": "File is too large. Maximum size is 50MB.",
+      "uploadError": "Failed to process file",
+      "activeLabel": "Supplier is active for sync",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes about this supplier...",
+      "create": "Create Supplier"
+    }
+  }
+}

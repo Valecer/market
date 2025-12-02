@@ -88,7 +88,7 @@ export function ProductDetailPage() {
       id: product.id,
       name: product.name,
       sku: product.internal_sku,
-      price: product.min_price,
+      price: typeof product.min_price === 'string' ? parseFloat(product.min_price) : product.min_price,
       category: product.category_id ?? undefined,
     }
     addItem(cartProduct)

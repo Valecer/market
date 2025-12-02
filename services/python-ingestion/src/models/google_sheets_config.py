@@ -39,7 +39,12 @@ class GoogleSheetsConfig(BaseModel):
     header_row: int = Field(
         default=1,
         ge=1,
-        description="Row number (1-indexed) containing column headers"
+        description="Row number (1-indexed) containing column headers (first header row if multiple)"
+    )
+    header_row_end: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Row number (1-indexed) of last header row if headers span multiple rows. If None, only header_row is used."
     )
     data_start_row: int = Field(
         default=2,
@@ -71,14 +76,30 @@ class GoogleSheetsConfig(BaseModel):
             )
         return v
     
+    @field_validator('header_row_end')
+    @classmethod
+    def validate_header_row_end(cls, v: Optional[int], info) -> Optional[int]:
+        """Validate header_row_end is after header_row."""
+        if v is None:
+            return v
+        header_row = info.data.get('header_row', 1)
+        if v < header_row:
+            raise ValueError(
+                f'header_row_end ({v}) must be greater than or equal to header_row ({header_row})'
+            )
+        return v
+    
     @field_validator('data_start_row')
     @classmethod
     def validate_data_start_after_header(cls, v: int, info) -> int:
-        """Validate data_start_row is after header_row."""
+        """Validate data_start_row is after header rows."""
         header_row = info.data.get('header_row', 1)
-        if v <= header_row:
+        header_row_end = info.data.get('header_row_end')
+        # Use header_row_end if provided, otherwise use header_row
+        last_header_row = header_row_end if header_row_end is not None else header_row
+        if v <= last_header_row:
             raise ValueError(
-                f'data_start_row ({v}) must be greater than header_row ({header_row})'
+                f'data_start_row ({v}) must be greater than last header row ({last_header_row})'
             )
         return v
     

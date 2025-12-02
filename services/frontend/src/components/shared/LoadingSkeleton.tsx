@@ -6,8 +6,10 @@
  *
  * Design System: Tailwind CSS with custom animations
  * Accessibility: Uses aria-busy for screen readers
+ * i18n: Screen reader text is translatable
  */
 
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 interface SkeletonProps {
@@ -30,11 +32,13 @@ export function Skeleton({ className }: SkeletonProps) {
  * Product card skeleton for catalog loading
  */
 export function ProductCardSkeleton() {
+  const { t } = useTranslation()
+  
   return (
     <div
       className="bg-white rounded-xl shadow-md overflow-hidden border border-border"
       aria-busy="true"
-      aria-label="Loading product"
+      aria-label={t('loading.product')}
     >
       {/* Image placeholder */}
       <Skeleton className="h-48 w-full rounded-none" />
@@ -63,16 +67,18 @@ export function ProductCardSkeleton() {
  * Product grid skeleton for catalog loading
  */
 export function ProductGridSkeleton({ count = 6 }: { count?: number }) {
+  const { t } = useTranslation()
+  
   return (
     <div
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       role="status"
-      aria-label="Loading products"
+      aria-label={t('loading.products')}
     >
       {Array.from({ length: count }).map((_, i) => (
         <ProductCardSkeleton key={i} />
       ))}
-      <span className="sr-only">Loading products...</span>
+      <span className="sr-only">{t('loading.products')}</span>
     </div>
   )
 }
@@ -127,6 +133,8 @@ export function TableSkeleton({
   rows?: number
   columns?: number
 }) {
+  const { t } = useTranslation()
+  
   return (
     <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
       <table className="w-full" aria-busy="true">
@@ -145,7 +153,7 @@ export function TableSkeleton({
           ))}
         </tbody>
       </table>
-      <span className="sr-only">Loading table data...</span>
+      <span className="sr-only">{t('loading.table')}</span>
     </div>
   )
 }
@@ -154,8 +162,10 @@ export function TableSkeleton({
  * Product detail page skeleton
  */
 export function ProductDetailSkeleton() {
+  const { t } = useTranslation()
+  
   return (
-    <div className="space-y-6" aria-busy="true" aria-label="Loading product details">
+    <div className="space-y-6" aria-busy="true" aria-label={t('loading.product')}>
       {/* Back button */}
       <Skeleton className="h-9 w-24" />
 
@@ -192,4 +202,3 @@ export function ProductDetailSkeleton() {
 export function LoadingSkeleton({ className }: SkeletonProps) {
   return <Skeleton className={className} />
 }
-

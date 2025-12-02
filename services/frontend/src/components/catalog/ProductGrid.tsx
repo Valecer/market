@@ -8,8 +8,11 @@
  * - Mobile (< 640px): 1 column
  * - Tablet (640-1024px): 2 columns
  * - Desktop (> 1024px): 3 columns
+ * 
+ * i18n: All text content is translatable
  */
 
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { ProductCard } from './ProductCard'
 import { ProductGridSkeleton } from '@/components/shared/LoadingSkeleton'
@@ -45,6 +48,8 @@ export function ProductGrid({
   skeletonCount = 6,
   className,
 }: ProductGridProps) {
+  const { t } = useTranslation()
+
   // Loading state
   if (isLoading) {
     return <ProductGridSkeleton count={skeletonCount} />
@@ -54,8 +59,8 @@ export function ProductGrid({
   if (error) {
     return (
       <ErrorState
-        title="Failed to load products"
-        message={error.message || 'Please try again later.'}
+        title={t('error.failedToLoad')}
+        message={error.message || t('error.message')}
         onRetry={onRetry}
       />
     )
@@ -65,8 +70,8 @@ export function ProductGrid({
   if (!products || products.length === 0) {
     return (
       <EmptyState
-        title="No products found"
-        message="Try adjusting your filters or search terms to find what you're looking for."
+        title={t('catalog.noResults.title')}
+        message={t('catalog.noResults.message')}
         icon={
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
             <svg
@@ -110,6 +115,7 @@ export function ProductGrid({
 
 /**
  * Pagination info component
+ * i18n: Uses interpolated translation string
  */
 export function PaginationInfo({
   page,
@@ -120,23 +126,20 @@ export function PaginationInfo({
   limit: number
   totalCount: number
 }) {
+  const { t } = useTranslation()
   const start = (page - 1) * limit + 1
   const end = Math.min(page * limit, totalCount)
 
   return (
     <p className="text-sm text-muted">
-      Showing{' '}
-      <span className="font-medium text-slate-900">
-        {start}-{end}
-      </span>{' '}
-      of{' '}
-      <span className="font-medium text-slate-900">{totalCount}</span> products
+      {t('catalog.paginationInfo', { start, end, total: totalCount })}
     </p>
   )
 }
 
 /**
  * Pagination controls component
+ * i18n: All button labels are translatable
  */
 export function Pagination({
   page,
@@ -147,6 +150,8 @@ export function Pagination({
   totalPages: number
   onPageChange: (page: number) => void
 }) {
+  const { t } = useTranslation()
+
   if (totalPages <= 1) return null
 
   return (
@@ -163,13 +168,13 @@ export function Pagination({
             ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
             : 'bg-white border border-border text-slate-700 hover:bg-slate-50'
         )}
-        aria-label="Previous page"
+        aria-label={t('pagination.previous')}
       >
-        ← Previous
+        {t('pagination.previous')}
       </button>
 
       <span className="px-4 py-2 text-sm text-slate-600">
-        Page {page} of {totalPages}
+        {t('pagination.pageInfo', { page, total: totalPages })}
       </span>
 
       <button
@@ -181,11 +186,10 @@ export function Pagination({
             ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
             : 'bg-white border border-border text-slate-700 hover:bg-slate-50'
         )}
-        aria-label="Next page"
+        aria-label={t('pagination.next')}
       >
-        Next →
+        {t('pagination.next')}
       </button>
     </nav>
   )
 }
-

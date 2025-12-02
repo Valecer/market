@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "translation-schema.json",
+  "title": "Marketbel Translation Schema",
+  "description": "JSON Schema for validating translation files (en/ru)",
+  "type": "object",
+  "required": ["common", "header", "footer", "catalog", "product", "cart", "auth", "error", "loading"],
+  "additionalProperties": false,
+  "properties": {
+    "common": {
+      "type": "object",
+      "description": "Shared UI elements",
+      "required": ["loading", "error", "retry", "save", "cancel", "submit", "back", "next", "search", "clear", "close", "all"],
+      "properties": {
+        "loading": { "type": "string" },
+        "error": { "type": "string" },
+        "retry": { "type": "string" },
+        "save": { "type": "string" },
+        "cancel": { "type": "string" },
+        "submit": { "type": "string" },
+        "back": { "type": "string" },
+        "next": { "type": "string" },
+        "search": { "type": "string" },
+        "clear": { "type": "string" },
+        "close": { "type": "string" },
+        "all": { "type": "string" }
+      }
+    },
+    "header": {
+      "type": "object",
+      "description": "Header navigation and user menu",
+      "required": ["catalog", "cart", "admin", "login", "logout", "languageSelect", "openMenu"],
+      "properties": {
+        "catalog": { "type": "string" },
+        "cart": { "type": "string" },
+        "admin": { "type": "string" },
+        "login": { "type": "string" },
+        "logout": { "type": "string" },
+        "languageSelect": { "type": "string" },
+        "openMenu": { "type": "string" }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "description": "Footer content",
+      "required": ["copyright", "privacy", "terms", "contact"],
+      "properties": {
+        "copyright": { 
+          "type": "string",
+          "description": "Must contain {{year}} interpolation"
+        },
+        "privacy": { "type": "string" },
+        "terms": { "type": "string" },
+        "contact": { "type": "string" }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "description": "Catalog page text",
+      "required": ["title", "subtitle", "searchPlaceholder", "allCategories", "minPrice", "maxPrice", "clearFilters", "updating", "paginationInfo", "noResults", "filters"],
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "searchPlaceholder": { "type": "string" },
+        "allCategories": { "type": "string" },
+        "minPrice": { "type": "string" },
+        "maxPrice": { "type": "string" },
+        "clearFilters": { "type": "string" },
+        "updating": { "type": "string" },
+        "paginationInfo": { 
+          "type": "string",
+          "description": "Must contain {{start}}, {{end}}, {{total}} interpolations"
+        },
+        "noResults": {
+          "type": "object",
+          "required": ["title", "message"],
+          "properties": {
+            "title": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        },
+        "filters": {
+          "type": "object",
+          "required": ["search", "category", "minPrice", "maxPrice"],
+          "properties": {
+            "search": { "type": "string" },
+            "category": { "type": "string" },
+            "minPrice": { "type": "string" },
+            "maxPrice": { "type": "string" }
+          }
+        }
+      }
+    },
+    "product": {
+      "type": "object",
+      "description": "Product card and detail text",
+      "required": ["addToCart", "addToCartFull", "viewDetails", "sku", "price", "priceRange", "outOfStock", "inStock"],
+      "properties": {
+        "addToCart": { "type": "string" },
+        "addToCartFull": { "type": "string" },
+        "viewDetails": { "type": "string" },
+        "supplierCount": { "type": "string" },
+        "supplierCount_plural": { "type": "string" },
+        "supplierCount_one": { "type": "string" },
+        "supplierCount_few": { "type": "string" },
+        "supplierCount_many": { "type": "string" },
+        "sku": { "type": "string" },
+        "price": { "type": "string" },
+        "priceRange": { "type": "string" },
+        "outOfStock": { "type": "string" },
+        "inStock": { "type": "string" }
+      }
+    },
+    "cart": {
+      "type": "object",
+      "description": "Cart page and cart icon text",
+      "required": ["title", "empty", "total", "checkout", "continueShopping", "removeItem", "quantity"],
+      "properties": {
+        "title": { "type": "string" },
+        "empty": {
+          "type": "object",
+          "required": ["title", "message"],
+          "properties": {
+            "title": { "type": "string" },
+            "message": { "type": "string" }
+          }
+        },
+        "itemCount": { "type": "string" },
+        "itemCount_plural": { "type": "string" },
+        "itemCount_one": { "type": "string" },
+        "itemCount_few": { "type": "string" },
+        "itemCount_many": { "type": "string" },
+        "ariaLabel": { "type": "string" },
+        "ariaLabel_plural": { "type": "string" },
+        "ariaLabel_one": { "type": "string" },
+        "ariaLabel_few": { "type": "string" },
+        "ariaLabel_many": { "type": "string" },
+        "total": { "type": "string" },
+        "checkout": { "type": "string" },
+        "continueShopping": { "type": "string" },
+        "removeItem": { "type": "string" },
+        "quantity": { "type": "string" }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication UI text",
+      "required": ["username", "password", "loginButton", "loggingIn", "loginError", "loginRequired"],
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "loginButton": { "type": "string" },
+        "loggingIn": { "type": "string" },
+        "loginError": { "type": "string" },
+        "loginRequired": { "type": "string" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "description": "Error state messages",
+      "required": ["title", "message", "notFound", "networkError", "serverError"],
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "notFound": { "type": "string" },
+        "networkError": { "type": "string" },
+        "serverError": { "type": "string" }
+      }
+    },
+    "loading": {
+      "type": "object",
+      "description": "Loading state messages",
+      "required": ["products", "product", "cart", "translations", "table"],
+      "properties": {
+        "products": { "type": "string" },
+        "product": { "type": "string" },
+        "cart": { "type": "string" },
+        "translations": { "type": "string" },
+        "table": { "type": "string" }
+      }
+    }
+  }
+}
+

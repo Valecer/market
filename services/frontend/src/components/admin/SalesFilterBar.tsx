@@ -6,9 +6,11 @@
  *
  * Design System: Tailwind CSS with consistent form styling
  * Accessibility: Proper labels, ARIA attributes, keyboard navigation
+ * i18n: All text content is translatable
  */
 
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { AdminProductFilters, ProductStatus } from '@/lib/api-client'
 
 // =============================================================================
@@ -25,17 +27,6 @@ interface SalesFilterBarProps {
 }
 
 // =============================================================================
-// Status Options
-// =============================================================================
-
-const statusOptions: { value: ProductStatus | ''; label: string }[] = [
-  { value: '', label: 'All Statuses' },
-  { value: 'active', label: 'Active' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'archived', label: 'Archived' },
-]
-
-// =============================================================================
 // Component
 // =============================================================================
 
@@ -44,9 +35,19 @@ export function SalesFilterBar({
   onFiltersChange, 
   totalCount 
 }: SalesFilterBarProps) {
+  const { t } = useTranslation()
+  
   // Local state for margin inputs (debounced)
   const [localMinMargin, setLocalMinMargin] = useState(filters.min_margin?.toString() ?? '')
   const [localMaxMargin, setLocalMaxMargin] = useState(filters.max_margin?.toString() ?? '')
+
+  // Status options with translations
+  const statusOptions: { value: ProductStatus | ''; labelKey: string }[] = [
+    { value: '', labelKey: 'admin.sales.allStatuses' },
+    { value: 'active', labelKey: 'admin.sales.active' },
+    { value: 'draft', labelKey: 'admin.sales.draft' },
+    { value: 'archived', labelKey: 'admin.sales.archived' },
+  ]
 
   // Handle status change
   const handleStatusChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -109,41 +110,41 @@ export function SalesFilterBar({
   )
 
   return (
-    <div className="bg-white rounded-lg border border-border p-4 mb-4">
-      <div className="flex flex-wrap items-end gap-4">
+    <div className="bg-white rounded-xl border border-border shadow-sm mb-4 overflow-hidden">
+      <div className="p-4 flex flex-col sm:flex-row sm:items-end gap-4">
         {/* Status Filter */}
-        <div className="flex-1 min-w-[160px] max-w-[200px]">
+        <div className="w-full sm:w-44">
           <label 
             htmlFor="status-filter" 
-            className="block text-sm font-medium text-slate-700 mb-1.5"
+            className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5"
           >
-            Status
+            {t('admin.sales.status')}
           </label>
           <select
             id="status-filter"
             value={filters.status ?? ''}
             onChange={handleStatusChange}
-            className="w-full px-3 py-2 bg-white border border-border rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+            className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-white transition-all cursor-pointer"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {t(option.labelKey)}
               </option>
             ))}
           </select>
         </div>
 
         {/* Margin Range Filter */}
-        <div className="flex-1 min-w-[240px] max-w-[320px]">
+        <div className="w-full sm:w-auto">
           <label 
-            className="block text-sm font-medium text-slate-700 mb-1.5"
+            className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5"
           >
-            Margin Range (%)
+            {t('admin.sales.marginRange')}
           </label>
           <div className="flex items-center gap-2">
             <input
               type="number"
-              placeholder="Min"
+              placeholder={t('admin.sales.min')}
               value={localMinMargin}
               onChange={(e) => handleMarginChange('min', e.target.value)}
               onBlur={applyMarginFilter}
@@ -151,13 +152,13 @@ export function SalesFilterBar({
               min="0"
               max="100"
               step="1"
-              className="flex-1 px-3 py-2 bg-white border border-border rounded-md text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-              aria-label="Minimum margin percentage"
+              className="w-20 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-white transition-all"
+              aria-label={t('admin.sales.min')}
             />
-            <span className="text-slate-400">—</span>
+            <span className="text-slate-300 font-light">—</span>
             <input
               type="number"
-              placeholder="Max"
+              placeholder={t('admin.sales.max')}
               value={localMaxMargin}
               onChange={(e) => handleMarginChange('max', e.target.value)}
               onBlur={applyMarginFilter}
@@ -165,34 +166,37 @@ export function SalesFilterBar({
               min="0"
               max="100"
               step="1"
-              className="flex-1 px-3 py-2 bg-white border border-border rounded-md text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-              aria-label="Maximum margin percentage"
+              className="w-20 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary focus:bg-white transition-all"
+              aria-label={t('admin.sales.max')}
             />
           </div>
         </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Spacer - grows to push actions to the right */}
+        <div className="hidden sm:block flex-1" />
 
+        {/* Actions */}
+        <div className="flex items-center gap-3 sm:ml-auto">
         {/* Clear Filters */}
         {hasActiveFilters && (
           <button
             type="button"
             onClick={handleClearFilters}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+              className="h-10 px-4 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            Clear filters
+              {t('admin.sales.clearFilters')}
           </button>
         )}
 
         {/* Result Count */}
         {totalCount !== undefined && (
-          <div className="text-sm text-slate-500">
-            <span className="font-medium text-slate-900">{totalCount.toLocaleString()}</span> product{totalCount !== 1 ? 's' : ''}
+            <div className="h-10 px-4 flex items-center bg-slate-100 rounded-lg">
+              <span className="text-sm font-semibold text-slate-900">{totalCount.toLocaleString()}</span>
+              <span className="text-sm text-slate-500 ml-1.5">{t('admin.sales.products')}</span>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
 }
-

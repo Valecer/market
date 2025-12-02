@@ -6,9 +6,11 @@
  *
  * Design System: Tailwind CSS with custom shadows
  * Accessibility: Focusable card, proper alt text
+ * i18n: All text content is translatable
  */
 
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { cn, formatPrice, getPlaceholderImage, truncate } from '@/lib/utils'
 import type { CatalogProduct } from '@/lib/api-client'
 
@@ -29,6 +31,7 @@ export function ProductCard({
   onAddToCart,
   className,
 }: ProductCardProps) {
+  const { t } = useTranslation()
   const {
     id,
     name,
@@ -61,7 +64,7 @@ export function ProductCard({
       >
         <img
           src={getPlaceholderImage(name)}
-          alt={`Product: ${name}`}
+          alt={`${t('product.viewDetails')}: ${name}`}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
@@ -69,7 +72,7 @@ export function ProductCard({
         {/* Supplier count badge */}
         {supplier_count > 0 && (
           <span className="absolute top-3 right-3 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-slate-600 shadow-sm">
-            {supplier_count} supplier{supplier_count !== 1 ? 's' : ''}
+            {t('product.supplierCount', { count: supplier_count })}
           </span>
         )}
       </Link>
@@ -110,7 +113,7 @@ export function ProductCard({
                 'hover:bg-primary hover:text-white transition-colors',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
               )}
-              aria-label={`Add ${name} to cart`}
+              aria-label={`${t('product.addToCartFull')}: ${name}`}
             >
               <svg
                 className="w-4 h-4"
@@ -126,7 +129,7 @@ export function ProductCard({
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
-              Add
+              {t('product.addToCart')}
             </button>
           )}
         </div>
@@ -134,4 +137,3 @@ export function ProductCard({
     </article>
   )
 }
-

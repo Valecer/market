@@ -32,13 +32,43 @@ setInterval(() => {
 }, 60000) // Clean up every minute
 
 /**
- * Check rate limit for a user
+ * Check rate limit status for a user (read-only, does not increment)
  * @param userId - User identifier (user ID preferred, IP as fallback)
  * @param limit - Maximum requests allowed in window
  * @param windowMs - Time window in milliseconds
- * @returns Object with allowed status and remaining requests
+ * @returns Object with current status and remaining requests
  */
-function checkRateLimit(
+function getRateLimitStatus(
+  userId: string,
+  limit: number,
+  windowMs: number
+): { allowed: boolean; remaining: number; resetAt: number } {
+  const now = Date.now()
+  const entry = rateLimitStore.get(userId)
+
+  if (!entry || now - entry.windowStart >= windowMs) {
+    // No window or window expired - would be allowed
+    return { allowed: true, remaining: limit, resetAt: now + windowMs }
+  }
+
+  if (entry.count >= limit) {
+    // Rate limit exceeded
+    const resetAt = entry.windowStart + windowMs
+    return { allowed: false, remaining: 0, resetAt }
+  }
+
+  // Still within limit
+  return { allowed: true, remaining: limit - entry.count, resetAt: entry.windowStart + windowMs }
+}
+
+/**
+ * Increment rate limit counter for a user
+ * @param userId - User identifier
+ * @param limit - Maximum requests allowed in window
+ * @param windowMs - Time window in milliseconds
+ * @returns Object with status after incrementing
+ */
+function incrementRateLimit(
   userId: string,
   limit: number,
   windowMs: number
@@ -53,7 +83,7 @@ function checkRateLimit(
   }
 
   if (entry.count >= limit) {
-    // Rate limit exceeded
+    // Rate limit already exceeded
     const resetAt = entry.windowStart + windowMs
     return { allowed: false, remaining: 0, resetAt }
   }
@@ -98,20 +128,23 @@ export function rateLimiter(options: RateLimiterOptions = {}) {
         request.headers.get('x-real-ip') || 
         'anonymous'
 
-      const { allowed, remaining, resetAt } = checkRateLimit(userId, limit, windowMs)
-
-      // Always set rate limit headers
-      const resetAtDate = new Date(resetAt)
+      // Get current status WITHOUT incrementing (read-only check)
+      const currentStatus = getRateLimitStatus(userId, limit, windowMs)
       
       return {
         rateLimitInfo: {
-          allowed,
-          remaining,
-          resetAt,
+          allowed: currentStatus.allowed,
+          remaining: currentStatus.remaining,
+          resetAt: currentStatus.resetAt,
           limit,
         },
-        // Helper to check and respond with 429 if rate limited
+        // Helper to check, increment, and respond with 429 if rate limited
+        // Only increments when actually called by a route handler
         checkRateLimit: () => {
+          // Increment counter and get updated status
+          const { allowed, remaining, resetAt } = incrementRateLimit(userId, limit, windowMs)
+          const resetAtDate = new Date(resetAt)
+          
           if (!allowed) {
             set.status = 429
             set.headers['x-ratelimit-limit'] = String(limit)

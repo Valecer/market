@@ -2,17 +2,21 @@
  * PublicLayout Component
  *
  * Layout wrapper for public-facing pages (catalog, product detail, cart).
- * Includes header with navigation and cart icon.
+ * Includes header with navigation, language switcher, and cart icon.
  *
  * Design System: Radix UI + Tailwind CSS
  * Accessibility: Semantic HTML, proper navigation structure
+ * i18n: All text content is translatable
  */
 
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { CartIcon } from '@/components/cart'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 export function PublicLayout() {
+  const { t } = useTranslation()
   const { isAuthenticated, user, logout } = useAuth()
   const location = useLocation()
 
@@ -66,7 +70,7 @@ export function PublicLayout() {
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Catalog
+                {t('header.catalog')}
               </Link>
               <Link
                 to="/cart"
@@ -76,12 +80,15 @@ export function PublicLayout() {
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Cart
+                {t('header.cart')}
               </Link>
             </nav>
 
-            {/* Right side - Auth & Cart */}
+            {/* Right side - Language Switcher, Auth & Cart */}
             <div className="flex items-center gap-4">
+              {/* Language Switcher */}
+              <LanguageSwitcher className="hidden sm:flex" />
+
               {/* Cart Icon with badge */}
               <CartIcon />
 
@@ -98,14 +105,14 @@ export function PublicLayout() {
                       to="/admin"
                       className="text-sm font-medium text-slate-600 hover:text-primary transition-colors"
                     >
-                      Admin
+                      {t('header.admin')}
                     </Link>
                   )}
                   <button
                     onClick={logout}
                     className="text-sm font-medium text-slate-600 hover:text-danger transition-colors"
                   >
-                    Logout
+                    {t('header.logout')}
                   </button>
                 </div>
               ) : (
@@ -113,14 +120,14 @@ export function PublicLayout() {
                   to="/login"
                   className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
                 >
-                  Login
+                  {t('header.login')}
                 </Link>
               )}
 
               {/* Mobile menu button */}
               <button
                 className="md:hidden p-2 text-slate-600 hover:text-slate-900"
-                aria-label="Open menu"
+                aria-label={t('header.openMenu')}
               >
                 <svg
                   className="w-6 h-6"
@@ -151,32 +158,35 @@ export function PublicLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted">
-              © {new Date().getFullYear()} Marketbel. All rights reserved.
+              {t('footer.copyright', { year: new Date().getFullYear() })}
             </p>
+            <div className="flex items-center gap-4">
+              {/* Mobile Language Switcher (shown only on small screens) */}
+              <LanguageSwitcher className="sm:hidden" />
             <nav className="flex gap-6">
               <a
                 href="#"
                 className="text-sm text-muted hover:text-slate-900 transition-colors"
               >
-                Privacy
+                  {t('footer.privacy')}
               </a>
               <a
                 href="#"
                 className="text-sm text-muted hover:text-slate-900 transition-colors"
               >
-                Terms
+                  {t('footer.terms')}
               </a>
               <a
                 href="#"
                 className="text-sm text-muted hover:text-slate-900 transition-colors"
               >
-                Contact
+                  {t('footer.contact')}
               </a>
             </nav>
+            </div>
           </div>
         </div>
       </footer>
     </div>
   )
 }
-

@@ -3,8 +3,11 @@
  *
  * Single cart item display with image, details, quantity controls, and remove button.
  * Used in CartPage for displaying cart contents.
+ * 
+ * i18n: All text content is translatable
  */
 
+import { useTranslation } from 'react-i18next'
 import { useCart } from '@/hooks/useCart'
 import type { CartItem } from '@/types/cart'
 import { formatCurrency } from '@/types/cart'
@@ -14,6 +17,7 @@ interface CartItemRowProps {
 }
 
 export function CartItemRow({ item }: CartItemRowProps) {
+  const { t } = useTranslation()
   const { updateQuantity, removeItem } = useCart()
   const { product, quantity } = item
   const itemTotal = product.price * quantity
@@ -42,7 +46,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
   return (
     <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-border shadow-sm">
       {/* Product Image */}
-      <div className="flex-shrink-0 w-20 h-20 bg-slate-100 rounded-lg overflow-hidden">
+      <div className="shrink-0 w-20 h-20 bg-slate-100 rounded-lg overflow-hidden">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -71,12 +75,12 @@ export function CartItemRow({ item }: CartItemRowProps) {
       {/* Product Details */}
       <div className="flex-1 min-w-0">
         <h3 className="font-medium text-slate-900 truncate">{product.name}</h3>
-        <p className="text-sm text-muted">SKU: {product.sku}</p>
+        <p className="text-sm text-muted">{t('common.sku')}: {product.sku}</p>
         {product.category && (
           <p className="text-sm text-muted">{product.category}</p>
         )}
         <p className="text-sm font-medium text-slate-600 mt-1">
-          {formatCurrency(product.price)} each
+          {formatCurrency(product.price)} {t('common.each')}
         </p>
       </div>
 
@@ -86,7 +90,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
           onClick={handleDecrement}
           disabled={quantity <= 1}
           className="w-8 h-8 flex items-center justify-center rounded-md border border-border text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          aria-label="Decrease quantity"
+          aria-label={t('cart.decreaseQuantity')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -99,13 +103,13 @@ export function CartItemRow({ item }: CartItemRowProps) {
           value={quantity}
           onChange={handleQuantityChange}
           className="w-14 h-8 text-center text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-          aria-label="Quantity"
+          aria-label={t('cart.quantity')}
         />
         
         <button
           onClick={handleIncrement}
           className="w-8 h-8 flex items-center justify-center rounded-md border border-border text-slate-600 hover:bg-slate-50 transition-colors"
-          aria-label="Increase quantity"
+          aria-label={t('cart.increaseQuantity')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -121,7 +125,7 @@ export function CartItemRow({ item }: CartItemRowProps) {
         <button
           onClick={handleRemove}
           className="text-sm text-danger hover:text-danger/80 transition-colors flex items-center gap-1"
-          aria-label={`Remove ${product.name} from cart`}
+          aria-label={t('cart.removeItemLabel', { name: product.name })}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -131,10 +135,9 @@ export function CartItemRow({ item }: CartItemRowProps) {
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
             />
           </svg>
-          Remove
+          {t('common.remove')}
         </button>
       </div>
     </div>
   )
 }
-

@@ -5,10 +5,12 @@
  * Includes "Unlink" button with confirmation for each supplier item.
  *
  * Used in the procurement matching page to show existing associations.
+ * i18n: All text content is translatable
  */
 
 import { useState, useCallback } from 'react'
-import { AlertDialog, Button, Flex, Text } from '@radix-ui/themes'
+import { useTranslation } from 'react-i18next'
+import { AlertDialog, Button, Flex } from '@radix-ui/themes'
 import type { AdminProduct, SupplierItem } from '@/lib/api-client'
 
 // =============================================================================
@@ -98,21 +100,21 @@ function formatDate(dateStr: string): string {
 /**
  * Get status badge styling
  */
-function getStatusBadge(status: AdminProduct['status']): { text: string; className: string } {
+function getStatusBadge(status: AdminProduct['status'], t: (key: string) => string): { text: string; className: string } {
   switch (status) {
     case 'active':
       return { 
-        text: 'Active', 
+        text: t('admin.sales.active'), 
         className: 'bg-emerald-50 text-emerald-700 border-emerald-200' 
       }
     case 'draft':
       return { 
-        text: 'Draft', 
+        text: t('admin.sales.draft'), 
         className: 'bg-slate-50 text-slate-600 border-slate-200' 
       }
     case 'archived':
       return { 
-        text: 'Archived', 
+        text: t('admin.sales.archived'), 
         className: 'bg-slate-50 text-slate-400 border-slate-200' 
       }
     default:
@@ -133,6 +135,7 @@ export function MatchedItemsSection({
   onUnlink,
   isUnlinking = false,
 }: MatchedItemsSectionProps) {
+  const { t } = useTranslation()
   const [confirmState, setConfirmState] = useState<UnlinkConfirmState>({
     open: false,
     productId: '',
@@ -209,8 +212,8 @@ export function MatchedItemsSection({
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 mb-4">
           <ProductIcon />
         </div>
-        <h3 className="text-lg font-medium text-slate-900 mb-1">No matched items</h3>
-        <p className="text-slate-500">Link supplier items to products using the unmatched items table above.</p>
+        <h3 className="text-lg font-medium text-slate-900 mb-1">{t('admin.procurementPage.noMatchedItems')}</h3>
+        <p className="text-slate-500">{t('admin.procurementPage.noMatchedItemsDesc')}</p>
       </div>
     )
   }
@@ -220,15 +223,15 @@ export function MatchedItemsSection({
       <div className="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
         <div className="px-4 py-3 bg-slate-50 border-b border-border">
           <h3 className="text-sm font-semibold text-slate-700">
-            Matched Products
+            {t('admin.procurementPage.matchedProducts')}
             <span className="ml-2 text-xs font-normal text-slate-500">
-              ({productsWithItems.length} product{productsWithItems.length !== 1 ? 's' : ''})
+              ({t('admin.procurementPage.itemCount', { count: productsWithItems.length })})
             </span>
           </h3>
         </div>
         <div className="divide-y divide-border">
           {productsWithItems.map((product) => {
-            const statusBadge = getStatusBadge(product.status)
+            const statusBadge = getStatusBadge(product.status, t)
             const isExpanded = expandedProducts.has(product.id)
             const itemCount = product.supplier_items?.length ?? 0
             
@@ -242,7 +245,7 @@ export function MatchedItemsSection({
                   aria-expanded={isExpanded}
                   aria-controls={`supplier-items-${product.id}`}
                 >
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <ProductIcon />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -252,7 +255,7 @@ export function MatchedItemsSection({
                         {statusBadge.text}
                       </span>
                       <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        {itemCount} item{itemCount !== 1 ? 's' : ''}
+                        {t('admin.procurementPage.itemCount', { count: itemCount })}
                       </span>
                     </div>
                     <span className="text-sm text-slate-500 font-mono block mt-0.5">
@@ -265,8 +268,10 @@ export function MatchedItemsSection({
                 {/* Supplier Items - Collapsible */}
                 <div
                   id={`supplier-items-${product.id}`}
-                  className={`overflow-hidden transition-all duration-200 ease-in-out ${
-                    isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                  className={`transition-all duration-200 ease-in-out ${
+                    isExpanded 
+                      ? 'max-h-[400px] opacity-100 overflow-y-auto' 
+                      : 'max-h-0 opacity-0 overflow-hidden'
                   }`}
                 >
                   <div className="px-4 pb-4 pt-1 ml-8 space-y-2">
@@ -303,10 +308,10 @@ export function MatchedItemsSection({
                             }}
                             disabled={isUnlinking}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                            aria-label={`Unlink ${item.supplier_name} from ${product.name}`}
+                            aria-label={t('admin.procurementPage.unlinkAriaLabel', { supplier: item.supplier_name, product: product.name })}
                           >
                             <UnlinkIcon />
-                            Unlink
+                            {t('admin.procurementPage.unlink')}
                           </button>
                         </div>
                       </div>
@@ -322,19 +327,18 @@ export function MatchedItemsSection({
       {/* Confirmation Dialog */}
       <AlertDialog.Root open={confirmState.open} onOpenChange={(open) => setConfirmState((prev) => ({ ...prev, open }))}>
         <AlertDialog.Content maxWidth="450px">
-          <AlertDialog.Title>Unlink Supplier Item?</AlertDialog.Title>
+          <AlertDialog.Title>{t('admin.procurementPage.unlinkTitle')}</AlertDialog.Title>
           <AlertDialog.Description size="2">
-            Are you sure you want to unlink{' '}
-            <Text weight="medium">{confirmState.supplierItemName}</Text>
-            {' '}from{' '}
-            <Text weight="medium">{confirmState.productName}</Text>?
-            {' '}This will remove the association between them.
+            {t('admin.procurementPage.unlinkDescription', { 
+              supplier: confirmState.supplierItemName, 
+              product: confirmState.productName 
+            })}
           </AlertDialog.Description>
 
           <Flex gap="3" mt="4" justify="end">
             <AlertDialog.Cancel>
               <Button variant="soft" color="gray" disabled={isUnlinking}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action>
@@ -344,7 +348,7 @@ export function MatchedItemsSection({
                 onClick={handleConfirmUnlink}
                 disabled={isUnlinking}
               >
-                {isUnlinking ? 'Unlinking...' : 'Unlink'}
+                {isUnlinking ? t('admin.procurementPage.unlinking') : t('admin.procurementPage.unlink')}
               </Button>
             </AlertDialog.Action>
           </Flex>
@@ -353,4 +357,3 @@ export function MatchedItemsSection({
     </>
   )
 }
-

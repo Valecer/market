@@ -78,7 +78,7 @@ function DefaultFallback({ error, resetErrorBoundary }: FallbackProps) {
         </p>
 
         {/* Error details (development only) */}
-        {process.env.NODE_ENV === 'development' && (
+        {import.meta.env.DEV && (
           <details className="mb-4 text-left">
             <summary className="text-sm text-muted cursor-pointer hover:text-slate-700 dark:hover:text-slate-300">
               Error details
@@ -156,7 +156,7 @@ export class ErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo)
     }
 

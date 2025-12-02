@@ -8,9 +8,11 @@
  *
  * Design System: Tailwind CSS with form styling
  * Accessibility: Labels, aria-labels, keyboard navigation
+ * i18n: All text content is translatable
  */
 
 import { useState, useEffect, useCallback, useId } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn, debounce } from '@/lib/utils'
 import type { CatalogFilters } from '@/types/filters'
 
@@ -37,6 +39,7 @@ export function FilterBar({
   categoriesLoading,
   className,
 }: FilterBarProps) {
+  const { t } = useTranslation()
   const searchId = useId()
   const categoryId = useId()
   const minPriceId = useId()
@@ -123,7 +126,7 @@ export function FilterBar({
         {/* Search Input */}
         <div className="flex-1 min-w-0">
           <label htmlFor={searchId} className="sr-only">
-            Search products
+            {t('common.search')}
           </label>
           <div className="relative">
             <svg
@@ -145,7 +148,7 @@ export function FilterBar({
               type="search"
               value={searchValue}
               onChange={handleSearchChange}
-              placeholder="Search products by name or SKU..."
+              placeholder={t('catalog.searchPlaceholder')}
               className={cn(
                 'w-full pl-10 pr-4 py-2.5 rounded-lg border border-border',
                 'bg-white text-slate-900 placeholder:text-slate-400',
@@ -159,7 +162,7 @@ export function FilterBar({
         {/* Category Dropdown */}
         <div className="w-full lg:w-48">
           <label htmlFor={categoryId} className="sr-only">
-            Category
+            {t('catalog.allCategories')}
           </label>
           <select
             id={categoryId}
@@ -181,7 +184,7 @@ export function FilterBar({
               paddingRight: '2.5rem',
             }}
           >
-            <option value="">All Categories</option>
+            <option value="">{t('catalog.allCategories')}</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -194,7 +197,7 @@ export function FilterBar({
         <div className="flex items-center gap-2">
           <div className="w-28">
             <label htmlFor={minPriceId} className="sr-only">
-              Minimum price
+              {t('catalog.minPrice')}
             </label>
             <input
               id={minPriceId}
@@ -203,7 +206,7 @@ export function FilterBar({
               step="0.01"
               value={filters.min_price ?? ''}
               onChange={handleMinPriceChange}
-              placeholder="Min $"
+              placeholder={t('catalog.minPrice')}
               className={cn(
                 'w-full px-3 py-2.5 rounded-lg border border-border',
                 'bg-white text-slate-900 placeholder:text-slate-400',
@@ -217,7 +220,7 @@ export function FilterBar({
           </span>
           <div className="w-28">
             <label htmlFor={maxPriceId} className="sr-only">
-              Maximum price
+              {t('catalog.maxPrice')}
             </label>
             <input
               id={maxPriceId}
@@ -226,7 +229,7 @@ export function FilterBar({
               step="0.01"
               value={filters.max_price ?? ''}
               onChange={handleMaxPriceChange}
-              placeholder="Max $"
+              placeholder={t('catalog.maxPrice')}
               className={cn(
                 'w-full px-3 py-2.5 rounded-lg border border-border',
                 'bg-white text-slate-900 placeholder:text-slate-400',
@@ -262,7 +265,7 @@ export function FilterBar({
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-            Clear
+            {t('catalog.clearFilters')}
           </button>
         )}
       </div>
@@ -271,18 +274,20 @@ export function FilterBar({
       {hasActiveFilters && (
         <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-2">
           {filters.search && (
-            <FilterTag label={`Search: "${filters.search}"`} />
+            <FilterTag label={t('catalog.filters.search', { query: filters.search })} />
           )}
           {filters.category_id && (
             <FilterTag
-              label={`Category: ${categories.find((c) => c.id === filters.category_id)?.name || filters.category_id}`}
+              label={t('catalog.filters.category', { 
+                name: categories.find((c) => c.id === filters.category_id)?.name || filters.category_id 
+              })}
             />
           )}
           {filters.min_price !== undefined && (
-            <FilterTag label={`Min: $${filters.min_price}`} />
+            <FilterTag label={t('catalog.filters.minPrice', { price: filters.min_price })} />
           )}
           {filters.max_price !== undefined && (
-            <FilterTag label={`Max: $${filters.max_price}`} />
+            <FilterTag label={t('catalog.filters.maxPrice', { price: filters.max_price })} />
           )}
         </div>
       )}
@@ -300,4 +305,3 @@ function FilterTag({ label }: { label: string }) {
     </span>
   )
 }
-

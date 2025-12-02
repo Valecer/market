@@ -92,3 +92,6 @@ credentials/*
 !credentials/README.md
 google-credentials.json
 
+
+# Uploaded files
+uploads/
