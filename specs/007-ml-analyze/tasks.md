@@ -61,32 +61,32 @@ Each phase represents a complete, independently testable increment.
 **Goal:** Initialize project structure, configure development environment, and establish database foundation.
 
 **Independent Test Criteria:**
-- [ ] Service starts and responds to health check
-- [ ] Database migrations apply cleanly
-- [ ] Ollama models are accessible
-- [ ] All dependencies install without errors
+- [X] Service starts and responds to health check
+- [X] Database migrations apply cleanly
+- [X] Ollama models are accessible
+- [X] All dependencies install without errors
 
 ### Tasks
 
-- [ ] T001 Create ml-analyze service directory structure in services/ml-analyze/
-- [ ] T002 [P] Create requirements.txt with all Python dependencies (fastapi, langchain, asyncpg, pgvector, etc.)
-- [ ] T003 [P] Create pyproject.toml for project metadata and build configuration
-- [ ] T004 [P] Create .env.example with all required environment variables
-- [ ] T005 [P] Create Dockerfile for ml-analyze service in services/ml-analyze/
-- [ ] T006 [P] Update docker-compose.yml to add ml-analyze service container
-- [ ] T007 Create Python virtual environment and install dependencies from requirements.txt
-- [ ] T008 [P] Install and configure Ollama with nomic-embed-text and llama3 models
-- [ ] T009 Create Alembic migration 007_enable_pgvector.py to enable vector extension
-- [ ] T010 Create Alembic migration 008_create_product_embeddings.py for embeddings table
-- [ ] T011 Run database migrations and verify product_embeddings table exists
-- [ ] T012 [P] Create src/__init__.py to mark as Python package
-- [ ] T013 [P] Create src/config/settings.py for environment variable management using pydantic-settings
-- [ ] T014 [P] Create src/api/__init__.py for API package
-- [ ] T015 [P] Create src/db/__init__.py for database package
-- [ ] T016 [P] Create src/ingest/__init__.py for ingestion package
-- [ ] T017 [P] Create src/rag/__init__.py for RAG package
-- [ ] T018 Create src/api/main.py with minimal FastAPI app and /health endpoint
-- [ ] T019 Test service startup: uvicorn src.api.main:app --reload and verify http://localhost:8001/health
+- [X] T001 Create ml-analyze service directory structure in services/ml-analyze/
+- [X] T002 [P] Create requirements.txt with all Python dependencies (fastapi, langchain, asyncpg, pgvector, etc.)
+- [X] T003 [P] Create pyproject.toml for project metadata and build configuration
+- [X] T004 [P] Create .env.example with all required environment variables
+- [X] T005 [P] Create Dockerfile for ml-analyze service in services/ml-analyze/
+- [X] T006 [P] Update docker-compose.yml to add ml-analyze service container
+- [X] T007 Create Python virtual environment and install dependencies from requirements.txt
+- [X] T008 [P] Install and configure Ollama with nomic-embed-text and llama3 models
+- [X] T009 Create Alembic migration 007_enable_pgvector.py to enable vector extension
+- [X] T010 Create Alembic migration 008_create_product_embeddings.py for embeddings table
+- [X] T011 Run database migrations and verify product_embeddings table exists
+- [X] T012 [P] Create src/__init__.py to mark as Python package
+- [X] T013 [P] Create src/config/settings.py for environment variable management using pydantic-settings
+- [X] T014 [P] Create src/api/__init__.py for API package
+- [X] T015 [P] Create src/db/__init__.py for database package
+- [X] T016 [P] Create src/ingest/__init__.py for ingestion package
+- [X] T017 [P] Create src/rag/__init__.py for RAG package
+- [X] T018 Create src/api/main.py with minimal FastAPI app and /health endpoint
+- [X] T019 Test service startup: uvicorn src.api.main:app --reload and verify http://localhost:8001/health
 
 **Dependencies:** None (starting point)
 
