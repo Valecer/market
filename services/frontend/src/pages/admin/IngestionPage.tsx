@@ -12,9 +12,9 @@
  * @see /specs/006-admin-sync-scheduler/spec.md
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useIngestionStatus, useTriggerSync } from '@/hooks'
+import { useIngestionStatus, useTriggerSync, useDeleteSupplier } from '@/hooks'
 import {
   SyncControlCard,
   SupplierAddModal,
@@ -64,12 +64,21 @@ export function IngestionPage() {
     error: triggerError,
   } = useTriggerSync()
 
-  // Delete supplier mutation available via useDeleteSupplier if needed
+  // Delete supplier mutation
+  const {
+    mutate: deleteSupplier,
+    isPending: isDeletePending,
+  } = useDeleteSupplier()
 
   // Handle sync button click
   const handleSyncNow = () => {
     triggerSync()
   }
+
+  // Handle delete supplier
+  const handleDeleteSupplier = useCallback((id: string, _name: string) => {
+    deleteSupplier(id)
+  }, [deleteSupplier])
 
   // Determine if sync is in progress
   const isSyncing =
@@ -150,6 +159,8 @@ export function IngestionPage() {
         <SupplierStatusTable
           suppliers={status?.suppliers || []}
           isLoading={isStatusLoading}
+          onDeleteSupplier={handleDeleteSupplier}
+          isDeletingSupplier={isDeletePending}
         />
 
         {/* Live Log Viewer */}

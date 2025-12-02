@@ -12,7 +12,8 @@
 | 3 | React Frontend | ✅ Complete |
 | 4 | Product Matching Pipeline | ✅ Complete |
 | 5 | Frontend i18n | ✅ Complete |
-| 6 | Admin Sync Scheduler | 🚧 In Progress |
+| 6 | Admin Sync Scheduler | ✅ Complete |
+| 7 | ML-Analyze Service (RAG Pipeline) | 🚧 In Progress |
 
 **Before implementation:** Use mcp context7 to collect up-to-date documentation.  
 **For frontend:** Use i18n (add text to translation files in `public/locales/`).
@@ -22,12 +23,20 @@
 
 ## Technology Stack
 
-### Backend (Phases 1, 4, 6)
+### Backend (Phases 1, 4, 6, 7)
 - **Runtime:** Python 3.12+ (venv)
 - **ORM:** SQLAlchemy 2.0+ AsyncIO
 - **Queue:** arq (Redis-based)
 - **Validation:** Pydantic 2.x
 - **Matching:** RapidFuzz (Phase 4)
+
+### ML-Analyze Service (Phase 7)
+- **Framework:** FastAPI + uvicorn
+- **RAG:** LangChain + LangChain-Ollama
+- **LLM:** Ollama (nomic-embed-text for embeddings, llama3 for matching)
+- **Vector DB:** pgvector (PostgreSQL extension)
+- **File Parsing:** pymupdf4llm (PDF), openpyxl (Excel)
+- **Database:** asyncpg (async PostgreSQL driver)
 
 ### API (Phase 2)
 - **Runtime:** Bun
@@ -63,6 +72,13 @@ marketbel/
 │   │   │   ├── services/    # Matching, extraction (Phase 4)
 │   │   │   └── tasks/       # arq tasks
 │   │   └── migrations/      # Alembic
+│   ├── ml-analyze/          # Phase 7 - AI Service
+│   │   └── src/
+│   │       ├── api/         # FastAPI endpoints
+│   │       ├── db/          # Repositories, models
+│   │       ├── ingest/      # File parsers (PDF, Excel)
+│   │       ├── rag/         # VectorService, MergerAgent
+│   │       └── services/    # Business logic orchestration
 │   ├── bun-api/             # Phase 2 - API
 │   │   └── src/
 │   │       ├── controllers/ # auth/, catalog/, admin/
@@ -80,7 +96,8 @@ marketbel/
 │   ├── 003-frontend-app/
 │   ├── 004-product-matching-pipeline/
 │   ├── 005-frontend-i18n/
-│   └── 006-admin-sync-scheduler/
+│   ├── 006-admin-sync-scheduler/
+│   └── 007-ml-analyze/
 └── docker-compose.yml
 ```
 
@@ -115,13 +132,19 @@ marketbel/
 ```bash
 # Docker
 docker-compose up -d
-docker-compose logs -f worker|bun-api|frontend
+docker-compose logs -f worker|bun-api|frontend|ml-analyze
 
 # Python Worker
 cd services/python-ingestion
 source venv/bin/activate
 pytest tests/ -v --cov=src
 alembic upgrade head
+
+# ML-Analyze Service
+cd services/ml-analyze
+source venv/bin/activate
+uvicorn src.api.main:app --reload --port 8001
+pytest tests/ -v --cov=src
 
 # Bun API
 cd services/bun-api
@@ -164,6 +187,39 @@ Centralized admin panel for monitoring and controlling supplier data ingestion w
 
 ---
 
+## Phase 7: ML-Analyze Service (Planned)
+
+### Purpose
+AI-powered service for parsing complex unstructured supplier data (PDFs with tables, Excel with merged cells) using RAG (Retrieval-Augmented Generation) pipeline with local LLM for intelligent product matching.
+
+### Key Features
+- **Complex File Parsing:** Handles PDF tables and Excel merged cells using pymupdf4llm + openpyxl
+- **Vector Embeddings:** Generates 768-dim semantic embeddings with nomic-embed-text (Ollama)
+- **Semantic Search:** pgvector with IVFFLAT indexing for cosine similarity search
+- **LLM Matching:** llama3 (Ollama) for reasoning-based product matching with confidence scores
+- **Confidence Thresholds:** >90% auto-match, 70-90% review queue, <70% reject
+- **Background Jobs:** arq-based async processing with job status tracking
+
+### API Endpoints
+- `POST /analyze/file` - Trigger file analysis (returns job_id)
+- `GET /analyze/status/:job_id` - Poll job progress and results
+- `POST /analyze/merge` - Trigger batch product matching
+- `GET /health` - Service health check (DB, Ollama, Redis)
+
+### Key Files (Phase 7)
+- `services/ml-analyze/src/api/main.py` - FastAPI application
+- `services/ml-analyze/src/ingest/excel_strategy.py` - Excel parser
+- `services/ml-analyze/src/ingest/pdf_strategy.py` - PDF parser
+- `services/ml-analyze/src/rag/vector_service.py` - Embedding + vector search
+- `services/ml-analyze/src/rag/merger_agent.py` - LLM-based matching
+
+### Spec Reference
+- `/specs/007-ml-analyze/spec.md`
+- `/specs/007-ml-analyze/plan/`
+- `/specs/007-ml-analyze/plan/quickstart.md` - 15-minute setup guide
+
+---
+
 ## Database Schema (Key Tables)
 
 | Table | Description |
@@ -171,6 +227,7 @@ Centralized admin panel for monitoring and controlling supplier data ingestion w
 | `suppliers` | External data sources (google_sheets, csv, excel) |
 | `products` | Internal catalog (status: draft/active/archived) |
 | `supplier_items` | Raw supplier data with JSONB characteristics |
+| `product_embeddings` | Vector embeddings (768-dim) for semantic search (Phase 7) |
 | `price_history` | Time-series price tracking |
 | `parsing_logs` | Structured error logging |
 | `users` | Authentication (roles: sales, procurement, admin) |

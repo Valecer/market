@@ -126,5 +126,7 @@ export interface LiveLogViewerProps {
 export interface SupplierStatusTableProps {
   suppliers: SupplierStatus[]
   isLoading: boolean
+  onDeleteSupplier?: (id: string, name: string) => void
+  isDeletingSupplier?: boolean
 }
 

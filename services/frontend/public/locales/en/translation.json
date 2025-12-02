@@ -316,6 +316,11 @@
     "addFirst": "Add your first supplier",
     "delete": "Delete supplier",
     "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This will also delete all associated items.",
+    "deleting": "Deleting...",
+    "deleteSuccess": "Supplier deleted successfully",
+    "deleteError": "Failed to delete supplier",
+    "clearAll": "Clear All",
+    "clearAllConfirm": "Are you sure you want to delete all suppliers? This action cannot be undone.",
     "sourceTypes": {
       "google_sheets": "Google Sheets",
       "csv": "CSV File",

@@ -1,0 +1,460 @@
+openapi: 3.1.0
+info:
+  title: ml-analyze API
+  description: |
+    AI-powered product analysis and matching service for complex unstructured supplier data.
+
+    This service uses RAG (Retrieval-Augmented Generation) with vector embeddings and LLMs
+    to intelligently parse PDF/Excel files and match supplier items to existing products.
+  version: 1.0.0
+  contact:
+    name: Marketbel Development Team
+    email: dev@marketbel.com
+
+servers:
+  - url: http://localhost:8001
+    description: Local development
+  - url: http://ml-analyze:8001
+    description: Docker internal network
+
+tags:
+  - name: analysis
+    description: File analysis and product matching operations
+  - name: health
+    description: Service health and status checks
+
+paths:
+  /analyze/file:
+    post:
+      summary: Trigger file analysis
+      description: |
+        Accepts a file reference (URL or path) and enqueues a background job to:
+        1. Parse the file (PDF tables or Excel with merged cells)
+        2. Generate vector embeddings for each product
+        3. Perform semantic similarity search
+        4. Use LLM to confirm matches
+        5. Update database with results
+      operationId: analyzeFile
+      tags: [analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileAnalysisRequest'
+            examples:
+              pdf_file:
+                summary: Analyze PDF price list
+                value:
+                  file_url: "https://example.com/supplier_catalog.pdf"
+                  supplier_id: "550e8400-e29b-41d4-a716-446655440000"
+                  file_type: "pdf"
+              excel_file:
+                summary: Analyze Excel with merged cells
+                value:
+                  file_url: "file:///data/supplier_prices.xlsx"
+                  supplier_id: "550e8400-e29b-41d4-a716-446655440000"
+                  file_type: "excel"
+      responses:
+        '202':
+          description: File analysis job accepted and queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileAnalysisResponse'
+              example:
+                job_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                status: "pending"
+                message: "File analysis started. Use /analyze/status/{job_id} to track progress."
+        '400':
+          description: Invalid request (bad file URL, missing fields, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Invalid file URL format"
+                  details:
+                    field: "file_url"
+                    constraint: "Must be HTTP(S) URL or file:// path"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analyze/status/{job_id}:
+    get:
+      summary: Get analysis job status
+      description: |
+        Retrieves the current status and progress of a file analysis job.
+        Job data is stored in Redis with 24-hour TTL.
+      operationId: getJobStatus
+      tags: [analysis]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: UUID of the analysis job
+          schema:
+            type: string
+            format: uuid
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+      responses:
+        '200':
+          description: Job status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+              examples:
+                processing:
+                  summary: Job in progress
+                  value:
+                    job_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    status: "processing"
+                    progress_percentage: 45
+                    items_processed: 45
+                    items_total: 100
+                    errors: []
+                    created_at: "2025-12-03T10:00:00Z"
+                    started_at: "2025-12-03T10:00:05Z"
+                    completed_at: null
+                completed:
+                  summary: Job completed successfully
+                  value:
+                    job_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    status: "completed"
+                    progress_percentage: 100
+                    items_processed: 100
+                    items_total: 100
+                    errors: []
+                    created_at: "2025-12-03T10:00:00Z"
+                    started_at: "2025-12-03T10:00:05Z"
+                    completed_at: "2025-12-03T10:02:30Z"
+                failed_with_errors:
+                  summary: Job failed with errors
+                  value:
+                    job_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    status: "failed"
+                    progress_percentage: 67
+                    items_processed: 67
+                    items_total: 100
+                    errors:
+                      - "PDF parse error: Malformed table on page 3"
+                      - "LLM timeout: Exceeded 30s limit"
+                    created_at: "2025-12-03T10:00:00Z"
+                    started_at: "2025-12-03T10:00:05Z"
+                    completed_at: "2025-12-03T10:01:45Z"
+        '404':
+          description: Job not found (invalid job_id or expired)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "JOB_NOT_FOUND"
+                  message: "Job 7c9e6679-7425-40de-944b-e07fc1f90ae7 not found or has expired"
+
+  /analyze/merge:
+    post:
+      summary: Trigger batch product matching
+      description: |
+        Enqueues a batch matching job for all unlinked supplier items.
+        This is useful for re-running matching after LLM model upgrades.
+      operationId: triggerBatchMatch
+      tags: [analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchMatchRequest'
+            example:
+              supplier_id: "550e8400-e29b-41d4-a716-446655440000"
+              force_rematch: false
+      responses:
+        '202':
+          description: Batch matching job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileAnalysisResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analyze/vision:
+    post:
+      summary: Analyze image file (STUB - Not Implemented)
+      description: |
+        **STUB ENDPOINT:** Returns 501 Not Implemented.
+
+        This endpoint is designed but not implemented in MVP.
+        Future versions will support image-based price list extraction
+        using vision models (GPT-4V, LLaVA, etc.).
+      operationId: analyzeVision
+      tags: [analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_url, supplier_id]
+              properties:
+                file_url:
+                  type: string
+                  format: uri
+                  description: URL or path to image file (JPG, PNG)
+                supplier_id:
+                  type: string
+                  format: uuid
+            example:
+              file_url: "https://example.com/price_list_photo.jpg"
+              supplier_id: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '501':
+          description: Not Implemented (vision module stubbed for MVP)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "NOT_IMPLEMENTED"
+                  message: "Vision module is not implemented in this version. Text-only processing is supported."
+                  details:
+                    planned_version: "2.0.0"
+
+  /health:
+    get:
+      summary: Health check
+      description: |
+        Returns service health status including:
+        - Database connection
+        - Ollama API availability
+        - Redis connection
+      operationId: healthCheck
+      tags: [health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                version: "1.0.0"
+                checks:
+                  database: "ok"
+                  ollama: "ok"
+                  redis: "ok"
+        '503':
+          description: Service is unhealthy (one or more dependencies down)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "unhealthy"
+                version: "1.0.0"
+                checks:
+                  database: "ok"
+                  ollama: "error: connection refused"
+                  redis: "ok"
+
+components:
+  schemas:
+    FileAnalysisRequest:
+      type: object
+      required:
+        - file_url
+        - supplier_id
+        - file_type
+      properties:
+        file_url:
+          type: string
+          description: HTTP(S) URL or file:// path to the file
+          example: "https://example.com/supplier_catalog.pdf"
+        supplier_id:
+          type: string
+          format: uuid
+          description: UUID of the supplier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        file_type:
+          type: string
+          enum: [pdf, excel, csv]
+          description: Type of file to process
+          example: "pdf"
+
+    FileAnalysisResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - message
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the analysis job
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Current job status
+          example: "pending"
+        message:
+          type: string
+          description: Human-readable status message
+          example: "File analysis started. Use /analyze/status/{job_id} to track progress."
+
+    JobStatus:
+      type: object
+      required:
+        - job_id
+        - status
+        - progress_percentage
+        - items_processed
+        - items_total
+        - errors
+        - created_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Job identifier
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Current job status
+          example: "processing"
+        progress_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Completion percentage (0-100)
+          example: 45
+        items_processed:
+          type: integer
+          minimum: 0
+          description: Number of items processed so far
+          example: 45
+        items_total:
+          type: integer
+          minimum: 0
+          description: Total number of items to process
+          example: 100
+        errors:
+          type: array
+          items:
+            type: string
+          description: List of errors encountered during processing
+          example: ["PDF parse error on page 3", "LLM timeout for item 27"]
+        created_at:
+          type: string
+          format: date-time
+          description: Job creation timestamp (ISO 8601)
+          example: "2025-12-03T10:00:00Z"
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Job start timestamp (null if pending)
+          example: "2025-12-03T10:00:05Z"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Job completion timestamp (null if not finished)
+          example: "2025-12-03T10:02:30Z"
+
+    BatchMatchRequest:
+      type: object
+      properties:
+        supplier_id:
+          type: string
+          format: uuid
+          description: Optional supplier ID to limit matching scope
+          example: "550e8400-e29b-41d4-a716-446655440000"
+          nullable: true
+        force_rematch:
+          type: boolean
+          description: If true, re-match already matched items
+          default: false
+          example: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Invalid file URL format"
+            details:
+              type: object
+              description: Additional error context
+              additionalProperties: true
+              nullable: true
+              example:
+                field: "file_url"
+                constraint: "Must be HTTP(S) URL or file:// path"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Overall service health status
+          example: "healthy"
+        version:
+          type: string
+          description: Service version
+          example: "1.0.0"
+        checks:
+          type: object
+          description: Health check results for dependencies
+          required:
+            - database
+            - ollama
+            - redis
+          properties:
+            database:
+              type: string
+              description: PostgreSQL connection status
+              example: "ok"
+            ollama:
+              type: string
+              description: Ollama API availability
+              example: "ok"
+            redis:
+              type: string
+              description: Redis connection status
+              example: "ok"
