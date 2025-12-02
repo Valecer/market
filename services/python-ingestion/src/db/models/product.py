@@ -50,8 +50,15 @@ class Product(Base, UUIDMixin, TimestampMixin):
         nullable=True,
         index=True
     )
+    # Note: values_callable ensures SQLAlchemy uses enum VALUES (lowercase strings)
+    # instead of enum NAMES (uppercase) to match PostgreSQL enum values
     status: Mapped[ProductStatus] = mapped_column(
-        SQLEnum(ProductStatus, name="product_status", create_constraint=True),
+        SQLEnum(
+            ProductStatus,
+            name="product_status",
+            create_constraint=True,
+            values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=False,
         server_default=ProductStatus.DRAFT.value,
         index=True

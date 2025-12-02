@@ -4,6 +4,7 @@
     "error": "Error",
     "retry": "Try Again",
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "submit": "Submit",
     "back": "Back",
@@ -22,7 +23,12 @@
     "category": "Category",
     "supplier": "Supplier",
     "complete": "complete",
-    "name": "Name"
+    "name": "Name",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "configure": "Configure",
+    "activating": "Activating..."
   },
 
   "header": {
@@ -209,10 +215,31 @@
       "linkingItemsMultiple": "Linking {{count}} supplier items:",
       "searchProductsPlaceholder": "Search products by name or SKU...",
       "typeToSearch": "Type at least 2 characters to search",
-      "noProductsForQuery": "No products found for \"{{query}}\""
+      "noProductsForQuery": "No products found for \"{{query}}\"",
+      "createNewProduct": "Create New Product",
+      "createNewProductTitle": "Create New Product",
+      "createNewProductDescription": "Create a new product and automatically link the supplier item to it.",
+      "createNewProductHint": "Can't find the right product?",
+      "orCreateNew": "Or create a new product",
+      "productName": "Product Name",
+      "productNamePlaceholder": "Enter product name",
+      "createAndLink": "Create & Link",
+      "productCreatedSuccess": "Product \"{{name}}\" created and linked successfully"
     },
 
-    "ingestion": "Ingestion"
+    "ingestion": "Ingestion",
+    
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "archived": "Archived"
+    },
+    
+    "statusUpdateSuccess": "Product status updated successfully",
+    "statusUpdateError": "Failed to update product status",
+    "bulkStatusUpdateError": "Failed to update product statuses",
+    "noDraftProducts": "No draft products to activate",
+    "activateAllDraft": "Activate {{count}} Draft"
   },
 
   "ingestion": {
@@ -243,6 +270,57 @@
       "error": "Error",
       "pending": "Pending",
       "inactive": "Inactive"
+    }
+  },
+
+  "settings": {
+    "masterSheetUrl": {
+      "title": "Master Sheet URL",
+      "description": "Google Sheets URL used to sync supplier configurations",
+      "label": "Master Sheet URL",
+      "placeholder": "https://docs.google.com/spreadsheets/d/...",
+      "sheetNameLabel": "Worksheet Name",
+      "sheetNamePlaceholder": "Suppliers",
+      "sheetNameHint": "Name of the worksheet tab to parse (default: Suppliers)",
+      "notConfigured": "No master sheet URL configured",
+      "lastUpdated": "Last updated:",
+      "invalidUrl": "Please enter a valid Google Sheets URL",
+      "fetchError": "Failed to load settings",
+      "saveSuccess": "Master sheet configuration saved successfully"
+    }
+  },
+
+  "suppliers": {
+    "addSupplier": "Add Supplier",
+    "count": "{{count}} supplier",
+    "count_plural": "{{count}} suppliers",
+    "noSuppliers": "No suppliers configured yet",
+    "addFirst": "Add your first supplier",
+    "delete": "Delete supplier",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This will also delete all associated items.",
+    "sourceTypes": {
+      "google_sheets": "Google Sheets",
+      "csv": "CSV File",
+      "excel": "Excel File"
+    },
+    "modal": {
+      "title": "Add New Supplier",
+      "name": "Supplier Name",
+      "namePlaceholder": "Enter supplier name",
+      "sourceType": "Data Source Type",
+      "sourceUrl": "Source URL (optional)",
+      "sourceUrlPlaceholder": "https://docs.google.com/spreadsheets/d/...",
+      "sourceUrlHint": "URL to Google Sheets or external file. Can be added later.",
+      "uploadFile": "Upload Price List (optional)",
+      "dropzoneText": "Drag & drop a file here, or click to select",
+      "dropzoneHint": "Supports CSV, XLSX, XLS (max 50MB)",
+      "invalidFileType": "Invalid file type. Please upload CSV or Excel files.",
+      "fileTooLarge": "File is too large. Maximum size is 50MB.",
+      "uploadError": "Failed to process file",
+      "activeLabel": "Supplier is active for sync",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes about this supplier...",
+      "create": "Create Supplier"
     }
   }
 }

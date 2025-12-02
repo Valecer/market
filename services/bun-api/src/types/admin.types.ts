@@ -332,3 +332,91 @@ export const UnmatchedResponseSchema = Type.Object({
 
 export type UnmatchedResponse = Static<typeof UnmatchedResponseSchema>
 
+// =============================================================================
+// Product Status Update Types
+// =============================================================================
+
+export const UpdateProductStatusRequestSchema = Type.Object(
+  {
+    status: ProductStatusSchema,
+  },
+  {
+    examples: [
+      { status: 'active' },
+      { status: 'draft' },
+      { status: 'archived' },
+    ],
+  }
+)
+
+export type UpdateProductStatusRequest = Static<typeof UpdateProductStatusRequestSchema>
+
+export const UpdateProductStatusResponseSchema = Type.Object(
+  {
+    id: Type.String({ format: 'uuid', description: 'Product UUID' }),
+    internal_sku: Type.String({ description: 'Internal SKU' }),
+    name: Type.String({ description: 'Product name' }),
+    status: ProductStatusSchema,
+    updated_at: Type.String({ format: 'date-time', description: 'Update timestamp' }),
+    message: Type.String({ description: 'Success message' }),
+  },
+  {
+    examples: [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        internal_sku: 'PROD-001',
+        name: 'USB-C Cable 2m',
+        status: 'active',
+        updated_at: '2025-12-01T20:00:00Z',
+        message: 'Product status updated to active',
+      },
+    ],
+  }
+)
+
+export type UpdateProductStatusResponse = Static<typeof UpdateProductStatusResponseSchema>
+
+// =============================================================================
+// Bulk Product Status Update Types
+// =============================================================================
+
+export const BulkUpdateProductStatusRequestSchema = Type.Object(
+  {
+    product_ids: Type.Array(Type.String({ format: 'uuid' }), {
+      minItems: 1,
+      maxItems: 100,
+      description: 'Array of product UUIDs to update',
+    }),
+    status: ProductStatusSchema,
+  },
+  {
+    examples: [
+      {
+        product_ids: ['550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440001'],
+        status: 'active',
+      },
+    ],
+  }
+)
+
+export type BulkUpdateProductStatusRequest = Static<typeof BulkUpdateProductStatusRequestSchema>
+
+export const BulkUpdateProductStatusResponseSchema = Type.Object(
+  {
+    updated_count: Type.Integer({ minimum: 0, description: 'Number of products updated' }),
+    status: ProductStatusSchema,
+    message: Type.String({ description: 'Success message' }),
+  },
+  {
+    examples: [
+      {
+        updated_count: 2,
+        status: 'active',
+        message: '2 products updated to active status',
+      },
+    ],
+  }
+)
+
+export type BulkUpdateProductStatusResponse = Static<typeof BulkUpdateProductStatusResponseSchema>
+

@@ -363,3 +363,214 @@ async def check_sync_lock(
         logger.error("check_sync_lock_failed", error=str(e))
         return False, None
 
+
+# =============================================================================
+# Manual Sync Trigger (for Bun API integration)
+# =============================================================================
+
+SYNC_TRIGGER_KEY = "sync:trigger"
+
+
+async def set_sync_trigger(
+    redis: Redis,
+    task_id: str,
+    triggered_by: str = "manual",
+) -> bool:
+    """Set a sync trigger request in Redis.
+    
+    This is called by the Bun API to request a manual sync.
+    The Python worker polls this key and triggers sync when set.
+    
+    Args:
+        redis: Redis connection
+        task_id: Unique task identifier
+        triggered_by: What initiated the sync ("manual" or "api")
+    
+    Returns:
+        True if trigger was set successfully
+    """
+    log = logger.bind(task_id=task_id, triggered_by=triggered_by)
+    
+    try:
+        trigger_data = {
+            "task_id": task_id,
+            "triggered_by": triggered_by,
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        # Use SET with NX to prevent overwriting existing trigger
+        # TTL of 5 minutes to auto-cleanup stale triggers
+        result = await redis.set(
+            SYNC_TRIGGER_KEY,
+            json.dumps(trigger_data),
+            nx=True,
+            ex=300,  # 5 minute TTL
+        )
+        
+        if result:
+            log.info("sync_trigger_set")
+            return True
+        else:
+            # Trigger already exists
+            log.warning("sync_trigger_already_pending")
+            return False
+            
+    except RedisError as e:
+        log.error("set_sync_trigger_failed", error=str(e))
+        raise
+
+
+async def get_sync_trigger(
+    redis: Redis,
+) -> Optional[dict]:
+    """Get pending sync trigger from Redis.
+    
+    Called by the Python worker to check for manual sync requests.
+    
+    Args:
+        redis: Redis connection
+    
+    Returns:
+        Trigger data dict or None if no trigger pending
+    """
+    try:
+        trigger_json = await redis.get(SYNC_TRIGGER_KEY)
+        
+        if trigger_json:
+            return json.loads(trigger_json.decode())
+        return None
+        
+    except (json.JSONDecodeError, RedisError) as e:
+        logger.error("get_sync_trigger_failed", error=str(e))
+        return None
+
+
+async def clear_sync_trigger(
+    redis: Redis,
+) -> bool:
+    """Clear the sync trigger after processing.
+    
+    Args:
+        redis: Redis connection
+    
+    Returns:
+        True if trigger was cleared
+    """
+    try:
+        await redis.delete(SYNC_TRIGGER_KEY)
+        logger.debug("sync_trigger_cleared")
+        return True
+    except RedisError as e:
+        logger.error("clear_sync_trigger_failed", error=str(e))
+        return False
+
+
+# =============================================================================
+# Parse Trigger (for file upload integration)
+# =============================================================================
+
+PARSE_TRIGGERS_KEY = "parse:triggers"
+
+
+async def add_parse_trigger(
+    redis: Redis,
+    task_id: str,
+    parser_type: str,
+    supplier_name: str,
+    source_config: dict,
+) -> bool:
+    """Add a parse trigger to the queue.
+    
+    Called by Bun API when a file is uploaded for parsing.
+    The Python worker polls this and executes parse tasks.
+    
+    Args:
+        redis: Redis connection
+        task_id: Unique task identifier
+        parser_type: Parser type (csv, excel, google_sheets)
+        supplier_name: Name of the supplier
+        source_config: Parser configuration dict
+    
+    Returns:
+        True if trigger was added successfully
+    """
+    log = logger.bind(task_id=task_id, parser_type=parser_type, supplier_name=supplier_name)
+    
+    try:
+        trigger_data = {
+            "task_id": task_id,
+            "parser_type": parser_type,
+            "supplier_name": supplier_name,
+            "source_config": source_config,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        # Add to list of pending triggers
+        await redis.rpush(PARSE_TRIGGERS_KEY, json.dumps(trigger_data))
+        log.info("parse_trigger_added")
+        return True
+        
+    except RedisError as e:
+        log.error("add_parse_trigger_failed", error=str(e))
+        raise
+
+
+async def get_pending_parse_triggers(
+    redis: Redis,
+    max_count: int = 10,
+) -> list:
+    """Get pending parse triggers from Redis.
+    
+    Atomically pops triggers from the list to prevent duplicate processing.
+    
+    Args:
+        redis: Redis connection
+        max_count: Maximum triggers to retrieve at once
+    
+    Returns:
+        List of trigger data dicts
+    """
+    triggers = []
+    
+    try:
+        for _ in range(max_count):
+            # LPOP atomically removes and returns the first element
+            trigger_json = await redis.lpop(PARSE_TRIGGERS_KEY)
+            
+            if not trigger_json:
+                break
+            
+            try:
+                trigger_data = json.loads(trigger_json.decode())
+                triggers.append(trigger_data)
+            except json.JSONDecodeError as e:
+                logger.warning("parse_trigger_invalid_json", error=str(e))
+                continue
+        
+        if triggers:
+            logger.debug("parse_triggers_retrieved", count=len(triggers))
+        
+        return triggers
+        
+    except RedisError as e:
+        logger.error("get_parse_triggers_failed", error=str(e))
+        return []
+
+
+async def get_parse_trigger_count(
+    redis: Redis,
+) -> int:
+    """Get count of pending parse triggers.
+    
+    Args:
+        redis: Redis connection
+    
+    Returns:
+        Number of pending triggers
+    """
+    try:
+        return await redis.llen(PARSE_TRIGGERS_KEY)
+    except RedisError as e:
+        logger.error("get_parse_trigger_count_failed", error=str(e))
+        return 0
+

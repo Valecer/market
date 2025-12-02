@@ -495,6 +495,89 @@ export class ProductRepository implements IProductRepository {
 
     return result[0]
   }
+
+  /**
+   * Update product status
+   * @param productId - Product UUID
+   * @param status - New status
+   * @returns Updated product
+   */
+  async updateStatus(
+    productId: string,
+    status: 'draft' | 'active' | 'archived'
+  ): Promise<Product | null> {
+    const result = await db
+      .update(products)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(products.id, productId))
+      .returning()
+
+    return result[0] || null
+  }
+
+  /**
+   * Bulk update product statuses
+   * @param productIds - Array of product UUIDs
+   * @param status - New status
+   * @returns Number of updated products
+   */
+  async bulkUpdateStatus(
+    productIds: string[],
+    status: 'draft' | 'active' | 'archived'
+  ): Promise<number> {
+    if (productIds.length === 0) return 0
+
+    const result = await db
+      .update(products)
+      .set({ status, updatedAt: new Date() })
+      .where(inArray(products.id, productIds))
+      .returning({ id: products.id })
+
+    return result.length
+  }
+
+  /**
+   * Find orphaned products (products with no linked supplier items)
+   * @returns Array of orphaned product IDs
+   */
+  async findOrphaned(): Promise<string[]> {
+    // Get all products that don't have any supplier_items linked to them
+    const result = await db.execute(sql`
+      SELECT p.id 
+      FROM products p
+      LEFT JOIN supplier_items si ON p.id = si.product_id
+      GROUP BY p.id
+      HAVING COUNT(si.id) = 0
+    `)
+    
+    return (result.rows as { id: string }[]).map(row => row.id)
+  }
+
+  /**
+   * Delete products by IDs
+   * @param productIds - Array of product UUIDs to delete
+   * @returns Number of deleted products
+   */
+  async deleteByIds(productIds: string[]): Promise<number> {
+    if (productIds.length === 0) return 0
+
+    const result = await db
+      .delete(products)
+      .where(inArray(products.id, productIds))
+      .returning({ id: products.id })
+
+    return result.length
+  }
+
+  /**
+   * Delete orphaned products (products with no linked supplier items)
+   * @returns Number of deleted products
+   */
+  async deleteOrphaned(): Promise<number> {
+    const orphanedIds = await this.findOrphaned()
+    if (orphanedIds.length === 0) return 0
+    return this.deleteByIds(orphanedIds)
+  }
 }
 
 // Export singleton instance

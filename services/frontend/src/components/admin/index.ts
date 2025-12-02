@@ -17,3 +17,10 @@ export { MatchedItemsSection } from './MatchedItemsSection'
 // Phase 6: Ingestion Control Panel components
 export { SyncControlCard } from './SyncControlCard'
 
+// Phase 7: Supplier Management components
+export { SupplierAddModal } from './SupplierAddModal'
+export { MasterSheetUrlConfig } from './MasterSheetUrlConfig'
+
+// Product status components
+export { ProductStatusDropdown } from './ProductStatusDropdown'
+

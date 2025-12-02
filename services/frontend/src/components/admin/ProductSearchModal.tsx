@@ -3,6 +3,7 @@
  *
  * Modal dialog for searching and selecting products to link supplier items to.
  * Features debounced search with fuzzy matching results.
+ * Supports creating new products when no suitable match exists.
  *
  * Uses Radix UI Dialog for accessible modal behavior.
  * i18n: All text content is translatable
@@ -12,6 +13,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Flex, Text, TextField, Button } from '@radix-ui/themes'
 import { useProductSearch, type ProductSearchResult } from '@/hooks/useProductSearch'
+import { useCreateProduct, type CreateProductResponse } from '@/hooks/useCreateProduct'
 import type { UnmatchedSupplierItem } from '@/hooks/useUnmatchedItems'
 
 // =============================================================================
@@ -37,6 +39,12 @@ const ProductIcon = () => (
   </svg>
 )
 
+const PlusIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+)
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -50,6 +58,8 @@ interface ProductSearchModalProps {
   supplierItems: UnmatchedSupplierItem | UnmatchedSupplierItem[] | null
   /** Callback when a product is selected for linking */
   onSelectProduct: (product: ProductSearchResult, supplierItems: UnmatchedSupplierItem[]) => void
+  /** Callback when a new product is created (used for single item only) */
+  onProductCreated?: (product: CreateProductResponse) => void
   /** Whether a match operation is in progress */
   isMatching?: boolean
 }
@@ -95,11 +105,22 @@ export function ProductSearchModal({
   onOpenChange,
   supplierItems,
   onSelectProduct,
+  onProductCreated,
   isMatching = false,
 }: ProductSearchModalProps) {
   const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
+  const [newProductName, setNewProductName] = useState('')
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const { data: products, isSearching, searchQuery: debouncedQuery } = useProductSearch(searchQuery)
+
+  // Create product hook
+  const { createProduct, isCreating } = useCreateProduct({
+    onSuccess: (product) => {
+      onProductCreated?.(product)
+      handleOpenChange(false)
+    },
+  })
 
   // Normalize to array for consistent handling
   const itemsArray = useMemo(() => {
@@ -109,16 +130,41 @@ export function ProductSearchModal({
 
   const isMultiple = itemsArray.length > 1
 
+  // Only allow creating new product for single item
+  const canCreateProduct = itemsArray.length === 1
+
   const handleSelectProduct = useCallback((product: ProductSearchResult) => {
     if (itemsArray.length > 0 && !isMatching) {
       onSelectProduct(product, itemsArray)
     }
   }, [itemsArray, onSelectProduct, isMatching])
 
-  // Reset search when modal closes
+  // Handle creating a new product with the supplier item linked
+  const handleCreateProduct = useCallback(async () => {
+    if (!canCreateProduct || !newProductName.trim()) return
+
+    const item = itemsArray[0]
+    await createProduct({
+      name: newProductName.trim(),
+      supplier_item_id: item.id,
+      status: 'draft',
+    })
+  }, [canCreateProduct, newProductName, itemsArray, createProduct])
+
+  // Show create form with pre-filled name from supplier item
+  const handleShowCreateForm = useCallback(() => {
+    if (itemsArray.length === 1) {
+      setNewProductName(itemsArray[0].name)
+    }
+    setShowCreateForm(true)
+  }, [itemsArray])
+
+  // Reset state when modal closes
   const handleOpenChange = useCallback((newOpen: boolean) => {
     if (!newOpen) {
       setSearchQuery('')
+      setNewProductName('')
+      setShowCreateForm(false)
     }
     onOpenChange(newOpen)
   }, [onOpenChange])
@@ -161,35 +207,53 @@ export function ProductSearchModal({
           </div>
         )}
 
-        {/* Search Input */}
-        <div className="relative mb-4">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            {isSearching ? <LoadingIcon /> : <SearchIcon />}
+        {/* Search Input - hidden when create form is showing */}
+        {!showCreateForm && (
+          <div className="relative mb-4">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+              {isSearching ? <LoadingIcon /> : <SearchIcon />}
+            </div>
+            <TextField.Root
+              size="2"
+              placeholder={t('admin.procurementPage.searchProductsPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              autoFocus
+            />
           </div>
-          <TextField.Root
-            size="2"
-            placeholder={t('admin.procurementPage.searchProductsPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            autoFocus
-          />
-        </div>
+        )}
 
-        {/* Results */}
+        {/* Results - hidden when create form is showing */}
         <div className="max-h-80 overflow-y-auto rounded-lg border border-border">
           {/* Initial state */}
-          {!debouncedQuery && (
+          {!showCreateForm && !debouncedQuery && (
             <div className="p-8 text-center text-slate-500">
               <SearchIcon />
               <Text size="2" className="mt-2 block">
                 {t('admin.procurementPage.typeToSearch')}
               </Text>
+              {canCreateProduct && (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <Text size="2" className="text-slate-600 block mb-3">
+                    {t('admin.procurementPage.orCreateNew')}
+                  </Text>
+                  <Button
+                    type="button"
+                    variant="soft"
+                    onClick={handleShowCreateForm}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <PlusIcon />
+                    {t('admin.procurementPage.createNewProduct')}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Loading */}
-          {isSearching && (
+          {!showCreateForm && isSearching && (
             <div className="p-8 text-center text-slate-500">
               <LoadingIcon />
               <Text size="2" className="mt-2 block">
@@ -198,17 +262,80 @@ export function ProductSearchModal({
             </div>
           )}
 
-          {/* No results */}
-          {debouncedQuery && !isSearching && products && products.length === 0 && (
-            <div className="p-8 text-center text-slate-500">
-              <Text size="2">
+          {/* No results - with option to create new product */}
+          {debouncedQuery && !isSearching && products && products.length === 0 && !showCreateForm && (
+            <div className="p-6 text-center">
+              <Text size="2" className="text-slate-500 block mb-4">
                 {t('admin.procurementPage.noProductsForQuery', { query: debouncedQuery })}
               </Text>
+              {canCreateProduct && (
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <Text size="2" className="text-slate-600 block mb-3">
+                    {t('admin.procurementPage.createNewProductHint')}
+                  </Text>
+                  <Button
+                    type="button"
+                    variant="soft"
+                    onClick={handleShowCreateForm}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <PlusIcon />
+                    {t('admin.procurementPage.createNewProduct')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Create new product form */}
+          {showCreateForm && canCreateProduct && (
+            <div className="p-4">
+              <div className="mb-4">
+                <Text size="2" weight="medium" className="text-slate-700 block mb-2">
+                  {t('admin.procurementPage.createNewProductTitle')}
+                </Text>
+                <Text size="1" className="text-slate-500 block mb-3">
+                  {t('admin.procurementPage.createNewProductDescription')}
+                </Text>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Text as="label" size="1" weight="medium" className="text-slate-600 block mb-1">
+                    {t('admin.procurementPage.productName')}
+                  </Text>
+                  <TextField.Root
+                    size="2"
+                    placeholder={t('admin.procurementPage.productNamePlaceholder')}
+                    value={newProductName}
+                    onChange={(e) => setNewProductName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <Flex gap="2" justify="end" className="pt-2">
+                  <Button
+                    type="button"
+                    variant="soft"
+                    color="gray"
+                    onClick={() => setShowCreateForm(false)}
+                    disabled={isCreating}
+                  >
+                    {t('common.back')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="solid"
+                    onClick={handleCreateProduct}
+                    disabled={isCreating || !newProductName.trim()}
+                  >
+                    {isCreating ? t('common.saving') : t('admin.procurementPage.createAndLink')}
+                  </Button>
+                </Flex>
+              </div>
             </div>
           )}
 
           {/* Results list */}
-          {!isSearching && products && products.length > 0 && (
+          {!showCreateForm && !isSearching && products && products.length > 0 && (
             <ul className="divide-y divide-border" role="listbox">
               {products.map((product) => {
                 const statusBadge = getStatusBadge(product.status, t)
@@ -256,14 +383,16 @@ export function ProductSearchModal({
           )}
         </div>
 
-        {/* Actions */}
-        <Flex gap="3" mt="4" justify="end">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" disabled={isMatching}>
-              {t('common.cancel')}
-            </Button>
-          </Dialog.Close>
-        </Flex>
+        {/* Actions - only show cancel when not in create form (create form has its own buttons) */}
+        {!showCreateForm && (
+          <Flex gap="3" mt="4" justify="end">
+            <Dialog.Close>
+              <Button variant="soft" color="gray" disabled={isMatching || isCreating}>
+                {t('common.cancel')}
+              </Button>
+            </Dialog.Close>
+          </Flex>
+        )}
       </Dialog.Content>
     </Dialog.Root>
   )

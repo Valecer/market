@@ -2,6 +2,11 @@
 from src.models.parsed_item import ParsedSupplierItem
 from src.models.queue_message import ParseTaskMessage
 from src.models.google_sheets_config import GoogleSheetsConfig
+from src.models.file_parser_config import (
+    FileParserConfig,
+    CsvParserConfig,
+    ExcelParserConfig,
+)
 
 # Master sync pipeline models
 from src.models.master_sheet_config import (
@@ -47,6 +52,10 @@ __all__ = [
     "ParsedSupplierItem",
     "ParseTaskMessage",
     "GoogleSheetsConfig",
+    # File parser configs
+    "FileParserConfig",
+    "CsvParserConfig",
+    "ExcelParserConfig",
     # Master sync models
     "SourceFormat",
     "SupplierConfigRow",

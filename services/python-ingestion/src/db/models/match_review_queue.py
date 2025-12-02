@@ -66,17 +66,26 @@ class MatchReviewQueue(Base, UUIDMixin):
         server_default='[]',
         doc="Array of potential matches [{product_id, score, name}]"
     )
+    # Note: values_callable ensures SQLAlchemy uses enum VALUES (lowercase strings)
+    # instead of enum NAMES (uppercase) to match PostgreSQL enum values
     status: Mapped[ReviewStatus] = mapped_column(
-        SQLEnum(ReviewStatus, name="review_status", create_constraint=False),
+        SQLEnum(
+            ReviewStatus,
+            name="review_status",
+            create_constraint=False,
+            values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=False,
         server_default=ReviewStatus.PENDING.value,
         index=True,
         doc="Current review status"
     )
+    # Note: FK constraint exists in DB but not modeled here since User model 
+    # is managed by Bun API. Just store the UUID reference.
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
+        postgresql.UUID(as_uuid=True),
         nullable=True,
-        doc="User who actioned the review"
+        doc="User who actioned the review (FK to users.id in DB)"
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

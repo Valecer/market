@@ -98,8 +98,15 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
     )
     
     # Phase 4: Matching fields
+    # Note: values_callable ensures SQLAlchemy uses enum VALUES (lowercase strings like "unmatched")
+    # instead of enum NAMES (uppercase like "UNMATCHED") to match PostgreSQL enum values
     match_status: Mapped[MatchStatus] = mapped_column(
-        SQLEnum(MatchStatus, name="match_status", create_constraint=False),
+        SQLEnum(
+            MatchStatus,
+            name="match_status",
+            create_constraint=False,
+            values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=False,
         server_default=MatchStatus.UNMATCHED.value,
         index=True,

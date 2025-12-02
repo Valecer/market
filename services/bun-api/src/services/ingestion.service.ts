@@ -26,9 +26,7 @@ import { RedisUnavailableError } from './queue.service'
 const SYNC_STATUS_KEY = 'sync:status'
 const SYNC_LOCK_KEY = 'sync:lock'
 const SYNC_LAST_RUN_KEY = 'sync:last_run'
-
-// Queue name for arq worker
-const QUEUE_NAME = process.env.REDIS_QUEUE_NAME || 'arq:queue:price-ingestion-queue'
+const SYNC_TRIGGER_KEY = 'sync:trigger'
 
 // Default sync interval (from env or 8 hours)
 const SYNC_INTERVAL_HOURS = parseInt(process.env.SYNC_INTERVAL_HOURS || '8', 10)
@@ -97,7 +95,7 @@ export class IngestionService {
   async triggerSync(): Promise<TriggerSyncResponse> {
     const redis = await this.getRedis()
 
-    // Check if sync is already running
+    // Check if sync is already running (check both lock and pending trigger)
     const currentLock = await redis.get(SYNC_LOCK_KEY)
     if (currentLock) {
       const error = new Error('A sync operation is already in progress') as Error & {
@@ -109,31 +107,48 @@ export class IngestionService {
       throw error
     }
 
+    // Check if there's already a pending trigger
+    const pendingTrigger = await redis.get(SYNC_TRIGGER_KEY)
+    if (pendingTrigger) {
+      const trigger = JSON.parse(pendingTrigger)
+      const error = new Error('A sync request is already pending') as Error & {
+        code: string
+        current_task_id: string
+      }
+      error.code = 'SYNC_IN_PROGRESS'
+      error.current_task_id = trigger.task_id || 'pending'
+      throw error
+    }
+
     // Generate task ID
     const taskId = `sync-manual-${Date.now()}`
     const triggeredAt = new Date().toISOString()
 
-    // Create queue message for Python worker
-    // arq expects messages in format: {"function": "task_name", "args": [...], "kwargs": {...}}
-    const message = {
-      function: 'trigger_master_sync_task',
-      args: [],
-      kwargs: {
-        task_id: taskId,
-        triggered_by: 'manual',
-        triggered_at: triggeredAt,
-      },
-      job_id: taskId,
-      enqueue_time_ms: Date.now(),
+    // Set trigger key for Python worker to pick up
+    // Uses SET NX to prevent overwriting (5 minute TTL for auto-cleanup)
+    const triggerData = {
+      task_id: taskId,
+      triggered_by: 'manual',
+      triggered_at: triggeredAt,
     }
 
-    // Enqueue to arq queue
-    await redis.rpush(QUEUE_NAME, JSON.stringify(message))
+    const result = await redis.set(SYNC_TRIGGER_KEY, JSON.stringify(triggerData), 'EX', 300, 'NX')
+
+    if (!result) {
+      // Another trigger was set between our check and this set
+      const error = new Error('A sync request is already pending') as Error & {
+        code: string
+        current_task_id: string
+      }
+      error.code = 'SYNC_IN_PROGRESS'
+      error.current_task_id = taskId
+      throw error
+    }
 
     return {
       task_id: taskId,
       status: 'queued',
-      message: 'Master sync pipeline started',
+      message: 'Master sync pipeline started (will begin within 1 minute)',
     }
   }
 

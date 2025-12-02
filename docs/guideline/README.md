@@ -572,6 +572,7 @@ LIMIT 20;
 - [Parser Guide](/docs/parser-guide.md)
 - [Deployment Guide](/docs/deployment.md)
 - [Schema Diagram](/docs/schema-diagram.png)
+- [Рекомендации по обработке заголовков](/docs/guideline/06-header-processing-recommendations.md)
 
 ---
 

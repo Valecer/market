@@ -71,6 +71,28 @@ export const queryKeys = {
   },
 
   // =============================================================================
+  // Settings (Admin)
+  // =============================================================================
+  settings: {
+    /** All settings queries */
+    all: ['settings'] as const,
+    /** Master sheet URL setting */
+    masterSheetUrl: ['settings', 'master-sheet-url'] as const,
+  },
+
+  // =============================================================================
+  // Suppliers (Admin)
+  // =============================================================================
+  suppliers: {
+    /** All supplier queries */
+    all: ['suppliers'] as const,
+    /** Suppliers list */
+    list: ['suppliers', 'list'] as const,
+    /** Single supplier detail */
+    detail: (id: string) => ['suppliers', 'detail', id] as const,
+  },
+
+  // =============================================================================
   // Authentication
   // =============================================================================
   auth: {

@@ -135,20 +135,70 @@ class GoogleSheetsParser(ParserInterface):
             # Get worksheet by name
             worksheet = self._get_worksheet(spreadsheet, parsed_config.sheet_name, log)
             
-            # Read header row
-            header_row_data = worksheet.row_values(parsed_config.header_row)
-            log.debug("header_row_read", headers=header_row_data, row_number=parsed_config.header_row)
+            # Determine header rows range
+            header_row_start = parsed_config.header_row
+            header_row_end = parsed_config.header_row_end if parsed_config.header_row_end else header_row_start
+            header_rows = list(range(header_row_start, header_row_end + 1))
             
-            # Perform column mapping
-            column_map = self._map_columns(
-                header_row_data,
-                parsed_config.column_mapping,
-                log
+            # Read and combine headers from multiple rows
+            header_rows_data = []
+            for row_num in header_rows:
+                row_data = worksheet.row_values(row_num)
+                header_rows_data.append(row_data)
+            
+            # Combine headers from multiple rows
+            combined_headers = self._combine_header_rows(header_rows_data, log)
+            log.debug(
+                "headers_combined",
+                header_rows=header_rows,
+                combined_count=len(combined_headers),
+                sample_headers=combined_headers[:5]
             )
+            
+            # Try to map columns - if fails, try auto-detecting header rows
+            try:
+                column_map = self._map_columns(
+                    combined_headers,
+                    parsed_config.column_mapping,
+                    log
+                )
+            except ValidationError as e:
+                # If mapping failed and header_row_end not specified, try auto-detection
+                if parsed_config.header_row_end is None:
+                    log.warning(
+                        "column_mapping_failed_trying_auto_detect",
+                        error=str(e),
+                        current_header_row=parsed_config.header_row
+                    )
+                    # Try to find headers in next rows (up to data_start_row)
+                    all_values = worksheet.get_all_values()
+                    detected_header_rows = self._auto_detect_header_rows(
+                        all_values,
+                        parsed_config.header_row - 1,  # Convert to 0-indexed
+                        parsed_config.data_start_row - 1,  # Convert to 0-indexed
+                        log
+                    )
+                    if detected_header_rows and detected_header_rows != [r - 1 for r in header_rows]:  # Convert back
+                        log.info(
+                            "header_rows_auto_detected",
+                            original_rows=header_rows,
+                            detected_rows=[r + 1 for r in detected_header_rows]  # Convert to 1-indexed for log
+                        )
+                        # Re-read headers with detected rows
+                        detected_header_rows_data = []
+                        for row_num in [r + 1 for r in detected_header_rows]:  # Convert to 1-indexed
+                            row_data = worksheet.row_values(row_num)
+                            detected_header_rows_data.append(row_data)
+                        combined_headers = self._combine_header_rows(detected_header_rows_data, log)
+                        column_map = self._map_columns(combined_headers, parsed_config.column_mapping, log)
+                    else:
+                        raise  # Re-raise original error
+                else:
+                    raise  # Re-raise original error
             
             # Determine characteristic columns
             characteristic_cols = self._determine_characteristic_columns(
-                header_row_data,
+                combined_headers,
                 column_map,
                 parsed_config.characteristic_columns,
                 log
@@ -252,6 +302,8 @@ class GoogleSheetsParser(ParserInterface):
     ) -> gspread.Worksheet:
         """Get worksheet by name.
         
+        If the specified worksheet is not found, falls back to the first available worksheet.
+        
         Args:
             spreadsheet: gspread.Spreadsheet object
             sheet_name: Name of worksheet tab
@@ -261,18 +313,135 @@ class GoogleSheetsParser(ParserInterface):
             gspread.Worksheet object
         
         Raises:
-            ParserError: If worksheet not found
+            ParserError: If no worksheets are available
         """
         try:
             worksheet = spreadsheet.worksheet(sheet_name)
             log.debug("worksheet_found", sheet_name=sheet_name, row_count=worksheet.row_count)
             return worksheet
         except WorksheetNotFound:
-            # List available worksheets for better error message
+            # List available worksheets
             available = [ws.title for ws in spreadsheet.worksheets()]
-            raise ParserError(
-                f"Worksheet '{sheet_name}' not found. Available worksheets: {available}"
+            
+            if not available:
+                raise ParserError("No worksheets found in spreadsheet")
+            
+            # Fallback to first available worksheet
+            first_sheet = available[0]
+            log.warning(
+                "worksheet_not_found_using_fallback",
+                requested_sheet=sheet_name,
+                fallback_sheet=first_sheet,
+                available_sheets=available
             )
+            worksheet = spreadsheet.worksheet(first_sheet)
+            return worksheet
+    
+    def _combine_header_rows(
+        self,
+        header_rows_data: List[List[str]],
+        log: Any
+    ) -> List[str]:
+        """Combine headers from multiple rows into a single header row.
+        
+        Args:
+            header_rows_data: List of row data lists, each containing header values
+            log: Structured logger instance
+        
+        Returns:
+            List of combined header strings
+        """
+        if not header_rows_data:
+            raise ValidationError("No header rows provided")
+        
+        # Get maximum number of columns across all header rows
+        max_cols = max(len(row) for row in header_rows_data) if header_rows_data else 0
+        
+        # Combine headers from all specified rows
+        combined_headers = []
+        for col_idx in range(max_cols):
+            header_parts = []
+            for row_data in header_rows_data:
+                if col_idx < len(row_data):
+                    cell_value = row_data[col_idx]
+                    if cell_value and str(cell_value).strip():
+                        header_parts.append(str(cell_value).strip())
+            
+            # Join header parts with space, filter empty
+            combined_header = ' '.join(header_parts).strip()
+            if not combined_header:
+                combined_header = f"Column_{col_idx + 1}"  # Fallback name
+            
+            combined_headers.append(combined_header)
+        
+        return combined_headers
+    
+    def _auto_detect_header_rows(
+        self,
+        all_values: List[List[str]],
+        start_row: int,
+        max_row: int,
+        log: Any
+    ) -> List[int]:
+        """Automatically detect which rows contain headers by searching for standard fields.
+        
+        Args:
+            all_values: All worksheet values as list of rows
+            start_row: Starting row index (0-indexed) to search from
+            max_row: Maximum row index (0-indexed) to search up to (exclusive)
+            log: Structured logger instance
+        
+        Returns:
+            List of row indices (0-indexed) that should be used as headers
+        """
+        # Try combining rows starting from start_row
+        for end_row in range(start_row, min(start_row + 3, max_row)):  # Try up to 3 rows
+            test_header_rows = list(range(start_row, end_row + 1))
+            try:
+                test_header_rows_data = []
+                for row_idx in test_header_rows:
+                    if row_idx < len(all_values):
+                        test_header_rows_data.append(all_values[row_idx])
+                
+                test_headers = self._combine_header_rows(test_header_rows_data, log)
+                # Try to map columns
+                test_column_map = {}
+                normalized_headers = [h.strip().lower() if h else "" for h in test_headers]
+                
+                for field_name, possible_names in self.STANDARD_FIELDS.items():
+                    found = False
+                    for possible_name in possible_names:
+                        try:
+                            col_idx = normalized_headers.index(possible_name.lower())
+                            test_column_map[field_name] = col_idx
+                            found = True
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if not found:
+                        # Try fuzzy matching
+                        matches = get_close_matches(
+                            possible_names[0],
+                            normalized_headers,
+                            n=1,
+                            cutoff=0.6
+                        )
+                        if matches:
+                            col_idx = normalized_headers.index(matches[0])
+                            test_column_map[field_name] = col_idx
+                            found = True
+                
+                # If we found all required fields, return these header rows
+                required_fields = {'sku', 'name', 'price'}
+                if required_fields.issubset(set(test_column_map.keys())):
+                    log.debug("auto_detect_success", header_rows=test_header_rows, column_map=test_column_map)
+                    return test_header_rows
+            except Exception:
+                continue
+        
+        # If nothing found, return original start_row
+        return [start_row]
     
     def _map_columns(
         self,
@@ -443,7 +612,7 @@ class GoogleSheetsParser(ParserInterface):
         Raises:
             ValidationError: If row data is invalid
         """
-        # Extract standard fields
+        # Extract standard fields using column indices
         try:
             sku = self._get_cell_value(row_data, column_map['sku'], row_number, 'sku')
             name = self._get_cell_value(row_data, column_map['name'], row_number, 'name')

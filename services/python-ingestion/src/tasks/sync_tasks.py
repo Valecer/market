@@ -28,6 +28,9 @@ from src.services.sync_state import (
     set_sync_idle,
     update_sync_progress,
     record_sync_completion,
+    get_sync_trigger,
+    clear_sync_trigger,
+    get_pending_parse_triggers,
 )
 from src.models.sync_messages import TriggerMasterSyncMessage
 from src.models.master_sheet_config import MasterSyncResult
@@ -52,6 +55,46 @@ def get_master_sheet_url() -> Optional[str]:
         Master Sheet URL or None if not configured
     """
     return os.getenv("MASTER_SHEET_URL")
+
+
+async def get_master_sheet_url_from_redis(redis: Redis) -> Optional[str]:
+    """Get Master Sheet URL from Redis settings.
+    
+    Args:
+        redis: Redis connection
+    
+    Returns:
+        Master Sheet URL or None if not configured
+    """
+    try:
+        url = await redis.get("settings:master_sheet_url")
+        if url:
+            decoded = url.decode("utf-8") if isinstance(url, bytes) else url
+            return decoded if decoded else None
+        return None
+    except Exception as e:
+        logger.warning("failed_to_get_sheet_url_from_redis", error=str(e))
+        return None
+
+
+async def get_master_sheet_name(redis: Redis, default: str = "Suppliers") -> str:
+    """Get Master Sheet worksheet name from Redis.
+    
+    Args:
+        redis: Redis connection
+        default: Default sheet name if not configured (default: "Suppliers")
+    
+    Returns:
+        Worksheet name to parse
+    """
+    try:
+        sheet_name = await redis.get("settings:master_sheet_name")
+        if sheet_name:
+            return sheet_name.decode("utf-8") if isinstance(sheet_name, bytes) else sheet_name
+        return default
+    except Exception as e:
+        logger.warning("failed_to_get_sheet_name", error=str(e), default=default)
+        return default
 
 
 @dataclass
@@ -133,16 +176,20 @@ async def trigger_master_sync_task(
             **metrics.to_dict(),
         }
     
-    # Resolve Master Sheet URL
-    sheet_url = master_sheet_url or get_master_sheet_url()
+    # Resolve Master Sheet URL (optional - can sync without it)
+    # Priority: parameter > Redis > environment variable
+    if not master_sheet_url:
+        master_sheet_url = await get_master_sheet_url_from_redis(redis)
+        if master_sheet_url:
+            log.debug("master_sheet_url_from_redis", url=master_sheet_url)
+    if not master_sheet_url:
+        master_sheet_url = get_master_sheet_url()
+        if master_sheet_url:
+            log.debug("master_sheet_url_from_env", url=master_sheet_url)
+    sheet_url = master_sheet_url
+    
     if not sheet_url:
-        log.error("no_master_sheet_url")
-        return {
-            "task_id": task_id,
-            "status": "error",
-            "error": "MASTER_SHEET_URL not configured",
-            **metrics.to_dict(),
-        }
+        log.warning("no_master_sheet_url_configured", message="Master sheet URL not found in Redis or environment")
     
     try:
         # Step 1: Acquire sync lock
@@ -166,38 +213,48 @@ async def trigger_master_sync_task(
             # Step 2: Update status to syncing_master
             await set_sync_started(redis, task_id)
             
-            # Step 3: Parse Master Sheet
-            log.info("parsing_master_sheet", sheet_url=sheet_url)
-            ingestor = MasterSheetIngestor()
-            
-            try:
-                configs = await ingestor.ingest(
-                    master_sheet_url=sheet_url,
-                    sheet_name="Suppliers",
+            # Step 3: Parse Master Sheet (if URL is configured)
+            if sheet_url:
+                log.info("parsing_master_sheet", sheet_url=sheet_url)
+                ingestor = MasterSheetIngestor()
+                
+                # Get sheet name from Redis settings
+                sheet_name = await get_master_sheet_name(redis)
+                log.debug("using_sheet_name", sheet_name=sheet_name)
+                
+                try:
+                    configs = await ingestor.ingest(
+                        master_sheet_url=sheet_url,
+                        sheet_name=sheet_name,
+                    )
+                    metrics.master_sheet_parsed = True
+                    log.info("master_sheet_parsed", configs_count=len(configs))
+                except ParserError as e:
+                    log.error("master_sheet_parse_failed", error=str(e))
+                    metrics.errors.append(f"Master sheet parse error: {e}")
+                    raise
+                
+                # Step 4: Sync suppliers to database
+                log.info("syncing_suppliers")
+                sync_result: MasterSyncResult = await ingestor.sync_suppliers(configs)
+                
+                metrics.suppliers_created = sync_result.suppliers_created
+                metrics.suppliers_updated = sync_result.suppliers_updated
+                metrics.suppliers_deactivated = sync_result.suppliers_deactivated
+                metrics.suppliers_skipped = sync_result.suppliers_skipped
+                metrics.errors.extend(sync_result.errors)
+                
+                log.info(
+                    "suppliers_synced",
+                    created=sync_result.suppliers_created,
+                    updated=sync_result.suppliers_updated,
+                    deactivated=sync_result.suppliers_deactivated,
                 )
-                metrics.master_sheet_parsed = True
-                log.info("master_sheet_parsed", configs_count=len(configs))
-            except ParserError as e:
-                log.error("master_sheet_parse_failed", error=str(e))
-                metrics.errors.append(f"Master sheet parse error: {e}")
-                raise
-            
-            # Step 4: Sync suppliers to database
-            log.info("syncing_suppliers")
-            sync_result: MasterSyncResult = await ingestor.sync_suppliers(configs)
-            
-            metrics.suppliers_created = sync_result.suppliers_created
-            metrics.suppliers_updated = sync_result.suppliers_updated
-            metrics.suppliers_deactivated = sync_result.suppliers_deactivated
-            metrics.suppliers_skipped = sync_result.suppliers_skipped
-            metrics.errors.extend(sync_result.errors)
-            
-            log.info(
-                "suppliers_synced",
-                created=sync_result.suppliers_created,
-                updated=sync_result.suppliers_updated,
-                deactivated=sync_result.suppliers_deactivated,
-            )
+            else:
+                log.info(
+                    "no_master_sheet_skipping",
+                    message="Master sheet URL not configured, processing existing suppliers only",
+                )
             
             # Step 5: Get active suppliers for parsing
             active_suppliers = await _get_active_suppliers()
@@ -315,6 +372,51 @@ async def scheduled_sync_task(
     )
 
 
+async def poll_manual_sync_trigger(
+    ctx: Dict[str, Any],
+    **kwargs
+) -> Optional[Dict[str, Any]]:
+    """Poll for manual sync trigger requests from Bun API.
+    
+    This task runs every 5 seconds to check if a manual sync
+    has been requested via the sync:trigger Redis key.
+    
+    Args:
+        ctx: Worker context (contains Redis connection)
+        
+    Returns:
+        Result from trigger_master_sync_task if trigger found, else None
+    """
+    redis: Optional[ArqRedis] = ctx.get("redis")
+    if not redis:
+        return None
+    
+    # Check for pending trigger
+    trigger = await get_sync_trigger(redis)
+    
+    if trigger:
+        task_id = trigger.get("task_id", f"sync-manual-{int(time.time())}")
+        triggered_by = trigger.get("triggered_by", "manual")
+        
+        logger.info(
+            "manual_sync_trigger_detected",
+            task_id=task_id,
+            triggered_by=triggered_by,
+        )
+        
+        # Clear the trigger before starting (prevent duplicate runs)
+        await clear_sync_trigger(redis)
+        
+        # Execute the sync
+        return await trigger_master_sync_task(
+            ctx=ctx,
+            task_id=task_id,
+            triggered_by=triggered_by,
+        )
+    
+    return None
+
+
 async def _get_active_suppliers() -> List[Supplier]:
     """Get all active suppliers from database.
     
@@ -400,4 +502,82 @@ async def _enqueue_supplier_parse(
         parser_type=parser_type,
         parent_task_id=parent_task_id,
     )
+
+
+async def poll_parse_triggers(
+    ctx: Dict[str, Any],
+    **kwargs
+) -> Optional[Dict[str, Any]]:
+    """Poll for parse triggers from Bun API file uploads.
+    
+    This task runs every 10 seconds to check for pending parse triggers
+    set by the Bun API when files are uploaded.
+    
+    Args:
+        ctx: Worker context (contains Redis connection)
+        
+    Returns:
+        Dict with results if triggers were processed, else None
+    """
+    redis: Optional[ArqRedis] = ctx.get("redis")
+    if not redis:
+        return None
+    
+    # Get pending triggers
+    triggers = await get_pending_parse_triggers(redis, max_count=10)
+    
+    if not triggers:
+        return None
+    
+    logger.info(
+        "parse_triggers_found",
+        count=len(triggers),
+    )
+    
+    results = []
+    
+    for trigger in triggers:
+        task_id = trigger.get("task_id", f"parse-trigger-{int(time.time())}")
+        parser_type = trigger.get("parser_type", "csv")
+        supplier_name = trigger.get("supplier_name", "unknown")
+        source_config = trigger.get("source_config", {})
+        
+        logger.info(
+            "processing_parse_trigger",
+            task_id=task_id,
+            parser_type=parser_type,
+            supplier_name=supplier_name,
+        )
+        
+        try:
+            # Enqueue the parse task using arq's native method
+            await redis.enqueue_job(
+                "parse_task",
+                task_id=task_id,
+                parser_type=parser_type,
+                supplier_name=supplier_name,
+                source_config=source_config,
+            )
+            
+            results.append({
+                "task_id": task_id,
+                "status": "enqueued",
+            })
+            
+        except Exception as e:
+            logger.error(
+                "parse_trigger_enqueue_failed",
+                task_id=task_id,
+                error=str(e),
+            )
+            results.append({
+                "task_id": task_id,
+                "status": "error",
+                "error": str(e),
+            })
+    
+    return {
+        "processed": len(results),
+        "results": results,
+    }
 

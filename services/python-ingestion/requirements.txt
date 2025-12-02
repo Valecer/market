@@ -5,6 +5,7 @@ alembic>=1.13.0
 
 # Data Processing
 pandas>=2.1.0
+openpyxl>=3.1.0
 
 # Product Matching
 rapidfuzz>=3.5.0

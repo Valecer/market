@@ -468,6 +468,67 @@ export class AdminService {
       enqueued_at: enqueuedAt,
     }
   }
+
+  /**
+   * Update product status
+   * @param productId - Product UUID
+   * @param status - New status (draft, active, archived)
+   * @returns Updated product info
+   */
+  async updateProductStatus(
+    productId: string,
+    status: 'draft' | 'active' | 'archived'
+  ): Promise<{
+    id: string
+    internal_sku: string
+    name: string
+    status: 'draft' | 'active' | 'archived'
+    updated_at: string
+    message: string
+  }> {
+    // Find product using findByIdWithSuppliers (existing method)
+    const product = await this.productRepo.findByIdWithSuppliers(productId)
+    if (!product) {
+      const error = new Error(`Product with id ${productId} not found`)
+      ;(error as any).code = 'NOT_FOUND'
+      throw error
+    }
+
+    // Update status
+    await this.productRepo.updateStatus(productId, status)
+
+    return {
+      id: productId,
+      internal_sku: product.internal_sku,
+      name: product.name,
+      status,
+      updated_at: new Date().toISOString(),
+      message: `Product status updated to ${status}`,
+    }
+  }
+
+  /**
+   * Bulk update product statuses
+   * @param productIds - Array of product UUIDs
+   * @param status - New status for all products
+   * @returns Count of updated products
+   */
+  async bulkUpdateProductStatus(
+    productIds: string[],
+    status: 'draft' | 'active' | 'archived'
+  ): Promise<{
+    updated_count: number
+    status: 'draft' | 'active' | 'archived'
+    message: string
+  }> {
+    const updatedCount = await this.productRepo.bulkUpdateStatus(productIds, status)
+
+    return {
+      updated_count: updatedCount,
+      status,
+      message: `${updatedCount} products updated to ${status} status`,
+    }
+  }
 }
 
 // Export singleton instance

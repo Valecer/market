@@ -4,6 +4,7 @@
     "error": "Ошибка",
     "retry": "Повторить",
     "save": "Сохранить",
+    "saving": "Сохранение...",
     "cancel": "Отмена",
     "submit": "Отправить",
     "back": "Назад",
@@ -22,7 +23,12 @@
     "category": "Категория",
     "supplier": "Поставщик",
     "complete": "завершено",
-    "name": "Название"
+    "name": "Название",
+    "actions": "Действия",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "configure": "Настроить",
+    "activating": "Активация..."
   },
 
   "header": {
@@ -216,10 +222,31 @@
       "linkingItemsMultiple": "Привязка {{count}} товаров поставщика:",
       "searchProductsPlaceholder": "Поиск товаров по названию или артикулу...",
       "typeToSearch": "Введите минимум 2 символа для поиска",
-      "noProductsForQuery": "Товары не найдены по запросу \"{{query}}\""
+      "noProductsForQuery": "Товары не найдены по запросу \"{{query}}\"",
+      "createNewProduct": "Создать новый товар",
+      "createNewProductTitle": "Создать новый товар",
+      "createNewProductDescription": "Создайте новый товар и автоматически привяжите к нему товар поставщика.",
+      "createNewProductHint": "Не можете найти нужный товар?",
+      "orCreateNew": "Или создайте новый товар",
+      "productName": "Название товара",
+      "productNamePlaceholder": "Введите название товара",
+      "createAndLink": "Создать и привязать",
+      "productCreatedSuccess": "Товар \"{{name}}\" создан и успешно привязан"
     },
 
-    "ingestion": "Синхронизация"
+    "ingestion": "Синхронизация",
+    
+    "status": {
+      "draft": "Черновик",
+      "active": "Активный",
+      "archived": "Архив"
+    },
+    
+    "statusUpdateSuccess": "Статус товара успешно обновлён",
+    "statusUpdateError": "Не удалось обновить статус товара",
+    "bulkStatusUpdateError": "Не удалось обновить статусы товаров",
+    "noDraftProducts": "Нет черновиков для активации",
+    "activateAllDraft": "Активировать {{count}} черновиков"
   },
 
   "ingestion": {
@@ -250,6 +277,58 @@
       "error": "Ошибка",
       "pending": "Ожидание",
       "inactive": "Неактивен"
+    }
+  },
+
+  "settings": {
+    "masterSheetUrl": {
+      "title": "URL мастер-таблицы",
+      "description": "URL Google Таблицы для синхронизации конфигурации поставщиков",
+      "label": "URL мастер-таблицы",
+      "placeholder": "https://docs.google.com/spreadsheets/d/...",
+      "sheetNameLabel": "Название листа",
+      "sheetNamePlaceholder": "Suppliers",
+      "sheetNameHint": "Название вкладки листа для парсинга (по умолчанию: Suppliers)",
+      "notConfigured": "URL мастер-таблицы не настроен",
+      "lastUpdated": "Последнее обновление:",
+      "invalidUrl": "Введите корректный URL Google Таблицы",
+      "fetchError": "Не удалось загрузить настройки",
+      "saveSuccess": "Конфигурация мастер-таблицы успешно сохранена"
+    }
+  },
+
+  "suppliers": {
+    "addSupplier": "Добавить поставщика",
+    "count_one": "{{count}} поставщик",
+    "count_few": "{{count}} поставщика",
+    "count_many": "{{count}} поставщиков",
+    "noSuppliers": "Поставщики ещё не настроены",
+    "addFirst": "Добавить первого поставщика",
+    "delete": "Удалить поставщика",
+    "deleteConfirm": "Вы уверены, что хотите удалить \"{{name}}\"? Это также удалит все связанные товары.",
+    "sourceTypes": {
+      "google_sheets": "Google Таблицы",
+      "csv": "CSV файл",
+      "excel": "Excel файл"
+    },
+    "modal": {
+      "title": "Добавить нового поставщика",
+      "name": "Название поставщика",
+      "namePlaceholder": "Введите название поставщика",
+      "sourceType": "Тип источника данных",
+      "sourceUrl": "URL источника (опционально)",
+      "sourceUrlPlaceholder": "https://docs.google.com/spreadsheets/d/...",
+      "sourceUrlHint": "URL Google Таблицы или внешнего файла. Можно добавить позже.",
+      "uploadFile": "Загрузить прайс-лист (опционально)",
+      "dropzoneText": "Перетащите файл сюда или нажмите для выбора",
+      "dropzoneHint": "Поддерживаются CSV, XLSX, XLS (максимум 50МБ)",
+      "invalidFileType": "Неверный тип файла. Загрузите CSV или Excel файл.",
+      "fileTooLarge": "Файл слишком большой. Максимальный размер — 50МБ.",
+      "uploadError": "Не удалось обработать файл",
+      "activeLabel": "Поставщик активен для синхронизации",
+      "notes": "Заметки",
+      "notesPlaceholder": "Необязательные заметки о поставщике...",
+      "create": "Создать поставщика"
     }
   }
 }

@@ -40,6 +40,8 @@ from src.tasks.matching_tasks import (
 from src.tasks.sync_tasks import (
     trigger_master_sync_task,
     scheduled_sync_task,
+    poll_manual_sync_trigger,
+    poll_parse_triggers,
     get_sync_interval_hours,
 )
 
@@ -612,6 +614,7 @@ class WorkerSettings:
     """
     
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    queue_name = settings.queue_name  # Match the queue name used by Bun API
     max_jobs = settings.max_workers
     job_timeout = settings.job_timeout
     keep_result = 3600  # Keep results for 1 hour
@@ -649,6 +652,20 @@ class WorkerSettings:
             minute=0,
             unique=True,
             run_at_startup=False,
+        ),
+        # Poll for manual sync triggers every minute
+        # Bun API sets sync:trigger key, worker polls and executes
+        cron(
+            poll_manual_sync_trigger,
+            minute=set(range(0, 60)),  # Every minute
+            unique=True,
+        ),
+        # Poll for parse triggers every 10 seconds
+        # Bun API sets parse:triggers list, worker polls and enqueues parse_task
+        cron(
+            poll_parse_triggers,
+            second={0, 10, 20, 30, 40, 50},  # Every 10 seconds
+            unique=True,
         ),
     ]
 

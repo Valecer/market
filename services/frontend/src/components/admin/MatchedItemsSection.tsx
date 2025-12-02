@@ -10,7 +10,7 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertDialog, Button, Flex, Text } from '@radix-ui/themes'
+import { AlertDialog, Button, Flex } from '@radix-ui/themes'
 import type { AdminProduct, SupplierItem } from '@/lib/api-client'
 
 // =============================================================================

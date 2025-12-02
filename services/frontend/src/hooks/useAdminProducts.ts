@@ -12,8 +12,8 @@
  * })
  */
 
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { apiClient, type AdminProduct, type AdminProductFilters } from '@/lib/api-client'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { apiClient, type AdminProduct, type AdminProductFilters, type ProductStatus } from '@/lib/api-client'
 import { queryKeys } from '@/lib/query-keys'
 
 export interface AdminProductsResponse {
@@ -66,8 +66,136 @@ export function useAdminProducts(filters: AdminProductFilters = {}) {
   })
 }
 
+// =============================================================================
+// Product Status Mutations
+// =============================================================================
+
+export interface UpdateProductStatusParams {
+  productId: string
+  status: ProductStatus
+}
+
+export interface UpdateProductStatusResponse {
+  id: string
+  internal_sku: string
+  name: string
+  status: ProductStatus
+  updated_at: string
+  message: string
+}
+
+export interface BulkUpdateStatusParams {
+  productIds: string[]
+  status: ProductStatus
+}
+
+export interface BulkUpdateStatusResponse {
+  updated_count: number
+  status: ProductStatus
+  message: string
+}
+
+/**
+ * Get auth token from localStorage
+ */
+function getAuthToken(): string | null {
+  // Token is stored directly as 'jwt_token' (not in a JSON object)
+  return localStorage.getItem('jwt_token')
+}
+
+/**
+ * Update single product status
+ * Note: Using fetch directly as these endpoints are newly added and types haven't been regenerated
+ */
+async function updateProductStatus(params: UpdateProductStatusParams): Promise<UpdateProductStatusResponse> {
+  const token = getAuthToken()
+  const response = await fetch(`/api/v1/admin/products/${params.productId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ status: params.status }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error?.message || 'Failed to update product status')
+  }
+
+  return response.json()
+}
+
+/**
+ * Bulk update product statuses
+ * Note: Using fetch directly as these endpoints are newly added and types haven't been regenerated
+ */
+async function bulkUpdateProductStatus(params: BulkUpdateStatusParams): Promise<BulkUpdateStatusResponse> {
+  const token = getAuthToken()
+  const response = await fetch('/api/v1/admin/products/bulk-status', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
+    body: JSON.stringify({
+      product_ids: params.productIds,
+      status: params.status,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error?.message || 'Failed to bulk update product statuses')
+  }
+
+  return response.json()
+}
+
+/**
+ * Hook for updating a single product's status
+ *
+ * @example
+ * const { mutate, isPending } = useUpdateProductStatus()
+ * mutate({ productId: '...', status: 'active' })
+ */
+export function useUpdateProductStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateProductStatus,
+    onSuccess: () => {
+      // Invalidate admin products list to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.products.all })
+      // Also invalidate catalog since product visibility may have changed
+      queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all })
+    },
+  })
+}
+
+/**
+ * Hook for bulk updating product statuses
+ *
+ * @example
+ * const { mutate, isPending } = useBulkUpdateProductStatus()
+ * mutate({ productIds: ['...', '...'], status: 'active' })
+ */
+export function useBulkUpdateProductStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: bulkUpdateProductStatus,
+    onSuccess: () => {
+      // Invalidate admin products list to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.products.all })
+      // Also invalidate catalog since product visibility may have changed
+      queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all })
+    },
+  })
+}
+
 /**
  * Type exports for components
  */
-export type { AdminProduct, AdminProductFilters }
+export type { AdminProduct, AdminProductFilters, ProductStatus }
 

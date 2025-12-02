@@ -55,9 +55,13 @@ services:
       JOB_TIMEOUT: ${JOB_TIMEOUT:-300}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENVIRONMENT: ${ENVIRONMENT:-development}
+      UPLOADS_DIR: /shared/uploads
+      QUEUE_NAME: ${QUEUE_NAME:-price-ingestion-queue}
+      DLQ_NAME: ${DLQ_NAME:-price-ingestion-dlq}
     volumes:
       - ./services/python-ingestion:/app
       - ./credentials:/app/credentials:ro
+      - ./uploads:/shared/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,6 +95,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DB_POOL_MIN: ${DB_POOL_MIN:-5}
       DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      UPLOADS_DIR: /shared/uploads
+    volumes:
+      - ./uploads:/shared/uploads
     ports:
       - "3000:3000"
     depends_on:

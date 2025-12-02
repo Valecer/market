@@ -24,6 +24,7 @@ import { UnmatchedItemsTable } from '@/components/admin/UnmatchedItemsTable'
 import { ProductSearchModal } from '@/components/admin/ProductSearchModal'
 import { MatchedItemsSection } from '@/components/admin/MatchedItemsSection'
 import type { ProductSearchResult } from '@/hooks/useProductSearch'
+import type { CreateProductResponse } from '@/hooks/useCreateProduct'
 
 // =============================================================================
 // Component
@@ -119,6 +120,12 @@ export function ProcurementMatchingPage() {
       action: 'unlink',
     })
   }, [matchMutation])
+
+  // Handle new product created
+  const handleProductCreated = useCallback((product: CreateProductResponse) => {
+    toast.success(t('admin.procurementPage.productCreatedSuccess', { name: product.name }))
+    setModalState({ open: false, supplierItems: [] })
+  }, [toast, t])
 
   // Handle modal close
   const handleModalOpenChange = useCallback((open: boolean) => {
@@ -231,6 +238,7 @@ export function ProcurementMatchingPage() {
         onOpenChange={handleModalOpenChange}
         supplierItems={modalState.supplierItems}
         onSelectProduct={handleSelectProduct}
+        onProductCreated={handleProductCreated}
         isMatching={matchMutation.isPending}
       />
     </div>

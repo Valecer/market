@@ -259,9 +259,16 @@ async def match_items_task(
                 log.info("unmatched_items_selected", count=len(unmatched_items))
                 
                 # Step 2: Load products for matching (with category blocking if specified)
+                # Include both ACTIVE and DRAFT products to enable matching against
+                # recently created products that haven't been activated yet
                 products_query = (
                     select(Product)
-                    .where(Product.status == ProductStatus.ACTIVE)
+                    .where(
+                        or_(
+                            Product.status == ProductStatus.ACTIVE,
+                            Product.status == ProductStatus.DRAFT,
+                        )
+                    )
                 )
                 
                 if category_uuid:
@@ -271,7 +278,8 @@ async def match_items_task(
                     )
                 
                 products_result = await session.execute(products_query)
-                products = products_result.scalars().all()
+                # Convert to list to allow appending new products during batch processing
+                products: List[Product] = list(products_result.scalars().all())
                 
                 log.debug("products_loaded", count=len(products))
                 
@@ -300,10 +308,23 @@ async def match_items_task(
                                 if p.category_id == item.product.category_id
                             ]
                         
-                        # If no products to match against, skip
+                        # If no products to match against, create a new product
                         if not item_products:
-                            # Check if this is due to no category
-                            metrics.skipped_no_category += 1
+                            # No existing products to match - create new draft product
+                            new_product = await _handle_no_match(
+                                session=session,
+                                item=item,
+                                log=log,
+                            )
+                            metrics.new_products_created += 1
+                            metrics.items_processed += 1
+                            
+                            # IMPORTANT: Add new product to the list so subsequent items
+                            # in the same batch can match against it
+                            products.append(new_product)
+                            
+                            # Queue recalculation for the new product
+                            product_ids_to_recalc.append(new_product.id)
                             continue
                         
                         # Perform matching
@@ -352,6 +373,10 @@ async def match_items_task(
                                 log=log,
                             )
                             metrics.new_products_created += 1
+                            
+                            # IMPORTANT: Add new product to the list so subsequent items
+                            # in the same batch can match against it
+                            products.append(new_product)
                             
                             # Queue recalculation for the new product
                             product_ids_to_recalc.append(new_product.id)

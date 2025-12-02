@@ -1,30 +1,30 @@
-"""Pydantic models for Google Sheets parser configuration."""
-from pydantic import BaseModel, Field, field_validator, HttpUrl
+"""Pydantic models for file-based parser configuration (CSV, Excel)."""
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, List, Optional
 
 
-class GoogleSheetsConfig(BaseModel):
-    """Configuration for Google Sheets parser.
+class FileParserConfig(BaseModel):
+    """Base configuration for file-based parsers (CSV, Excel).
     
     This model validates the source_config dictionary passed in ParseTaskMessage
-    for the google_sheets parser type. It defines all parser-specific settings
-    including sheet URL, column mappings, and data extraction parameters.
+    for csv and excel parser types. It defines all parser-specific settings
+    including file path, column mappings, and data extraction parameters.
     """
     
-    sheet_url: HttpUrl = Field(
+    file_path: str = Field(
         ...,
-        description="Google Sheets URL (must be a valid HTTP/HTTPS URL)"
-    )
-    sheet_name: str = Field(
-        default="Sheet1",
         min_length=1,
-        description="Name of the worksheet tab to parse"
+        description="Path to the file to parse (uploaded or local)"
+    )
+    original_filename: Optional[str] = Field(
+        default=None,
+        description="Original filename before server-side renaming"
     )
     column_mapping: Optional[Dict[str, str]] = Field(
         default=None,
         description=(
-            "Manual column mapping from sheet headers to standard fields. "
-            "Keys: 'sku', 'name', 'price'. Values: exact header names from sheet. "
+            "Manual column mapping from file headers to standard fields. "
+            "Keys: 'sku', 'name', 'price'. Values: exact header names from file. "
             "If provided, overrides automatic column detection."
         )
     )
@@ -48,16 +48,16 @@ class GoogleSheetsConfig(BaseModel):
     )
     data_start_row: int = Field(
         default=2,
-        ge=2,
+        ge=1,
         description="Row number (1-indexed) where data rows begin"
     )
     
-    @field_validator('sheet_name')
+    @field_validator('file_path')
     @classmethod
-    def validate_sheet_name(cls, v: str) -> str:
-        """Validate sheet name is not empty."""
+    def validate_file_path(cls, v: str) -> str:
+        """Validate file path is not empty."""
         if not v.strip():
-            raise ValueError('sheet_name cannot be empty or whitespace')
+            raise ValueError('file_path cannot be empty or whitespace')
         return v.strip()
     
     @field_validator('column_mapping')
@@ -106,14 +106,78 @@ class GoogleSheetsConfig(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "sheet_url": "https://docs.google.com/spreadsheets/d/1abc123xyz/edit",
-                "sheet_name": "November 2025 Price List",
+                "file_path": "/tmp/uploads/supplier_12345.csv",
+                "original_filename": "price_list_november.csv",
                 "column_mapping": {
                     "sku": "Item Code",
                     "name": "Product Description",
                     "price": "Unit Price"
                 },
                 "characteristic_columns": ["Color", "Size", "Material"],
+                "header_row": 1,
+                "data_start_row": 2
+            }
+        }
+    }
+
+
+class CsvParserConfig(FileParserConfig):
+    """Configuration for CSV parser.
+    
+    Extends FileParserConfig with CSV-specific options.
+    """
+    
+    delimiter: str = Field(
+        default=",",
+        min_length=1,
+        max_length=5,
+        description="Field delimiter character (default: comma)"
+    )
+    encoding: str = Field(
+        default="utf-8",
+        description="File encoding (default: utf-8)"
+    )
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "file_path": "/tmp/uploads/supplier_12345.csv",
+                "original_filename": "price_list_november.csv",
+                "delimiter": ",",
+                "encoding": "utf-8",
+                "header_row": 1,
+                "data_start_row": 2
+            }
+        }
+    }
+
+
+class ExcelParserConfig(FileParserConfig):
+    """Configuration for Excel parser.
+    
+    Extends FileParserConfig with Excel-specific options.
+    """
+    
+    sheet_name: str = Field(
+        default="Sheet1",
+        min_length=1,
+        description="Name of the worksheet to parse"
+    )
+    
+    @field_validator('sheet_name')
+    @classmethod
+    def validate_sheet_name(cls, v: str) -> str:
+        """Validate sheet name is not empty."""
+        if not v.strip():
+            raise ValueError('sheet_name cannot be empty or whitespace')
+        return v.strip()
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "file_path": "/tmp/uploads/supplier_12345.xlsx",
+                "original_filename": "price_list_november.xlsx",
+                "sheet_name": "Price List",
                 "header_row": 1,
                 "data_start_row": 2
             }
