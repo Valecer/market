@@ -22,6 +22,8 @@ export const ErrorCodeSchema = Type.Union([
   Type.Literal('RATE_LIMIT_EXCEEDED'),
   Type.Literal('REDIS_UNAVAILABLE'),
   Type.Literal('INTERNAL_ERROR'),
+  // Phase 6: Ingestion-specific error codes
+  Type.Literal('SYNC_IN_PROGRESS'),
 ])
 
 export type ErrorCode = Static<typeof ErrorCodeSchema>

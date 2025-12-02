@@ -2,7 +2,107 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from typing import Optional
+from enum import Enum
 import structlog
+
+
+class LLMBackendType(str, Enum):
+    """Supported LLM backends."""
+    OLLAMA = "ollama"
+    OPENAI = "openai"
+    MOCK = "mock"
+
+
+class LLMSettings(BaseSettings):
+    """LLM configuration for ML-based matching and classification.
+    
+    All settings prefixed with LLM_ (e.g., LLM_MODEL=llama3.2)
+    
+    Supported backends:
+    - ollama: Local Ollama server (recommended)
+    - openai: OpenAI API (requires API key)
+    - mock: Mock client for testing
+    """
+    
+    # Backend Configuration
+    backend: LLMBackendType = Field(
+        default=LLMBackendType.OLLAMA,
+        description="LLM backend to use (ollama, openai, mock)"
+    )
+    
+    # Model Configuration
+    model: str = Field(
+        default="llama3.2",
+        description="Model to use. Recommended: llama3.2, qwen2.5:7b (good for Russian)"
+    )
+    
+    # Ollama Configuration
+    ollama_url: str = Field(
+        default="http://localhost:11434",
+        description="Ollama server URL"
+    )
+    
+    # OpenAI Configuration (optional)
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        description="OpenAI API key (only for openai backend)"
+    )
+    openai_base_url: Optional[str] = Field(
+        default=None,
+        description="OpenAI-compatible API base URL"
+    )
+    
+    # Request Configuration
+    timeout: float = Field(
+        default=60.0,
+        ge=1.0,
+        le=300.0,
+        description="Request timeout in seconds"
+    )
+    max_retries: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum retry attempts"
+    )
+    temperature: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=2.0,
+        description="Model temperature (lower = more deterministic)"
+    )
+    max_tokens: int = Field(
+        default=2048,
+        ge=100,
+        le=8192,
+        description="Maximum tokens in response"
+    )
+    
+    # Feature Flags
+    enabled: bool = Field(
+        default=True,
+        description="Enable/disable LLM features globally"
+    )
+    use_for_headers: bool = Field(
+        default=True,
+        description="Use LLM for header detection"
+    )
+    use_for_classification: bool = Field(
+        default=True,
+        description="Use LLM for product classification"
+    )
+    use_for_matching: bool = Field(
+        default=True,
+        description="Use LLM for product matching/similarity"
+    )
+    
+    model_config = SettingsConfigDict(
+        env_prefix="LLM_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 class MatchingSettings(BaseSettings):
@@ -81,6 +181,14 @@ class Settings(BaseSettings):
     # Google Sheets Configuration
     google_credentials_path: str = "/app/credentials/google-credentials.json"
 
+    # Sync Scheduler Configuration (Phase 6)
+    sync_interval_hours: int = Field(
+        default=8,
+        ge=1,
+        le=168,
+        description="Interval between automatic Master Sheet syncs (default: 8 hours)"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -99,6 +207,7 @@ class Settings(BaseSettings):
 # Global settings instances
 settings = Settings()
 matching_settings = MatchingSettings()
+llm_settings = LLMSettings()
 
 
 def configure_logging(log_level: str = "INFO") -> None:

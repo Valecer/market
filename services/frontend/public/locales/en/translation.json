@@ -270,6 +270,24 @@
       "error": "Error",
       "pending": "Pending",
       "inactive": "Inactive"
+    },
+    "logs": {
+      "title": "Parsing Logs",
+      "subtitle": "Recent parsing activity and errors",
+      "count": "{{count}} entries",
+      "count_plural": "{{count}} entries",
+      "ariaLabel": "Live parsing log stream",
+      "empty": "No parsing logs yet",
+      "emptyHint": "Logs will appear when suppliers are synced",
+      "legend": "Legend:"
+    },
+    "errors": {
+      "syncInProgress": "A sync operation is already in progress. Please wait for it to complete.",
+      "syncFailed": "Sync failed: {{message}}",
+      "redisUnavailable": "Unable to connect to the queue service. Please try again later.",
+      "masterSheetError": "Failed to read the Master Sheet. Please check the URL and permissions.",
+      "networkError": "Network error. Please check your connection and try again.",
+      "genericError": "An unexpected error occurred. Please try again."
     }
   },
 

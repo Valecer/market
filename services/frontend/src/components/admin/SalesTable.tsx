@@ -20,8 +20,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
-import type { AdminProduct, ProductStatus } from '@/lib/api-client'
-import { ProductStatusDropdown } from './ProductStatusDropdown'
+import type { AdminProduct } from '@/lib/api-client'
 
 // =============================================================================
 // Icons
@@ -56,9 +55,9 @@ interface SalesTableProps {
   isLoading?: boolean
   /** Callback when row is clicked */
   onRowClick?: (product: AdminProduct) => void
-  /** Callback when status is changed */
-  onStatusChange?: (productId: string, newStatus: AdminProduct['status']) => Promise<void>
-  /** Whether status changes are allowed */
+  /** Callback when product status is changed */
+  onStatusChange?: (productId: string, newStatus: 'draft' | 'active' | 'archived') => void
+  /** Enable inline status change controls */
   enableStatusChange?: boolean
 }
 
@@ -143,8 +142,11 @@ export function SalesTable({
   products, 
   isLoading = false, 
   onRowClick,
-  onStatusChange,
-  enableStatusChange = false,
+  // Note: onStatusChange and enableStatusChange are provided for future inline status editing
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onStatusChange: _onStatusChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  enableStatusChange: _enableStatusChange = false,
 }: SalesTableProps) {
   const { t } = useTranslation()
   const [sorting, setSorting] = useState<SortingState>([])
@@ -226,17 +228,6 @@ export function SalesTable({
         accessorKey: 'status',
         header: t('admin.sales.status'),
         cell: ({ row }) => {
-          // If status change is enabled and callback is provided, show dropdown
-          if (enableStatusChange && onStatusChange) {
-            return (
-              <ProductStatusDropdown
-                currentStatus={row.original.status as ProductStatus}
-                productId={row.original.id}
-                onStatusChange={onStatusChange}
-              />
-            )
-          }
-          // Otherwise show static badge
           const { text, className } = getStatusBadge(row.original.status, t)
           return (
             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${className}`}>

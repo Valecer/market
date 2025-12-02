@@ -1,231 +1,160 @@
+# Bun API Service Context
+
+## Overview
+REST API layer for Marketbel catalog system. Built with ElysiaJS + Drizzle ORM.
+
+**Port:** 3000  
+**Docs:** http://localhost:3000/docs (Swagger)
+
 ---
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
+
+## Stack
+- **Runtime:** Bun (not Node.js)
+- **Framework:** ElysiaJS
+- **ORM:** Drizzle ORM + node-postgres
+- **Validation:** TypeBox
+- **Auth:** @elysiajs/jwt + bcrypt
+
 ---
 
-Default to using Bun instead of Node.js.
+## Architecture (SOLID)
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Bun automatically loads .env, so don't use dotenv.
-
-## APIs
-
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
-
-## Testing
-
-Use `bun test` to run tests.
-
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+```
+Controllers (HTTP) → Services (Logic) → Repositories (Data)
 ```
 
-## Frontend
+- **Controllers:** HTTP only - routing, validation, response serialization
+- **Services:** Business logic, static classes or pure functions
+- **Repositories:** Database access via Drizzle, implement interfaces
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+---
 
-Server:
+## Structure
 
-```ts#index.ts
-import index from "./index.html"
+```
+src/
+├── controllers/
+│   ├── auth/        # Login, register
+│   ├── catalog/     # Public product/category endpoints
+│   └── admin/       # Sales, procurement, suppliers, sync
+├── services/        # Business logic
+├── db/
+│   ├── schema/      # Drizzle schemas (introspected from Phase 1)
+│   └── repositories/
+├── middleware/      # Auth, RBAC, error handling
+├── types/           # TypeBox schemas + TS types
+└── utils/
+```
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
+---
+
+## Commands
+
+```bash
+bun install
+bun --watch src/index.ts     # Dev with hot reload
+bun test                      # Run tests
+bun run tsc --noEmit         # Type check
+```
+
+---
+
+## Key Patterns
+
+### ElysiaJS Plugin Scoping
+
+**Problem:** `new Elysia()` creates isolated scope - JWT not inherited.
+
+```typescript
+// ❌ Wrong - isolated scope, jwt undefined
+export const middleware = new Elysia()
+  .derive(({ jwt }) => { /* jwt undefined! */ })
+
+// ✅ Correct - functional plugin, uses parent context
+export const middleware = (app: Elysia) =>
+  app.derive(({ jwt }) => { /* jwt available */ })
+```
+
+### TypeBox Validation
+
+```typescript
+import { t } from 'elysia'
+
+const CreateUserSchema = t.Object({
+  email: t.String({ format: 'email' }),
+  password: t.String({ minLength: 8 })
 })
 ```
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+### Repository Pattern
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-
-// import .css files directly and it works
-import './index.css';
-
-import { createRoot } from "react-dom/client";
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
+```typescript
+// db/repositories/product.repository.ts
+export class ProductRepository {
+  async findById(id: string): Promise<Product | null> {
+    return db.query.products.findFirst({ where: eq(products.id, id) })
+  }
 }
-
-root.render(<Frontend />);
 ```
 
-Then, run index.ts
+---
 
-```sh
-bun --hot ./index.ts
-```
+## Roles & Auth
 
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
+| Role | Access |
+|------|--------|
+| `sales` | Catalog, orders |
+| `procurement` | Suppliers, matching |
+| `admin` | Everything + sync |
 
-## ElysiaJS Plugin Scoping
-
-### Problem: Plugin Context Isolation
-
-When creating a new Elysia instance with `new Elysia()`, it creates an **isolated scope**. Plugins from the parent app (like JWT) are **not automatically inherited** by child instances.
-
-**❌ Incorrect Pattern (Isolated Scope):**
 ```typescript
-// This creates an isolated scope - JWT plugin from parent won't be accessible
-export const authMiddleware = new Elysia({ name: 'auth' })
-  .derive(async ({ jwt, headers }) => {
-    // jwt will be undefined or not accessible here!
-    const payload = await jwt.verify(token)
-  })
+// Usage in controller
+.use(requireAuth)           // Any authenticated user
+.use(requireRole('admin'))  // Specific role
 ```
 
-### Solution: Functional Plugin Pattern
+---
 
-Use a **functional plugin pattern** - export a function that takes the app instance and returns it with your middleware. This ensures the middleware uses the parent app's context where plugins are already initialized.
+## Queue Communication
 
-**✅ Correct Pattern (Functional Plugin):**
+API publishes tasks to Redis, Python worker consumes:
+
 ```typescript
-// Export a function that receives the parent app instance
-export const authMiddleware = (app: Elysia) =>
-  app.derive(async ({ jwt, headers }) => {
-    // jwt is now accessible from parent app's context!
-    const payload = await jwt.verify(token)
-    return { user: payload }
-  })
+// services/queue.service.ts
+await QueueService.enqueue('parse_task', { supplier_id: '...' })
 ```
 
-**Usage:**
+---
+
+## Database
+
+- **READ-ONLY** for Phase 1 tables (products, supplier_items, etc.)
+- **MANAGED** for users table (local migration)
+- Drizzle introspects schema from PostgreSQL
+
+---
+
+## Testing
+
 ```typescript
+import { describe, test, expect } from 'bun:test'
+
+// Create isolated test app
 const app = new Elysia()
-  .use(jwt({ name: 'jwt', secret: '...' }))
-  .use(authMiddleware) // Elysia automatically calls the function with app context
-  .get('/protected', ({ user }) => {
-    // user is available here
-  })
+  .use(errorHandler)
+  .use(jwt({ name: 'jwt', secret: 'test' }))
+  .use(controller)
+
+test('GET /api/products', async () => {
+  const res = await app.handle(new Request('http://localhost/api/products'))
+  expect(res.status).toBe(200)
+})
 ```
 
-### Why This Works
+---
 
-1. **Context Sharing**: The function receives the parent app instance, which already has the JWT plugin registered
-2. **No Isolation**: The middleware is added directly to the parent app, not as a separate isolated instance
-3. **Plugin Access**: All plugins from the parent (like `jwt`) are accessible in `derive` functions
+## Common Issues
 
-### When to Use Each Pattern
-
-- **Functional Plugin Pattern** (`(app) => app.derive(...)`): 
-  - ✅ When middleware needs access to plugins from parent app
-  - ✅ When using `derive` to enrich context
-  - ✅ For authentication/authorization middleware
-
-- **Instance Pattern** (`new Elysia().derive(...)`):
-  - ✅ When middleware is completely self-contained
-  - ✅ When middleware doesn't need parent plugins
-  - ✅ For reusable, independent middleware modules
-
-### Example: Auth Middleware
-
-```typescript
-// src/middleware/auth.ts
-import { Elysia } from 'elysia'
-import type { JWTPayload } from '../types/auth.types'
-
-export const authMiddleware = (app: Elysia) =>
-  app.derive(async ({ jwt, headers }) => {
-    const authHeader = headers.authorization
-    
-    if (!authHeader?.startsWith('Bearer ')) {
-      return { user: null }
-    }
-    
-    const token = authHeader.substring(7)
-    const payload = await jwt.verify(token)
-    
-    return {
-      user: payload as JWTPayload | null,
-    }
-  })
-```
-
-### Testing Context
-
-**In tests, `new Elysia()` is the correct pattern** because:
-- Tests create isolated app instances from scratch
-- Each test app initializes its own plugins (JWT, error handler, etc.)
-- No parent app context exists to share plugins from
-- Functional plugin pattern is only needed when middleware must access plugins from a parent app
-
-**Example in tests:**
-```typescript
-// tests/helpers.ts - Correct for tests
-export function createAuthTestApp() {
-  return new Elysia()  // ✅ Correct - creating isolated test app
-    .use(errorHandler)
-    .use(jwt({ name: 'jwt', secret: '...' }))
-    .use(authController)
-}
-```
-
-**Example in middleware:**
-```typescript
-// src/middleware/auth.ts - Must use functional pattern
-export const authMiddleware = (app: Elysia) =>  // ✅ Correct - needs parent JWT plugin
-  app.derive(async ({ jwt, headers }) => {
-    // jwt is from parent app's context
-  })
-```
-
-### References
-
-- See `src/middleware/auth.ts` for auth middleware implementation
-- See `src/middleware/rbac.ts` for RBAC implementation with type assertions
-- See `src/controllers/auth/index.ts` for controller using functional pattern
-- See `src/controllers/admin/index.ts` for controller using functional pattern with group
-- See `tests/helpers.ts` for test app creation patterns
-- Elysia Plugin Documentation: https://elysiajs.com/essential/plugin
+1. **JWT undefined in middleware** → Use functional plugin pattern
+2. **Type errors with Drizzle** → Run `bun run drizzle-kit introspect`
+3. **CORS errors** → Check `cors()` plugin in `index.ts`

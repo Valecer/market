@@ -40,12 +40,14 @@ logger = structlog.get_logger(__name__)
 
 
 def get_sync_interval_hours() -> int:
-    """Get sync interval from environment variable.
+    """Get sync interval from settings.
+    
+    Uses the SYNC_INTERVAL_HOURS environment variable via pydantic-settings.
     
     Returns:
         Sync interval in hours (default: 8)
     """
-    return int(os.getenv("SYNC_INTERVAL_HOURS", "8"))
+    return settings.sync_interval_hours
 
 
 def get_master_sheet_url() -> Optional[str]:

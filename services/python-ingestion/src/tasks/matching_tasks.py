@@ -168,6 +168,7 @@ async def match_items_task(
     task_id: str,
     category_id: Optional[str] = None,
     batch_size: int = 100,
+    supplier_id: Optional[str] = None,
     retry_count: int = 0,
     max_retries: int = 3,
     **kwargs
@@ -327,10 +328,14 @@ async def match_items_task(
                             product_ids_to_recalc.append(new_product.id)
                             continue
                         
-                        # Perform matching
-                        match_result = matcher.find_matches(
+                        # Extract category from characteristics (from dynamic parser)
+                        item_category = item.characteristics.get('_category') if item.characteristics else None
+                        
+                        # Perform matching with category blocking
+                        match_result = matcher.find_matches_with_blocking(
                             item_name=item.name,
                             item_id=item.id,
+                            item_category=item_category,
                             products=item_products,
                             auto_threshold=auto_threshold,
                             potential_threshold=potential_threshold,

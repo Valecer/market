@@ -1,4 +1,15 @@
-"""Excel file parser implementation."""
+"""Excel file parser implementation with dynamic header detection.
+
+This parser automatically:
+- Detects header rows (single or multi-row)
+- Maps Russian column names to standard fields
+- Tracks categories from section headers
+- Parses all worksheets with priority scoring
+- Backward compatible with manual configuration
+
+Implements ParserInterface for Marketbel project.
+"""
+import re
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -11,35 +22,57 @@ from src.models.parsed_item import ParsedSupplierItem
 from src.models.file_parser_config import ExcelParserConfig
 from src.errors.exceptions import ParserError, ValidationError
 
+# Import dynamic detector
+from src.parsers.dynamic_header_detector import (
+    DynamicHeaderDetector,
+    SheetStructure,
+    FieldType,
+    SectionTracker,
+    DetectorConfig
+)
+
+# Import name parser for extracting structured components from raw names
+from src.services.extraction.name_parser import ProductNameParser
+
 logger = structlog.get_logger(__name__)
 
 
 class ExcelParser(ParserInterface):
-    """Parser for extracting data from Excel files (.xlsx, .xls).
+    """Enhanced Excel parser with dynamic structure detection.
     
-    This parser reads Excel files using pandas + openpyxl, performs dynamic
-    column mapping with fuzzy matching, extracts product characteristics,
-    and validates data using Pydantic models.
+    This parser reads Excel files using pandas + openpyxl with automatic
+    structure detection for Russian price lists.
     
     Features:
-    - Support for .xlsx and .xls formats (via openpyxl and xlrd)
-    - Dynamic column mapping with fuzzy matching (difflib)
-    - Manual column mapping override support
-    - Characteristics extraction from additional columns
-    - Row-level validation with graceful error handling
-    - Price normalization to 2 decimal places
-    - Multi-sheet support
+    - Automatic header row detection (including multi-row headers)
+    - Russian field name recognition  
+    - Section/category tracking
+    - Multiple worksheet support with priority selection
+    - Dual price extraction (wholesale + retail)
+    - Backward compatible with existing ParsedSupplierItem model
+    
+    Extended data is stored in characteristics with '_' prefix:
+    - _category: Category path from sections
+    - _price_wholesale: Wholesale price
+    - _price_retail: Retail price
+    - _availability: Availability text
+    - _availability_normalized: Boolean availability
+    - _images: List of image URLs
+    - _source_row: Source row number for debugging
+    - _source_sheet: Source sheet name
     """
     
-    # Standard field names that parsers should map to
+    # Legacy standard fields for backward compatibility
     STANDARD_FIELDS = {
         'sku': ['sku', 'product code', 'item code', 'product_id', 'item_id', 'code', 'артикул', 'код'],
-        'name': ['name', 'product name', 'description', 'product description', 'title', 'item', 'название', 'Наименование', 'товар', 'модель'],
+        'name': ['name', 'product name', 'description', 'product description', 'title', 'item', 'название', 'наименование', 'товар', 'модель'],
         'price': ['price', 'unit price', 'cost', 'unit cost', 'amount', 'value', 'цена', 'стоимость', 'сток']
     }
     
     def __init__(self):
-        """Initialize Excel parser."""
+        """Initialize Excel parser with dynamic detector."""
+        self._detector = DynamicHeaderDetector()
+        self._name_parser = ProductNameParser()
         logger.info("excel_parser_initialized")
     
     def get_parser_name(self) -> str:
@@ -66,6 +99,10 @@ class ExcelParser(ParserInterface):
     
     async def parse(self, config: Dict[str, Any]) -> List[ParsedSupplierItem]:
         """Parse data from Excel file and return validated items.
+        
+        This method supports two modes:
+        1. Auto-detect mode (default): Automatically finds headers, sections, columns
+        2. Manual mode: Uses config settings for header_row, column_mapping, etc.
         
         Args:
             config: Parser configuration dictionary (validated as ExcelParserConfig)
@@ -104,141 +141,15 @@ class ExcelParser(ParserInterface):
             else:
                 engine = 'openpyxl'  # Default to openpyxl
             
-            # Determine header rows range
-            header_row_start = parsed_config.header_row - 1  # Convert to 0-indexed
-            header_row_end = (parsed_config.header_row_end - 1) if parsed_config.header_row_end else header_row_start
-            header_rows = list(range(header_row_start, header_row_end + 1))
+            # Check if auto-detect should be used
+            use_auto_detect = self._should_use_auto_detect(parsed_config)
             
-            # Read Excel file to get raw data
-            try:
-                # First, read without headers to get raw data
-                df_raw = pd.read_excel(
-                    file_path,
-                    sheet_name=parsed_config.sheet_name,
-                    header=None,
-                    skiprows=0,
-                    dtype=str,
-                    na_values=['', 'N/A', 'n/a', 'NA', 'null', 'NULL', 'None'],
-                    keep_default_na=True,
-                    engine=engine
-                )
-            except ValueError as e:
-                # Sheet not found - try fallback to first sheet
-                if "Worksheet" in str(e) or "sheet" in str(e).lower():
-                    # List available sheets
-                    xl = pd.ExcelFile(file_path, engine=engine)
-                    available_sheets = xl.sheet_names
-                    
-                    if not available_sheets:
-                        raise ParserError("No sheets found in Excel file")
-                    
-                    # Fallback to first available sheet
-                    first_sheet = available_sheets[0]
-                    log.warning(
-                        "sheet_not_found_using_fallback",
-                        requested_sheet=parsed_config.sheet_name,
-                        fallback_sheet=first_sheet,
-                        available_sheets=available_sheets
-                    )
-                    
-                    # Try reading with first sheet
-                    df_raw = pd.read_excel(
-                        file_path,
-                        sheet_name=first_sheet,
-                        header=None,
-                        skiprows=0,
-                        dtype=str,
-                        na_values=['', 'N/A', 'n/a', 'NA', 'null', 'NULL', 'None'],
-                        keep_default_na=True,
-                        engine=engine
-                    )
-                else:
-                    raise ParserError(f"Excel read error: {e}") from e
-            
-            # Extract and combine headers from multiple rows
-            headers = self._combine_header_rows(df_raw, header_rows, log)
-            
-            # Try to map columns - if fails, try auto-detecting header rows
-            try:
-                column_map = self._map_columns(headers, parsed_config.column_mapping, log)
-            except ValidationError as e:
-                # If mapping failed and header_row_end not specified, try auto-detection
-                if parsed_config.header_row_end is None:
-                    log.warning(
-                        "column_mapping_failed_trying_auto_detect",
-                        error=str(e),
-                        current_header_row=parsed_config.header_row
-                    )
-                    # Try to find headers in next rows (up to data_start_row)
-                    detected_header_rows = self._auto_detect_header_rows(
-                        df_raw,
-                        parsed_config.header_row - 1,
-                        parsed_config.data_start_row - 1,
-                        log
-                    )
-                    if detected_header_rows and detected_header_rows != header_rows:
-                        log.info(
-                            "header_rows_auto_detected",
-                            original_rows=header_rows,
-                            detected_rows=detected_header_rows
-                        )
-                        headers = self._combine_header_rows(df_raw, detected_header_rows, log)
-                        column_map = self._map_columns(headers, parsed_config.column_mapping, log)
-                    else:
-                        raise  # Re-raise original error
-                else:
-                    raise  # Re-raise original error
-            
-            # Read data rows (skip header rows)
-            data_start_idx = parsed_config.data_start_row - 1  # Convert to 0-indexed
-            df = df_raw.iloc[data_start_idx:].copy()
-            df.columns = range(len(headers))  # Temporary column names
-            log.debug("excel_headers_read", headers=headers, header_rows=header_rows, row_count=len(df))
-            
-            # Perform column mapping (if not done above)
-            if 'column_map' not in locals():
-                column_map = self._map_columns(headers, parsed_config.column_mapping, log)
-            
-            # Perform column mapping
-            column_map = self._map_columns(headers, parsed_config.column_mapping, log)
-            
-            # Determine characteristic columns
-            characteristic_cols = self._determine_characteristic_columns(
-                headers, column_map, parsed_config.characteristic_columns, log
-            )
-            
-            log.info(
-                "excel_data_read",
-                total_rows=len(df),
-                sheet_name=parsed_config.sheet_name,
-                header_row=parsed_config.header_row,
-                data_start_row=parsed_config.data_start_row
-            )
-            
-            # Parse rows into ParsedSupplierItem objects
-            parsed_items: List[ParsedSupplierItem] = []
-            for df_idx, row in df.iterrows():
-                row_number = df_idx + parsed_config.data_start_row  # Human-readable row number
-                try:
-                    item = self._parse_row(
-                        row, row_number, headers, column_map, characteristic_cols, log
-                    )
-                    parsed_items.append(item)
-                except ValidationError as e:
-                    log.warning(
-                        "row_validation_failed",
-                        row_number=row_number,
-                        error=str(e)
-                    )
-            
-            log.info(
-                "excel_parse_completed",
-                total_rows=len(df),
-                valid_items=len(parsed_items),
-                failed_rows=len(df) - len(parsed_items)
-            )
-            
-            return parsed_items
+            if use_auto_detect:
+                log.info("using_auto_detect_mode")
+                return await self._parse_with_auto_detect(file_path, engine, parsed_config, log)
+            else:
+                log.info("using_manual_mode")
+                return await self._parse_with_manual_config(file_path, engine, parsed_config, log)
             
         except pd.errors.EmptyDataError:
             raise ParserError("Excel file is empty or contains no data")
@@ -246,6 +157,498 @@ class ExcelParser(ParserInterface):
             if isinstance(e, (ParserError, ValidationError)):
                 raise
             raise ParserError(f"Unexpected error during Excel parsing: {e}") from e
+    
+    def _should_use_auto_detect(self, config: ExcelParserConfig) -> bool:
+        """Determine if auto-detect mode should be used."""
+        # Use manual mode if explicit column_mapping is provided
+        if config.column_mapping:
+            return False
+        # Use manual mode if non-default header_row is set
+        if config.header_row != 1:
+            return False
+        return True
+    
+    async def _parse_with_auto_detect(
+        self,
+        file_path: Path,
+        engine: str,
+        config: ExcelParserConfig,
+        log: Any
+    ) -> List[ParsedSupplierItem]:
+        """Parse using automatic structure detection."""
+        
+        # Get all sheet names
+        xl = pd.ExcelFile(file_path, engine=engine)
+        all_sheets = xl.sheet_names
+        
+        if not all_sheets:
+            raise ParserError("No sheets found in Excel file")
+        
+        log.info("sheets_found", sheet_count=len(all_sheets), sheets=all_sheets)
+        
+        # Determine which sheets to parse
+        sheets_to_parse = self._select_sheets_to_parse(all_sheets, config.sheet_name, log)
+        
+        all_parsed_items: List[ParsedSupplierItem] = []
+        
+        for sheet_name in sheets_to_parse:
+            try:
+                # Read sheet data
+                df_raw = pd.read_excel(
+                    file_path,
+                    sheet_name=sheet_name,
+                    header=None,
+                    skiprows=0,
+                    dtype=str,
+                    na_values=['', 'N/A', 'n/a', 'NA', 'null', 'NULL', 'None'],
+                    keep_default_na=True,
+                    engine=engine
+                )
+                
+                if df_raw.empty:
+                    log.warning("empty_sheet_skipped", sheet_name=sheet_name)
+                    continue
+                
+                # Convert to list of lists for detector
+                all_values = df_raw.fillna('').values.tolist()
+                all_values = [[str(cell) for cell in row] for row in all_values]
+                
+                # Analyze structure
+                try:
+                    structure = self._detector.analyze_sheet(all_values, sheet_name)
+                except ValueError as e:
+                    log.warning("sheet_analysis_failed", sheet_name=sheet_name, error=str(e))
+                    continue
+                
+                log.info(
+                    "structure_detected",
+                    sheet_name=sheet_name,
+                    header_rows=structure.header_rows,
+                    data_start=structure.data_start_row,
+                    sections=len(structure.sections),
+                    priority=structure.priority_score
+                )
+                
+                # Build field indices
+                field_indices = self._build_field_indices(structure)
+                log.debug("field_indices", indices={k.value: v for k, v in field_indices.items()})
+                
+                # Check for required fields
+                if FieldType.NAME not in field_indices:
+                    log.warning("name_column_not_found_skipping_sheet", sheet_name=sheet_name)
+                    continue
+                
+                # Get combined headers
+                combined_headers = self._get_combined_headers(all_values, structure)
+                
+                # Initialize section tracker
+                section_tracker = SectionTracker(structure.sections)
+                
+                # Use sheet name as fallback category
+                fallback_category = self._clean_sheet_name_for_category(sheet_name)
+                
+                # Parse data rows
+                for row_idx in range(structure.data_start_row, len(all_values)):
+                    # Skip repeated headers, sections, and info/footnote rows
+                    if row_idx in structure.repeated_header_rows:
+                        continue
+                    if row_idx in structure.info_rows:
+                        continue
+                    if any(s[0] == row_idx for s in structure.sections):
+                        continue
+                    
+                    row_data = all_values[row_idx]
+                    
+                    # Skip empty rows
+                    if not any(cell and str(cell).strip() for cell in row_data):
+                        continue
+                    
+                    try:
+                        item = self._parse_row_auto(
+                            row_data,
+                            row_idx,
+                            field_indices,
+                            combined_headers,
+                            section_tracker,
+                            structure,
+                            sheet_name,
+                            fallback_category,
+                            log
+                        )
+                        if item:
+                            all_parsed_items.append(item)
+                            
+                    except ValidationError as e:
+                        log.warning("row_validation_failed", sheet_name=sheet_name, row_number=row_idx + 1, error=str(e))
+                    except Exception as e:
+                        log.warning("row_parse_error", sheet_name=sheet_name, row_number=row_idx + 1, error=str(e))
+                
+            except Exception as e:
+                log.warning("sheet_parse_failed", sheet_name=sheet_name, error=str(e))
+                continue
+        
+        log.info(
+            "parse_completed",
+            total_sheets=len(sheets_to_parse),
+            total_items=len(all_parsed_items)
+        )
+        
+        return all_parsed_items
+    
+    def _select_sheets_to_parse(
+        self,
+        all_sheets: List[str],
+        requested_sheet: Optional[str],
+        log: Any
+    ) -> List[str]:
+        """Select which sheets to parse based on configuration."""
+        if requested_sheet:
+            # If specific sheet requested, use only that
+            if requested_sheet in all_sheets:
+                return [requested_sheet]
+            else:
+                log.warning(
+                    "requested_sheet_not_found",
+                    requested=requested_sheet,
+                    available=all_sheets
+                )
+                # Fall back to all sheets
+        
+        # Parse all sheets
+        return all_sheets
+    
+    def _clean_sheet_name_for_category(self, sheet_name: str) -> Optional[str]:
+        """Clean sheet name to use as fallback category."""
+        if not sheet_name:
+            return None
+        
+        # Skip generic sheet names
+        skip_names = ['лист1', 'лист2', 'лист3', 'sheet1', 'sheet2', 'sheet3',
+                      'общий прайс', 'прайс', 'для загрузки', '1с', 'data']
+        
+        if sheet_name.lower().strip() in skip_names:
+            return None
+        
+        return sheet_name.strip()
+    
+    def _build_field_indices(self, structure: SheetStructure) -> Dict[FieldType, int]:
+        """Build mapping from field types to column indices."""
+        indices = {}
+        for mapping in structure.column_mappings:
+            if mapping.field_type != FieldType.UNKNOWN:
+                if mapping.field_type not in indices:
+                    indices[mapping.field_type] = mapping.index
+        return indices
+    
+    def _get_combined_headers(self, all_values: List[List[str]], structure: SheetStructure) -> List[str]:
+        """Get combined headers from header rows."""
+        if not structure.header_rows:
+            return []
+        header_data = [all_values[i] for i in structure.header_rows if i < len(all_values)]
+        return self._detector._combine_headers(header_data)
+    
+    def _parse_row_auto(
+        self,
+        row_data: List[str],
+        row_idx: int,
+        field_indices: Dict[FieldType, int],
+        headers: List[str],
+        section_tracker: SectionTracker,
+        structure: SheetStructure,
+        sheet_name: str,
+        fallback_category: Optional[str],
+        log: Any
+    ) -> Optional[ParsedSupplierItem]:
+        """Parse a single data row using auto-detected structure."""
+        
+        def get_cell(field_type: FieldType) -> Optional[str]:
+            if field_type not in field_indices:
+                return None
+            idx = field_indices[field_type]
+            if idx < len(row_data):
+                val = row_data[idx]
+                return str(val).strip() if val else None
+            return None
+        
+        # Extract name (required)
+        name = get_cell(FieldType.NAME)
+        if not name:
+            return None
+        
+        # Parse the raw name into structured components
+        parsed_name = self._name_parser.parse(name)
+        
+        # Extract prices
+        price_retail_str = get_cell(FieldType.PRICE_RETAIL)
+        price_wholesale_str = get_cell(FieldType.PRICE_WHOLESALE)
+        
+        price_retail = self._parse_price_auto(price_retail_str)
+        price_wholesale = self._parse_price_auto(price_wholesale_str)
+        
+        # Determine primary price (prefer retail)
+        primary_price = price_retail or price_wholesale
+        if primary_price is None:
+            log.debug("no_price_found", row=row_idx + 1, name=name[:30] if name else '')
+            primary_price = Decimal("0")
+        
+        # Extract other fields
+        sku = get_cell(FieldType.SKU)
+        availability = get_cell(FieldType.AVAILABILITY)
+        image = get_cell(FieldType.IMAGE)
+        description = get_cell(FieldType.DESCRIPTION)
+        link = get_cell(FieldType.LINK)
+        
+        # Get category from section tracker, fallback to parsed category or sheet name
+        category = section_tracker.get_category(row_idx)
+        if not category and parsed_name.category_prefix:
+            category = parsed_name.category_prefix
+        if not category and fallback_category:
+            category = fallback_category
+        
+        # Build characteristics
+        characteristics: Dict[str, Any] = {}
+        
+        # Add extended fields with '_' prefix
+        if category:
+            characteristics['_category'] = category
+        if price_wholesale is not None:
+            characteristics['_price_wholesale'] = str(price_wholesale)
+        if price_retail is not None:
+            characteristics['_price_retail'] = str(price_retail)
+        if availability:
+            characteristics['_availability'] = availability
+            characteristics['_availability_normalized'] = self._normalize_availability(availability)
+        if image:
+            characteristics['_images'] = [image]
+        if description:
+            characteristics['_description'] = description
+        if link:
+            characteristics['_link'] = link
+        characteristics['_source_row'] = row_idx + 1
+        characteristics['_source_sheet'] = sheet_name
+        
+        # Add parsed name components
+        if parsed_name.category_key:
+            characteristics['_parsed_category_key'] = parsed_name.category_key
+        if parsed_name.brand:
+            characteristics['_parsed_brand'] = parsed_name.brand
+        if parsed_name.model:
+            characteristics['_parsed_model'] = parsed_name.model
+        if parsed_name.clean_name:
+            characteristics['_parsed_clean_name'] = parsed_name.clean_name
+        if parsed_name.characteristics:
+            characteristics['_parsed_characteristics'] = parsed_name.characteristics
+        
+        # Add unmapped columns as regular characteristics
+        mapped_indices = set(field_indices.values())
+        for idx, header in enumerate(headers):
+            if idx not in mapped_indices and idx < len(row_data):
+                cell_val = row_data[idx]
+                if cell_val and str(cell_val).strip() and header.strip():
+                    key = self._normalize_header_key(header)
+                    if key and len(key) < 100:
+                        characteristics[key] = self._parse_cell_value(cell_val)
+        
+        # Generate SKU if not found
+        if not sku:
+            import hashlib
+            name_hash = hashlib.md5(name.encode()).hexdigest()[:8].upper()
+            sku = f"AUTO-{name_hash}"
+        
+        return ParsedSupplierItem(
+            supplier_sku=sku,
+            name=name,
+            price=primary_price,
+            characteristics=characteristics
+        )
+    
+    def _parse_price_auto(self, price_str: Optional[str]) -> Optional[Decimal]:
+        """Parse price string to Decimal."""
+        if not price_str or price_str.strip() in ('', '-'):
+            return None
+        
+        cleaned = price_str.strip()
+        # Remove currency symbols and text (but not decimal point!)
+        cleaned = re.sub(r'[₽$€£рp]', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'руб\.?', '', cleaned, flags=re.IGNORECASE)
+        # Handle comma as decimal separator
+        cleaned = cleaned.replace(',', '.')
+        # Remove spaces
+        cleaned = re.sub(r'\s+', '', cleaned)
+        # Remove non-numeric except decimal point
+        cleaned = re.sub(r'[^\d.]', '', cleaned)
+        
+        if not cleaned:
+            return None
+        
+        try:
+            return Decimal(cleaned).quantize(Decimal('0.01'))
+        except InvalidOperation:
+            return None
+    
+    def _normalize_availability(self, text: str) -> Optional[bool]:
+        """Normalize availability text to boolean."""
+        if not text:
+            return None
+        
+        text_lower = text.strip().lower()
+        
+        negative = [
+            'нет в наличии', 'нет', 'отсутствует', 'под заказ',
+            'временно недоступно', 'закончились', 'out of stock',
+            'по запросу', 'ожидается', 'в пути', 'уточнять',
+            'недоступно к заказу', 'временно нет',
+        ]
+        
+        positive = [
+            'в наличии', 'есть', 'да', '+', 'available', 'in stock',
+            'на складе', 'имеется',
+        ]
+        
+        for neg in negative:
+            if neg in text_lower:
+                return False
+        
+        for pos in positive:
+            if pos in text_lower:
+                return True
+        
+        # Date pattern = out of stock
+        if re.search(r'\d{2}\.\d{2}', text_lower):
+            return False
+        
+        if text_lower.strip() == '+':
+            return True
+        
+        return None
+    
+    def _normalize_header_key(self, header: str) -> str:
+        """Normalize header to a valid key name."""
+        key = header.strip().lower()
+        key = re.sub(r'[^a-zа-яё0-9]+', '_', key)
+        key = re.sub(r'_+', '_', key).strip('_')
+        return key
+    
+    def _parse_cell_value(self, value: Any) -> Any:
+        """Parse cell value to appropriate Python type."""
+        if value is None:
+            return None
+        
+        str_val = str(value).strip()
+        if not str_val:
+            return None
+        
+        try:
+            if '.' not in str_val and ',' not in str_val:
+                return int(str_val.replace(' ', ''))
+            cleaned = str_val.replace(',', '.').replace(' ', '')
+            return float(cleaned)
+        except ValueError:
+            pass
+        
+        return str_val
+    
+    async def _parse_with_manual_config(
+        self,
+        file_path: Path,
+        engine: str,
+        config: ExcelParserConfig,
+        log: Any
+    ) -> List[ParsedSupplierItem]:
+        """Parse using manual configuration (legacy mode)."""
+        
+        # Determine header rows range
+        header_row_start = config.header_row - 1  # Convert to 0-indexed
+        header_row_end = (config.header_row_end - 1) if config.header_row_end else header_row_start
+        header_rows = list(range(header_row_start, header_row_end + 1))
+        
+        # Read Excel file to get raw data
+        try:
+            df_raw = pd.read_excel(
+                file_path,
+                sheet_name=config.sheet_name,
+                header=None,
+                skiprows=0,
+                dtype=str,
+                na_values=['', 'N/A', 'n/a', 'NA', 'null', 'NULL', 'None'],
+                keep_default_na=True,
+                engine=engine
+            )
+        except ValueError as e:
+            if "Worksheet" in str(e) or "sheet" in str(e).lower():
+                xl = pd.ExcelFile(file_path, engine=engine)
+                available_sheets = xl.sheet_names
+                
+                if not available_sheets:
+                    raise ParserError("No sheets found in Excel file")
+                
+                first_sheet = available_sheets[0]
+                log.warning(
+                    "sheet_not_found_using_fallback",
+                    requested_sheet=config.sheet_name,
+                    fallback_sheet=first_sheet,
+                    available_sheets=available_sheets
+                )
+                
+                df_raw = pd.read_excel(
+                    file_path,
+                    sheet_name=first_sheet,
+                    header=None,
+                    skiprows=0,
+                    dtype=str,
+                    na_values=['', 'N/A', 'n/a', 'NA', 'null', 'NULL', 'None'],
+                    keep_default_na=True,
+                    engine=engine
+                )
+            else:
+                raise ParserError(f"Excel read error: {e}") from e
+        
+        # Extract and combine headers
+        headers = self._combine_header_rows(df_raw, header_rows, log)
+        column_map = self._map_columns(headers, config.column_mapping, log)
+        
+        # Determine characteristic columns
+        characteristic_cols = self._determine_characteristic_columns(
+            headers, column_map, config.characteristic_columns, log
+        )
+        
+        # Read data rows
+        data_start_idx = config.data_start_row - 1
+        df = df_raw.iloc[data_start_idx:].copy()
+        df.columns = range(len(headers))
+        
+        log.info(
+            "excel_data_read",
+            total_rows=len(df),
+            sheet_name=config.sheet_name,
+            header_row=config.header_row,
+            data_start_row=config.data_start_row
+        )
+        
+        # Parse rows
+        parsed_items: List[ParsedSupplierItem] = []
+        for df_idx, row in df.iterrows():
+            row_number = df_idx + config.data_start_row
+            try:
+                item = self._parse_row(
+                    row, row_number, headers, column_map, characteristic_cols, log
+                )
+                parsed_items.append(item)
+            except ValidationError as e:
+                log.warning(
+                    "row_validation_failed",
+                    row_number=row_number,
+                    error=str(e)
+                )
+        
+        log.info(
+            "excel_parse_completed",
+            total_rows=len(df),
+            valid_items=len(parsed_items),
+            failed_rows=len(df) - len(parsed_items)
+        )
+        
+        return parsed_items
     
     def _combine_header_rows(
         self,

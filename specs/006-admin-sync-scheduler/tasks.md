@@ -140,20 +140,20 @@ This task list implements the Admin Control Panel & Master Sync Scheduler featur
 
 ### Python Worker - Cron Job
 
-- [ ] T038 [US2] Create scheduled_sync_task cron wrapper function in services/python-ingestion/src/tasks/sync_tasks.py
-- [ ] T039 [US2] Implement get_sync_hours() helper for dynamic hour calculation in services/python-ingestion/src/tasks/sync_tasks.py
-- [ ] T040 [US2] Register cron job in WorkerSettings.cron_jobs in services/python-ingestion/src/worker.py
-- [ ] T041 [US2] Add SYNC_INTERVAL_HOURS to Settings class in services/python-ingestion/src/config.py
+- [X] T038 [US2] Create scheduled_sync_task cron wrapper function in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T039 [US2] Implement get_sync_hours() helper for dynamic hour calculation in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T040 [US2] Register cron job in WorkerSettings.cron_jobs in services/python-ingestion/src/worker.py
+- [X] T041 [US2] Add SYNC_INTERVAL_HOURS to Settings class in services/python-ingestion/src/config.py
 
 ### Bun API - Schedule Calculation
 
-- [ ] T042 [US2] Implement calculateNextScheduledSync() helper in services/bun-api/src/services/ingestion.service.ts
-- [ ] T043 [US2] Add next_scheduled_at to getStatus() response in services/bun-api/src/services/ingestion.service.ts
+- [X] T042 [US2] Implement calculateNextScheduledSync() helper in services/bun-api/src/services/ingestion.service.ts
+- [X] T043 [US2] Add next_scheduled_at to getStatus() response in services/bun-api/src/services/ingestion.service.ts
 
 ### Frontend - Timestamp Display
 
-- [ ] T044 [US2] Add last sync timestamp display to SyncControlCard in services/frontend/src/components/admin/SyncControlCard.tsx
-- [ ] T045 [US2] Add next scheduled timestamp display to SyncControlCard in services/frontend/src/components/admin/SyncControlCard.tsx
+- [X] T044 [US2] Add last sync timestamp display to SyncControlCard in services/frontend/src/components/admin/SyncControlCard.tsx
+- [X] T045 [US2] Add next scheduled timestamp display to SyncControlCard in services/frontend/src/components/admin/SyncControlCard.tsx
 
 ---
 
@@ -171,35 +171,35 @@ This task list implements the Admin Control Panel & Master Sync Scheduler featur
 
 ### Bun API - Repository Layer
 
-- [ ] T046 [P] [US3] Create ingestion repository in services/bun-api/src/db/repositories/ingestion.repository.ts
-- [ ] T047 [P] [US3] Implement getSuppliersWithStatus() with items count in services/bun-api/src/db/repositories/ingestion.repository.ts
-- [ ] T048 [P] [US3] Implement getRecentParsingLogs() with supplier join in services/bun-api/src/db/repositories/ingestion.repository.ts
-- [ ] T049 [US3] Implement deriveSupplierStatus() from parsing logs in services/bun-api/src/db/repositories/ingestion.repository.ts
+- [X] T046 [P] [US3] Create ingestion repository in services/bun-api/src/db/repositories/ingestion.repository.ts
+- [X] T047 [P] [US3] Implement getSuppliersWithStatus() with items count in services/bun-api/src/db/repositories/ingestion.repository.ts
+- [X] T048 [P] [US3] Implement getRecentParsingLogs() with supplier join in services/bun-api/src/db/repositories/ingestion.repository.ts
+- [X] T049 [US3] Implement deriveSupplierStatus() from parsing logs in services/bun-api/src/db/repositories/ingestion.repository.ts
 
 ### Bun API - Service Integration
 
-- [ ] T050 [US3] Integrate repository methods into IngestionService.getStatus() in services/bun-api/src/services/ingestion.service.ts
+- [X] T050 [US3] Integrate repository methods into IngestionService.getStatus() in services/bun-api/src/services/ingestion.service.ts
 
 ### Frontend - Log Viewer Component
 
-- [ ] T051 [US3] Create LiveLogViewer component skeleton in services/frontend/src/components/admin/LiveLogViewer.tsx
-- [ ] T052 [US3] Implement scrollable log list with timestamp/level/message in services/frontend/src/components/admin/LiveLogViewer.tsx
-- [ ] T053 [US3] Add visual distinction for ERROR level logs in services/frontend/src/components/admin/LiveLogViewer.tsx
-- [ ] T054 [US3] Export LiveLogViewer from services/frontend/src/components/admin/index.ts
+- [X] T051 [US3] Create LiveLogViewer component skeleton in services/frontend/src/components/admin/LiveLogViewer.tsx
+- [X] T052 [US3] Implement scrollable log list with timestamp/level/message in services/frontend/src/components/admin/LiveLogViewer.tsx
+- [X] T053 [US3] Add visual distinction for ERROR level logs in services/frontend/src/components/admin/LiveLogViewer.tsx
+- [X] T054 [US3] Export LiveLogViewer from services/frontend/src/components/admin/index.ts
 
 ### Frontend - Supplier Table Component
 
-- [ ] T055 [US3] Create SupplierStatusTable component skeleton in services/frontend/src/components/admin/SupplierStatusTable.tsx
-- [ ] T056 [US3] Implement sortable columns (Name, Last Sync, Status, Items) in services/frontend/src/components/admin/SupplierStatusTable.tsx
-- [ ] T057 [US3] Add status color coding (success=green, error=red, pending=yellow) in services/frontend/src/components/admin/SupplierStatusTable.tsx
-- [ ] T058 [US3] Add inactive supplier visual distinction in services/frontend/src/components/admin/SupplierStatusTable.tsx
-- [ ] T059 [US3] Export SupplierStatusTable from services/frontend/src/components/admin/index.ts
+- [X] T055 [US3] Create SupplierStatusTable component skeleton in services/frontend/src/components/admin/SupplierStatusTable.tsx
+- [X] T056 [US3] Implement sortable columns (Name, Last Sync, Status, Items) in services/frontend/src/components/admin/SupplierStatusTable.tsx
+- [X] T057 [US3] Add status color coding (success=green, error=red, pending=yellow) in services/frontend/src/components/admin/SupplierStatusTable.tsx
+- [X] T058 [US3] Add inactive supplier visual distinction in services/frontend/src/components/admin/SupplierStatusTable.tsx
+- [X] T059 [US3] Export SupplierStatusTable from services/frontend/src/components/admin/index.ts
 
 ### Frontend - Page Integration
 
-- [ ] T060 [US3] Integrate LiveLogViewer into IngestionPage in services/frontend/src/pages/admin/IngestionPage.tsx
-- [ ] T061 [US3] Integrate SupplierStatusTable into IngestionPage in services/frontend/src/pages/admin/IngestionPage.tsx
-- [ ] T062 [US3] Implement responsive layout for log viewer and table in services/frontend/src/pages/admin/IngestionPage.tsx
+- [X] T060 [US3] Integrate LiveLogViewer into IngestionPage in services/frontend/src/pages/admin/IngestionPage.tsx
+- [X] T061 [US3] Integrate SupplierStatusTable into IngestionPage in services/frontend/src/pages/admin/IngestionPage.tsx
+- [X] T062 [US3] Implement responsive layout for log viewer and table in services/frontend/src/pages/admin/IngestionPage.tsx
 
 ---
 
@@ -211,19 +211,19 @@ This task list implements the Admin Control Panel & Master Sync Scheduler featur
 
 ### Error Handling
 
-- [ ] T063 Add SYNC_IN_PROGRESS error code to error types in services/bun-api/src/types/errors.ts
-- [ ] T064 Add user-friendly error messages for sync failures in frontend in services/frontend/src/pages/admin/IngestionPage.tsx
+- [X] T063 Add SYNC_IN_PROGRESS error code to error types in services/bun-api/src/types/errors.ts
+- [X] T064 Add user-friendly error messages for sync failures in frontend in services/frontend/src/pages/admin/IngestionPage.tsx
 
 ### Logging & Observability
 
-- [ ] T065 Add structured logging for sync pipeline events in services/python-ingestion/src/tasks/sync_tasks.py
-- [ ] T066 Add INFO-level log entries for successful sync completion in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T065 Add structured logging for sync pipeline events in services/python-ingestion/src/tasks/sync_tasks.py
+- [X] T066 Add INFO-level log entries for successful sync completion in services/python-ingestion/src/tasks/sync_tasks.py
 
 ### Final Verification
 
-- [ ] T067 Verify all Pydantic models pass mypy --strict in services/python-ingestion/
-- [ ] T068 Verify all TypeScript types pass tsc --noEmit in services/bun-api/
-- [ ] T069 Verify frontend builds without errors in services/frontend/
+- [X] T067 Verify all Pydantic models pass mypy --strict in services/python-ingestion/
+- [X] T068 Verify all TypeScript types pass tsc --noEmit in services/bun-api/
+- [X] T069 Verify frontend builds without errors in services/frontend/
 
 ---
 

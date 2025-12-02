@@ -80,8 +80,10 @@ async def calculate_product_aggregates(
         .scalar_subquery()
     )
     
-    # Subquery for availability: EXISTS any linked item with in_stock=true
-    # Check for various representations of "true" in JSONB: true, 'true', 'yes', '1'
+    # Subquery for availability: EXISTS any linked item with availability=true
+    # Check for various representations of "true" in JSONB:
+    # - _availability_normalized: true (from dynamic parser)
+    # - in_stock: true/yes/1 (legacy format)
     availability_subq = (
         select(func.count(SupplierItem.id) > 0)
         .where(
@@ -92,12 +94,15 @@ async def calculate_product_aggregates(
                     MatchStatus.VERIFIED_MATCH,
                 ]),
                 or_(
-                    # Boolean true in JSONB
+                    # Dynamic parser: _availability_normalized (boolean true)
+                    SupplierItem.characteristics["_availability_normalized"].astext == "true",
+                    SupplierItem.characteristics["_availability_normalized"].astext == "True",
+                    # Legacy: in_stock boolean true in JSONB
                     SupplierItem.characteristics["in_stock"].astext == "true",
-                    # String variations
+                    # Legacy: String variations
                     func.lower(SupplierItem.characteristics["in_stock"].astext) == "yes",
                     func.lower(SupplierItem.characteristics["in_stock"].astext) == "1",
-                    # Handle JSON boolean true (cast to text)
+                    # Legacy: Handle JSON boolean true (cast to text)
                     SupplierItem.characteristics["in_stock"].astext == "True",
                 )
             )

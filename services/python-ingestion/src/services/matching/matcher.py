@@ -8,10 +8,11 @@ Key Components:
     - RapidFuzzMatcher: Default implementation using RapidFuzz WRatio
     - MatchCandidate: Data class for match candidates
     - MatchResult: Result container for matching operations
+    - CategoryClassifier: Intelligent product classification
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence, Protocol
+from typing import List, Optional, Sequence, Protocol, Dict
 from uuid import UUID
 from decimal import Decimal
 from enum import Enum
@@ -20,6 +21,7 @@ import structlog
 from rapidfuzz import fuzz, process, utils
 
 from src.config import matching_settings
+from src.services.classification import CategoryClassifier, ClassificationResult
 
 logger = structlog.get_logger(__name__)
 
@@ -146,25 +148,34 @@ class RapidFuzzMatcher(MatcherStrategy):
         - score_cutoff: Early termination for low-scoring matches
         - processor: Default preprocessing (lowercase, remove non-alphanumeric)
         - Batch extraction using process.extract()
+        - Category blocking via intelligent classifier
     
     Attributes:
         use_preprocessing: Whether to apply default string preprocessing
         score_cutoff: Minimum score to include in results (performance optimization)
+        classifier: CategoryClassifier for intelligent category matching
+        category_mapping: Maps product category_id → category_key
     """
     
     def __init__(
         self,
         use_preprocessing: bool = True,
         score_cutoff: Optional[float] = None,
+        classifier: Optional[CategoryClassifier] = None,
+        category_mapping: Optional[Dict[UUID, str]] = None,
     ):
         """Initialize the RapidFuzz matcher.
         
         Args:
             use_preprocessing: Apply default preprocessing (lowercase, remove special chars)
             score_cutoff: Minimum score cutoff for performance (uses potential_threshold if None)
+            classifier: CategoryClassifier for intelligent product categorization
+            category_mapping: Maps product category_id → category_key (e.g., UUID → "phones")
         """
         self.use_preprocessing = use_preprocessing
         self._score_cutoff = score_cutoff
+        self._classifier = classifier or CategoryClassifier()
+        self._category_mapping = category_mapping or {}
         self._log = logger.bind(matcher="RapidFuzzMatcher")
     
     def get_strategy_name(self) -> str:
@@ -278,6 +289,172 @@ class RapidFuzzMatcher(MatcherStrategy):
             candidates=candidates,
             match_score=match_score,
         )
+        
+    def find_matches_with_blocking(
+        self,
+        item_name: str,
+        item_id: UUID,
+        item_category: Optional[str],
+        products: Sequence[ProductData],
+        auto_threshold: float = 95.0,
+        potential_threshold: float = 70.0,
+        max_candidates: int = 5,
+    ) -> MatchResult:
+        """Find matches using intelligent category blocking for performance.
+        
+        Uses CategoryClassifier to determine item's category from:
+        1. Product name keywords (e.g., "iPhone" → phones)
+        2. Brand detection (e.g., "Kugoo" → electric_scooters)
+        3. Supplier category fallback (fuzzy match)
+        
+        Then filters products to same category before fuzzy matching,
+        reducing comparison space by ~10x for large catalogs.
+        
+        Args:
+            item_name: Name of the supplier item to match
+            item_id: UUID of the supplier item
+            item_category: Category from parser (e.g., "Электротранспорт > Велосипеды")
+            products: Sequence of products to match against
+            auto_threshold: Score threshold for auto-match (default: 95%)
+            potential_threshold: Score threshold for potential match (default: 70%)
+            max_candidates: Maximum number of candidates to return
+            
+        Returns:
+            MatchResult with status and sorted candidates
+        """
+        # Use classifier to determine item's category
+        classification = self._classifier.classify(
+            product_name=item_name,
+            supplier_category=item_category,
+        )
+        
+        item_category_key = classification.category_key
+        
+        self._log.debug(
+            "item_classified",
+            item_id=str(item_id),
+            item_name=item_name[:50],
+            category_key=item_category_key,
+            confidence=classification.confidence,
+            method=classification.method.value,
+        )
+        
+        # Filter products by category (blocking)
+        filtered_products = products
+        if item_category_key and self._category_mapping:
+            filtered_products = [
+                p for p in products 
+                if self._category_matches(p, item_category_key)
+            ]
+            
+            self._log.debug(
+                "category_blocking_applied",
+                item_id=str(item_id),
+                item_category_key=item_category_key,
+                total_products=len(products),
+                filtered_products=len(filtered_products),
+            )
+            
+            # If no products in category, fall back to all products
+            if not filtered_products:
+                self._log.debug(
+                    "category_blocking_fallback",
+                    item_id=str(item_id),
+                    reason="no_products_in_category",
+                )
+                filtered_products = products
+        
+        # Use standard matching on filtered set
+        return self.find_matches(
+            item_name=item_name,
+            item_id=item_id,
+            products=filtered_products,
+            auto_threshold=auto_threshold,
+            potential_threshold=potential_threshold,
+            max_candidates=max_candidates,
+        )
+    
+    def _category_matches(self, product: ProductData, item_category_key: str) -> bool:
+        """Check if product's category matches the item's classified category.
+        
+        Uses category_mapping to resolve product's category_id to category_key,
+        then compares with item's classified category_key.
+        
+        Args:
+            product: Product to check
+            item_category_key: Category key from classifier (e.g., "phones", "electrotransport")
+            
+        Returns:
+            True if categories match or are related
+        """
+        if not product.category_id:
+            return False
+        
+        # Get product's category key from mapping
+        product_category_key = self._category_mapping.get(product.category_id)
+        
+        if not product_category_key:
+            # No mapping for this category - include in results (permissive)
+            return True
+        
+        # Exact match
+        if product_category_key == item_category_key:
+            return True
+        
+        # Check for parent-child relationships
+        # e.g., "electric_scooters" is a subcategory of "electrotransport"
+        related_categories = self._get_related_categories(item_category_key)
+        if product_category_key in related_categories:
+            return True
+        
+        return False
+    
+    def _get_related_categories(self, category_key: str) -> set:
+        """Get related categories (parent and child) for a category key.
+        
+        This handles category hierarchies where matching should include
+        both parent and child categories.
+        """
+        # Define category relationships
+        CATEGORY_HIERARCHY = {
+            "electrotransport": {"electric_scooters", "electric_bikes"},
+            "electric_scooters": {"electrotransport"},
+            "electric_bikes": {"electrotransport"},
+            "garden_equipment": {"trailers"},
+            "trailers": {"garden_equipment"},
+            "atv_moto": {"protection", "spare_parts"},
+            "protection": {"atv_moto"},
+            "spare_parts": {"atv_moto", "garden_equipment"},
+        }
+        
+        return CATEGORY_HIERARCHY.get(category_key, set())
+    
+    def set_category_mapping(self, mapping: Dict[UUID, str]) -> None:
+        """Update the category mapping at runtime.
+        
+        Args:
+            mapping: Dict mapping category_id (UUID) → category_key (str)
+        """
+        self._category_mapping = mapping
+        self._log.info("category_mapping_updated", count=len(mapping))
+    
+    def get_classification(
+        self,
+        item_name: str,
+        supplier_category: Optional[str] = None,
+    ) -> ClassificationResult:
+        """Classify a product without matching.
+        
+        Useful for debugging or pre-processing items.
+        
+        Args:
+            item_name: Product name to classify
+            supplier_category: Optional supplier category hint
+            
+        Returns:
+            ClassificationResult with category and confidence
+        """
+        return self._classifier.classify(item_name, supplier_category)
 
 
 def create_matcher(

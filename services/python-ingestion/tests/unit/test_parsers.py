@@ -153,6 +153,8 @@ class TestGoogleSheetsParserParse:
     def mock_worksheet(self, mock_sheet_data):
         """Create a mocked worksheet with sample data."""
         mock_ws = Mock()
+        # Add title for auto-detect mode
+        mock_ws.title = "Sheet1"
         # Return actual list values, not MagicMock
         # row_values is called with row number (1-indexed), return headers for row 1
         def row_values_side_effect(row_num):
@@ -179,6 +181,11 @@ class TestGoogleSheetsParserParse:
             config = {
                 "sheet_url": "https://docs.google.com/spreadsheets/d/abc123/edit",
                 "sheet_name": "Sheet1",
+                "column_mapping": {  # Use manual mode - English headers
+                    "sku": "Product Code",
+                    "name": "Description",
+                    "price": "Price"
+                },
                 "header_row": 1,
                 "data_start_row": 2
             }
@@ -197,6 +204,11 @@ class TestGoogleSheetsParserParse:
             config = {
                 "sheet_url": "https://docs.google.com/spreadsheets/d/abc123/edit",
                 "sheet_name": "Sheet1",
+                "column_mapping": {  # Use manual mode - English headers
+                    "sku": "Product Code",
+                    "name": "Description",
+                    "price": "Price"
+                },
                 "header_row": 1,
                 "data_start_row": 2
             }
@@ -238,6 +250,11 @@ class TestGoogleSheetsParserParse:
             config = {
                 "sheet_url": "https://docs.google.com/spreadsheets/d/abc123/edit",
                 "sheet_name": "Sheet1",
+                "column_mapping": {  # Use manual mode - English headers
+                    "sku": "Product Code",
+                    "name": "Description",
+                    "price": "Price"
+                },
                 "characteristic_columns": ["Color", "Size"],
                 "header_row": 1,
                 "data_start_row": 2
@@ -255,6 +272,7 @@ class TestGoogleSheetsParserParse:
         """Verify parse() handles missing price without crashing."""
         # Create sheet data with missing price
         mock_ws = Mock()
+        mock_ws.title = "Sheet1"  # Required for auto-detect mode
         # Return actual list values, not MagicMock
         # row_values is called with row number (1-indexed), return headers for row 1
         def row_values_side_effect(row_num):
@@ -275,6 +293,11 @@ class TestGoogleSheetsParserParse:
             config = {
                 "sheet_url": "https://docs.google.com/spreadsheets/d/abc123/edit",
                 "sheet_name": "Sheet1",
+                "column_mapping": {  # Use manual mode - English headers
+                    "sku": "Product Code",
+                    "name": "Description",
+                    "price": "Price"
+                },
                 "header_row": 1,
                 "data_start_row": 2
             }
@@ -292,6 +315,7 @@ class TestGoogleSheetsParserParse:
         """Verify parse() normalizes prices to 2 decimal places."""
         # Create sheet data with prices having more than 2 decimal places
         mock_ws = Mock()
+        mock_ws.title = "Sheet1"  # Required for auto-detect mode
         # Return actual list values, not MagicMock
         # row_values is called with row number (1-indexed), return headers for row 1
         def row_values_side_effect(row_num):
@@ -312,6 +336,11 @@ class TestGoogleSheetsParserParse:
             config = {
                 "sheet_url": "https://docs.google.com/spreadsheets/d/abc123/edit",
                 "sheet_name": "Sheet1",
+                "column_mapping": {  # Use manual mode - English headers
+                    "sku": "Product Code",
+                    "name": "Description",
+                    "price": "Price"
+                },
                 "header_row": 1,
                 "data_start_row": 2
             }

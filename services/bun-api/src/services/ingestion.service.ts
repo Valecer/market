@@ -16,7 +16,7 @@ import type {
   ParsingLogEntry,
   TriggerMasterSyncMessage,
 } from '../types/ingestion.types'
-import { supplierRepository } from '../db/repositories/supplier.repository'
+import { ingestionRepository } from '../db/repositories/ingestion.repository'
 import { RedisUnavailableError } from './queue.service'
 
 // =============================================================================
@@ -228,54 +228,40 @@ export class IngestionService {
 
   /**
    * Get all suppliers with their sync status
+   *
+   * Uses ingestion repository to derive status from parsing_logs.
    */
   private async getSuppliersWithStatus(): Promise<SupplierStatus[]> {
-    // Use repository to get suppliers with item counts
-    const suppliers = await supplierRepository.findAllWithItemCounts()
+    const suppliers = await ingestionRepository.getSuppliersWithStatus()
 
     return suppliers.map((supplier) => ({
       id: supplier.id,
       name: supplier.name,
       source_type: supplier.sourceType || 'unknown',
-      last_sync_at: supplier.updatedAt?.toISOString() || null,
-      status: this.deriveSupplierStatus(supplier),
-      items_count: supplier.itemsCount || 0,
+      last_sync_at: supplier.lastSyncAt,
+      status: supplier.status,
+      items_count: supplier.itemsCount,
     }))
   }
 
   /**
-   * Derive supplier sync status from metadata
-   *
-   * For now, use simple logic based on existence of items.
-   * In Phase 5, this will be based on parsing_logs.
-   */
-  private deriveSupplierStatus(supplier: {
-    metadata?: Record<string, unknown> | null
-    itemsCount?: number
-  }): 'success' | 'error' | 'pending' | 'inactive' {
-    // Check if supplier is inactive
-    const isActive = supplier.metadata?.is_active !== false
-    if (!isActive) {
-      return 'inactive'
-    }
-
-    // If has items, assume success (simplified for Phase 3)
-    // Phase 5 will implement proper status based on parsing_logs
-    if (supplier.itemsCount && supplier.itemsCount > 0) {
-      return 'success'
-    }
-
-    return 'pending'
-  }
-
-  /**
    * Get recent parsing logs with supplier names
+   *
+   * Uses ingestion repository to join logs with suppliers for context.
    */
   private async getRecentParsingLogs(limit: number): Promise<ParsingLogEntry[]> {
-    // For Phase 3, return empty array
-    // Phase 5 will implement proper log retrieval via ingestion.repository.ts
-    // This is intentional to keep Phase 3 scope focused on manual sync trigger
-    return []
+    const logs = await ingestionRepository.getRecentParsingLogs(limit)
+
+    return logs.map((log) => ({
+      id: log.id,
+      task_id: log.taskId,
+      supplier_id: log.supplierId,
+      supplier_name: log.supplierName,
+      error_type: log.errorType,
+      error_message: log.errorMessage,
+      row_number: log.rowNumber,
+      created_at: log.createdAt,
+    }))
   }
 
   /**
