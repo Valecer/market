@@ -219,25 +219,25 @@ Each phase represents a complete, independently testable increment.
 **Goal:** Implement FastAPI endpoints for job submission and status tracking with Redis-based state management.
 
 **Independent Test Criteria:**
-- [ ] POST /analyze/file returns job_id and enqueues background task
-- [ ] GET /analyze/status/:job_id returns current job state from Redis
-- [ ] Background task processes file asynchronously with progress updates
-- [ ] Job status includes progress percentage and error list
-- [ ] Integration test: Submit job → poll status → verify completion
+- [X] POST /analyze/file returns job_id and enqueues background task
+- [X] GET /analyze/status/:job_id returns current job state from Redis
+- [X] Background task processes file asynchronously with progress updates
+- [X] Job status includes progress percentage and error list
+- [X] Integration test: Submit job → poll status → verify completion
 
 ### Tasks
 
-- [ ] T062 [US4] Create src/services/job_service.py for Redis job status management (create, update, get)
-- [ ] T063 [US4] Create src/api/routes/analyze.py with POST /analyze/file endpoint
-- [ ] T064 [US4] Implement analyze_file endpoint: validate request → create job → enqueue task → return job_id
-- [ ] T065 [US4] Create src/api/routes/status.py with GET /analyze/status/:job_id endpoint
-- [ ] T066 [US4] Implement get_job_status endpoint: fetch from Redis → return JobStatus response
-- [ ] T067 [US4] Create src/tasks/file_analysis_task.py for arq background worker
-- [ ] T068 [US4] Implement process_file_task: parse → embed → match → update job status in Redis
-- [ ] T069 [P] [US4] Create POST /analyze/vision stub endpoint (returns 501 Not Implemented)
-- [ ] T070 [P] [US4] Write unit tests for job_service in tests/unit/test_job_service.py
-- [ ] T071 [P] [US4] Write API integration tests in tests/integration/test_api_endpoints.py (FastAPI TestClient)
-- [ ] T072 [US4] Write E2E test in tests/e2e/test_full_pipeline.py (submit job → wait for completion → verify results)
+- [X] T062 [US4] Create src/services/job_service.py for Redis job status management (create, update, get)
+- [X] T063 [US4] Create src/api/routes/analyze.py with POST /analyze/file endpoint
+- [X] T064 [US4] Implement analyze_file endpoint: validate request → create job → enqueue task → return job_id
+- [X] T065 [US4] Create src/api/routes/status.py with GET /analyze/status/:job_id endpoint
+- [X] T066 [US4] Implement get_job_status endpoint: fetch from Redis → return JobStatus response
+- [X] T067 [US4] Create src/tasks/file_analysis_task.py for arq background worker
+- [X] T068 [US4] Implement process_file_task: parse → embed → match → update job status in Redis
+- [X] T069 [P] [US4] Create POST /analyze/vision stub endpoint (returns 501 Not Implemented)
+- [X] T070 [P] [US4] Write unit tests for job_service in tests/unit/test_job_service.py
+- [X] T071 [P] [US4] Write API integration tests in tests/integration/test_api_endpoints.py (FastAPI TestClient)
+- [X] T072 [US4] Write E2E test in tests/e2e/test_full_pipeline.py (submit job → wait for completion → verify results)
 
 **Dependencies:** Phase 5 (US2: Matching) - uses all services
 
@@ -324,10 +324,10 @@ Phase 7: Polish
 - [X] <70% confidence → parsing_logs entry
 
 ### Phase 6 (US4): Job Status API ✓ Complete When:
-- [ ] POST /analyze/file → job_id returned, task enqueued
-- [ ] GET /analyze/status/:job_id → current state from Redis
-- [ ] Background task updates progress in real-time
-- [ ] 100-item file completes in <2 minutes
+- [X] POST /analyze/file → job_id returned, task enqueued
+- [X] GET /analyze/status/:job_id → current state from Redis
+- [X] Background task updates progress in real-time
+- [X] 100-item file completes in <2 minutes
 
 ---
 

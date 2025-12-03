@@ -263,10 +263,10 @@ def create_app() -> FastAPI:
     # -------------------------------------------------------------------------
     # Register Routers
     # -------------------------------------------------------------------------
-    # TODO: Include routers when implemented
-    # from src.api.routes import analyze, status
-    # app.include_router(analyze.router, prefix="/analyze", tags=["Analysis"])
-    # app.include_router(status.router, prefix="/status", tags=["Status"])
+    from src.api.routes import analyze_router, status_router
+
+    app.include_router(analyze_router, prefix="/analyze", tags=["Analysis"])
+    app.include_router(status_router, prefix="/analyze/status", tags=["Status"])
 
     return app
 
