@@ -15,6 +15,7 @@
 | 6 | Admin Sync Scheduler | ✅ Complete |
 | 7 | ML-Analyze Service (RAG Pipeline) | ✅ Complete |
 | 8 | ML-Ingestion Integration (Courier Pattern) | ✅ Complete |
+| 9 | Advanced Pricing & Categorization | 🚧 In Progress |
 
 **Before implementation:** Use mcp context7 to collect up-to-date documentation.  
 **For frontend:** Use i18n (add text to translation files in `public/locales/`).
@@ -66,7 +67,7 @@
 ```
 marketbel/
 ├── services/
-│   ├── python-ingestion/    # Phases 1, 4, 6, 8 - Worker (Data Courier)
+│   ├── python-ingestion/    # Phases 1, 4, 6, 8, 9 - Worker (Data Courier)
 │   │   ├── src/
 │   │   │   ├── db/models/   # SQLAlchemy ORM
 │   │   │   ├── parsers/     # Data source parsers
@@ -91,7 +92,7 @@ marketbel/
 │   │       ├── controllers/ # auth/, catalog/, admin/
 │   │       ├── services/    # Business logic, job.service.ts (Phase 8)
 │   │       └── db/          # Drizzle schemas
-│   └── frontend/            # Phases 3, 5, 8 - UI
+│   └── frontend/            # Phases 3, 5, 8, 9 - UI
 │       └── src/
 │           ├── components/  # catalog/, admin/, cart/, shared/
 │           │   └── admin/
@@ -110,7 +111,8 @@ marketbel/
 │   ├── 005-frontend-i18n/
 │   ├── 006-admin-sync-scheduler/
 │   ├── 007-ml-analyze/
-│   └── 008-ml-ingestion-integration/
+│   ├── 008-ml-ingestion-integration/
+│   └── 009-advanced-pricing-categories/
 └── docker-compose.yml
 ```
 
@@ -361,18 +363,63 @@ Refactored ingestion pipeline where `python-ingestion` acts as a **data courier*
 
 ---
 
+## Phase 9: Advanced Pricing & Categorization
+
+### Purpose
+Enable advanced pricing models by supporting dual pricing (retail and wholesale) with currency tracking on products. Leverages existing category hierarchy for product organization.
+
+### Key Features
+- **Dual Pricing:** Products store both `retail_price` (end-customer) and `wholesale_price` (bulk/dealer)
+- **Currency Tracking:** ISO 4217 currency code per product (e.g., USD, EUR, RUB)
+- **Exact Decimals:** All monetary fields use `DECIMAL(10,2)` to avoid floating-point errors
+- **Category Hierarchy:** Existing adjacency list pattern (`parent_id`) supports infinite nesting
+- **Non-Negative Constraints:** Database CHECK constraints prevent negative prices
+
+### New Product Fields
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `retail_price` | `DECIMAL(10,2)` | Yes | End-customer price |
+| `wholesale_price` | `DECIMAL(10,2)` | Yes | Bulk/dealer price |
+| `currency_code` | `VARCHAR(3)` | Yes | ISO 4217 currency code |
+
+**Note:** These are **canonical product-level prices**, distinct from `min_price` which is an aggregate of supplier prices.
+
+### API Endpoints (Phase 9)
+- `GET /api/products` - Returns pricing fields in response
+- `GET /api/products/{id}` - Returns pricing fields in detail
+- `PATCH /api/admin/products/{id}/pricing` - Update pricing (admin only)
+
+### Key Files (Phase 9)
+- `services/python-ingestion/migrations/versions/009_add_pricing_fields.py` - Migration
+- `services/python-ingestion/src/db/models/product.py` - SQLAlchemy model (updated)
+- `services/python-ingestion/src/models/product_pricing.py` - Pydantic validation
+- `services/bun-api/src/db/schema/schema.ts` - Drizzle schema (updated)
+- `services/bun-api/src/controllers/admin/products.controller.ts` - Pricing endpoint
+- `services/frontend/src/components/shared/PriceDisplay.tsx` - Price formatting
+- `services/frontend/src/components/catalog/ProductCard.tsx` - List display
+- `services/frontend/src/components/catalog/ProductDetail.tsx` - Detail display
+
+### Spec Reference
+- `/specs/009-advanced-pricing-categories/spec.md`
+- `/specs/009-advanced-pricing-categories/plan.md`
+- `/specs/009-advanced-pricing-categories/tasks.md`
+
+---
+
 ## Database Schema (Key Tables)
 
 | Table | Description |
 |-------|-------------|
 | `suppliers` | External data sources (google_sheets, csv, excel) |
-| `products` | Internal catalog (status: draft/active/archived) |
+| `products` | Internal catalog with dual pricing (retail/wholesale + currency) |
 | `supplier_items` | Raw supplier data with JSONB characteristics |
 | `product_embeddings` | Vector embeddings (768-dim) for semantic search (Phase 7) |
 | `price_history` | Time-series price tracking |
 | `parsing_logs` | Structured error logging |
 | `users` | Authentication (roles: sales, procurement, admin) |
 | `match_review_queue` | Pending matches for human review (Phase 4) |
+| `categories` | Hierarchical product categories (adjacency list via `parent_id`) |
 
 ---
 
