@@ -19,6 +19,9 @@ export { SyncControlCard } from './SyncControlCard'
 export { LiveLogViewer } from './LiveLogViewer'
 export { SupplierStatusTable } from './SupplierStatusTable'
 
+// Phase 8: ML Integration components
+export { JobPhaseIndicator } from './JobPhaseIndicator'
+
 // Phase 7: Supplier Management components
 export { SupplierAddModal } from './SupplierAddModal'
 export { MasterSheetUrlConfig } from './MasterSheetUrlConfig'

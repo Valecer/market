@@ -88,6 +88,7 @@ class SupplierService {
       source_url: metadata.source_url || null,
       contact_email: supplier.contactEmail,
       is_active: metadata.is_active ?? true,
+      use_ml_processing: metadata.use_ml_processing ?? true,
       notes: metadata.notes || null,
       items_count: itemsCount,
       created_at: supplier.createdAt,
@@ -109,6 +110,7 @@ class SupplierService {
         source_url: (s.metadata as any)?.source_url || null,
         contact_email: null, // Not in WithItemCount type
         is_active: (s.metadata as any)?.is_active ?? true,
+        use_ml_processing: (s.metadata as any)?.use_ml_processing ?? true,
         notes: (s.metadata as any)?.notes || null,
         items_count: s.itemsCount,
         created_at: s.updatedAt?.toISOString() || new Date().toISOString(),
@@ -145,6 +147,7 @@ class SupplierService {
     source_url?: string
     contact_email?: string
     is_active?: boolean
+    use_ml_processing?: boolean
     notes?: string
   }): Promise<CreateSupplierResponse> {
     // Check for duplicate name
@@ -161,6 +164,7 @@ class SupplierService {
       contactEmail: input.contact_email,
       sourceUrl: input.source_url,
       isActive: input.is_active ?? true,
+      useMlProcessing: input.use_ml_processing ?? true,
       notes: input.notes,
     }
 
@@ -212,6 +216,7 @@ class SupplierService {
       source_url?: string
       contact_email?: string
       is_active?: boolean
+      use_ml_processing?: boolean
       notes?: string
     }
   ): Promise<SupplierResponse | null> {
@@ -237,6 +242,7 @@ class SupplierService {
       contactEmail: input.contact_email,
       sourceUrl: input.source_url,
       isActive: input.is_active,
+      useMlProcessing: input.use_ml_processing,
       notes: input.notes,
     }
 

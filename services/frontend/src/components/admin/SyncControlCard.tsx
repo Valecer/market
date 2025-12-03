@@ -10,7 +10,8 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import type { SyncControlCardProps } from '@/types/ingestion'
+import type { SyncControlCardProps, IngestionJob } from '@/types/ingestion'
+import { JobPhaseIndicator } from './JobPhaseIndicator'
 
 // Status indicator colors and styles
 const STATUS_CONFIG = {
@@ -120,6 +121,7 @@ export function SyncControlCard({
   progress,
   lastSyncAt,
   nextScheduledAt,
+  jobs,
   onSyncNow,
   isSyncing,
   isLoading = false,
@@ -128,6 +130,14 @@ export function SyncControlCard({
   const { t } = useTranslation()
   const statusConfig = STATUS_CONFIG[syncState]
   const progressPercent = progress ? Math.round((progress.current / progress.total) * 100) : 0
+
+  // Filter active jobs (processing or recently completed)
+  const activeJobs = jobs.filter(
+    (job) => job.status === 'processing' || job.status === 'pending'
+  )
+  const recentJobs = jobs.filter(
+    (job) => job.status === 'completed' || job.status === 'failed'
+  ).slice(0, 3)
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-border overflow-hidden">
@@ -259,6 +269,30 @@ export function SyncControlCard({
         {error && (
           <div className="mb-6 p-3 bg-danger/10 border border-danger/20 rounded-lg">
             <p className="text-sm text-danger font-medium">{error}</p>
+          </div>
+        )}
+
+        {/* Active Jobs (Phase 8) */}
+        {activeJobs.length > 0 && (
+          <div className="mb-6 space-y-3">
+            <h4 className="text-sm font-medium text-slate-700">
+              {t('ingestion.activeJobs')}
+            </h4>
+            {activeJobs.map((job) => (
+              <JobPhaseIndicator key={job.job_id} job={job} />
+            ))}
+          </div>
+        )}
+
+        {/* Recent Jobs (Phase 8) */}
+        {recentJobs.length > 0 && activeJobs.length === 0 && (
+          <div className="mb-6 space-y-2">
+            <h4 className="text-sm font-medium text-slate-700">
+              {t('ingestion.recentJobs')}
+            </h4>
+            {recentJobs.map((job) => (
+              <JobPhaseIndicator key={job.job_id} job={job} compact />
+            ))}
           </div>
         )}
 

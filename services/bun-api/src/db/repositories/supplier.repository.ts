@@ -44,6 +44,7 @@ export interface CreateSupplierInput {
   contactEmail?: string | null
   sourceUrl?: string | null
   isActive?: boolean
+  useMlProcessing?: boolean
   notes?: string | null
 }
 
@@ -56,6 +57,7 @@ export interface UpdateSupplierInput {
   contactEmail?: string | null
   sourceUrl?: string | null
   isActive?: boolean
+  useMlProcessing?: boolean
   notes?: string | null
 }
 
@@ -169,6 +171,7 @@ class SupplierRepository implements ISupplierRepository {
     const metadata = {
       source_url: input.sourceUrl || null,
       is_active: input.isActive ?? true,
+      use_ml_processing: input.useMlProcessing ?? true,
       notes: input.notes || null,
     }
 
@@ -213,6 +216,7 @@ class SupplierRepository implements ISupplierRepository {
       ...existingMeta,
       ...(input.sourceUrl !== undefined && { source_url: input.sourceUrl }),
       ...(input.isActive !== undefined && { is_active: input.isActive }),
+      ...(input.useMlProcessing !== undefined && { use_ml_processing: input.useMlProcessing }),
       ...(input.notes !== undefined && { notes: input.notes }),
     }
 

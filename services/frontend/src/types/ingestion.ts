@@ -173,12 +173,14 @@ export interface SyncInProgressError {
 
 /**
  * Props for SyncControlCard component
+ * Extended in Phase 8 with jobs array
  */
 export interface SyncControlCardProps {
   syncState: SyncState
   progress: SyncProgress | null
   lastSyncAt: string | null
   nextScheduledAt: string
+  jobs: IngestionJob[]
   onSyncNow: () => void
   isSyncing: boolean
   isLoading?: boolean

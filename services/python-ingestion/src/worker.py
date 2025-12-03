@@ -44,6 +44,8 @@ from src.tasks.sync_tasks import (
     poll_parse_triggers,
     get_sync_interval_hours,
 )
+# Import ML integration tasks (Phase 8)
+from src.tasks.download_tasks import download_and_trigger_ml
 
 # Configure logging
 configure_logging(settings.log_level)
@@ -633,6 +635,8 @@ class WorkerSettings:
         # Phase 6: Master sync pipeline
         trigger_master_sync_task,
         scheduled_sync_task,
+        # Phase 8: ML integration pipeline
+        download_and_trigger_ml,
     ]
     
     # Register job lifecycle hooks

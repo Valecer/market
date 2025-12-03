@@ -6,10 +6,12 @@ This parser automatically:
 - Tracks categories from section headers
 - Handles repeated headers within data
 - Parses all worksheets with priority scoring
+- Exports spreadsheets to XLSX format
 
 Implements ParserInterface for Marketbel project.
 """
 
+import io
 import re
 import gspread
 from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound, APIError
@@ -18,6 +20,13 @@ from decimal import Decimal, InvalidOperation
 from difflib import get_close_matches
 import structlog
 from urllib.parse import urlparse
+
+try:
+    import openpyxl
+    from openpyxl import Workbook
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
 
 from src.parsers.base_parser import ParserInterface
 from src.models.parsed_item import ParsedSupplierItem
@@ -696,3 +705,84 @@ class GoogleSheetsParser(ParserInterface):
             price=price,
             characteristics=characteristics
         )
+
+    # ==================== Export Methods (Phase 8) ====================
+
+    async def export_to_xlsx(
+        self,
+        sheet_url: str,
+        sheet_name: Optional[str] = None,
+    ) -> bytes:
+        """
+        Export Google Sheet to XLSX format.
+
+        Downloads the entire spreadsheet (or specified sheet) and converts
+        it to XLSX format for ML processing.
+
+        Args:
+            sheet_url: Google Sheets URL
+            sheet_name: Optional specific sheet to export (defaults to all)
+
+        Returns:
+            XLSX file as bytes
+
+        Raises:
+            ParserError: If export fails
+            ImportError: If openpyxl is not installed
+        """
+        if not OPENPYXL_AVAILABLE:
+            raise ImportError(
+                "openpyxl is required for XLSX export. "
+                "Install with: pip install openpyxl"
+            )
+
+        log = logger.bind(sheet_url=sheet_url, sheet_name=sheet_name)
+        log.info("export_to_xlsx_started")
+
+        try:
+            spreadsheet = self._open_spreadsheet_by_url(sheet_url, log)
+
+            # Create workbook
+            wb = Workbook()
+            # Remove default sheet
+            default_sheet = wb.active
+            if default_sheet is not None:
+                wb.remove(default_sheet)
+
+            # Determine which sheets to export
+            if sheet_name:
+                worksheets = [self._get_worksheet(spreadsheet, sheet_name, log)]
+            else:
+                worksheets = spreadsheet.worksheets()
+
+            for ws in worksheets:
+                # Create sheet in workbook
+                xlsx_ws = wb.create_sheet(title=ws.title[:31])  # Excel limit
+
+                # Get all values
+                all_values = ws.get_all_values()
+
+                # Write values to xlsx
+                for row_idx, row_data in enumerate(all_values, start=1):
+                    for col_idx, cell_value in enumerate(row_data, start=1):
+                        xlsx_ws.cell(row=row_idx, column=col_idx, value=cell_value)
+
+            # Save to bytes
+            output = io.BytesIO()
+            wb.save(output)
+            xlsx_bytes = output.getvalue()
+
+            log.info(
+                "export_to_xlsx_completed",
+                sheets_exported=len(worksheets),
+                size_bytes=len(xlsx_bytes),
+            )
+
+            return xlsx_bytes
+
+        except (SpreadsheetNotFound, WorksheetNotFound) as e:
+            raise ParserError(f"Sheet not found: {e}") from e
+        except APIError as e:
+            raise ParserError(f"Google Sheets API error during export: {e}") from e
+        except Exception as e:
+            raise ParserError(f"Failed to export to XLSX: {e}") from e

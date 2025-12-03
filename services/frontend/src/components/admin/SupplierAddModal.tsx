@@ -87,6 +87,7 @@ export function SupplierAddModal({ isOpen, onClose, onSuccess }: SupplierAddModa
   const [sourceType, setSourceType] = useState<SourceType>('google_sheets')
   const [sourceUrl, setSourceUrl] = useState('')
   const [isActive, setIsActive] = useState(true)
+  const [useMlProcessing, setUseMlProcessing] = useState(true)
   const [notes, setNotes] = useState('')
 
   // File upload state
@@ -106,6 +107,7 @@ export function SupplierAddModal({ isOpen, onClose, onSuccess }: SupplierAddModa
     setSourceType('google_sheets')
     setSourceUrl('')
     setIsActive(true)
+    setUseMlProcessing(true)
     setNotes('')
     setSelectedFile(null)
     setFileError(null)
@@ -173,6 +175,7 @@ export function SupplierAddModal({ isOpen, onClose, onSuccess }: SupplierAddModa
         source_type: sourceType,
         source_url: sourceUrl.trim() || undefined,
         is_active: isActive,
+        use_ml_processing: useMlProcessing,
         notes: notes.trim() || undefined,
       }
 
@@ -339,6 +342,35 @@ export function SupplierAddModal({ isOpen, onClose, onSuccess }: SupplierAddModa
               />
             </button>
             <span className="text-sm text-slate-700">{t('suppliers.modal.activeLabel')}</span>
+          </div>
+
+          {/* ML Processing Toggle */}
+          <div className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-violet-800">
+                  {t('suppliers.modal.mlProcessingLabel')}
+                </p>
+                <p className="text-xs text-violet-600 mt-0.5">
+                  {t('suppliers.modal.mlProcessingHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={useMlProcessing}
+                onClick={() => setUseMlProcessing(!useMlProcessing)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  useMlProcessing ? 'bg-violet-500' : 'bg-slate-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    useMlProcessing ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Notes */}

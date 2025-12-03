@@ -78,70 +78,70 @@ This task list implements the refactored ingestion pipeline where `python-ingest
 
 ### Backend: ML Client (python-ingestion)
 
-- [ ] T018 [US1] Create `MLClient` class with httpx async client in `services/python-ingestion/src/services/ml_client.py`
-- [ ] T019 [US1] Implement `check_health()` method with retry logic in `services/python-ingestion/src/services/ml_client.py`
-- [ ] T020 [US1] Implement `trigger_analysis()` method in `services/python-ingestion/src/services/ml_client.py`
-- [ ] T021 [US1] Implement `get_job_status()` method in `services/python-ingestion/src/services/ml_client.py`
-- [ ] T022 [US1] Export singleton `ml_client` instance in `services/python-ingestion/src/services/ml_client.py`
+- [X] T018 [US1] Create `MLClient` class with httpx async client in `services/python-ingestion/src/services/ml_client.py`
+- [X] T019 [US1] Implement `check_health()` method with retry logic in `services/python-ingestion/src/services/ml_client.py`
+- [X] T020 [US1] Implement `trigger_analysis()` method in `services/python-ingestion/src/services/ml_client.py`
+- [X] T021 [US1] Implement `get_job_status()` method in `services/python-ingestion/src/services/ml_client.py`
+- [X] T022 [US1] Export singleton `ml_client` instance in `services/python-ingestion/src/services/ml_client.py`
 
 ### Backend: Download Tasks (python-ingestion)
 
-- [ ] T023 [US1] Create `download_and_trigger_ml` task function in `services/python-ingestion/src/tasks/download_tasks.py`
-- [ ] T024 [US1] Implement `_download_file()` helper for Google Sheets export to XLSX in `services/python-ingestion/src/tasks/download_tasks.py`
-- [ ] T025 [US1] Implement `_download_file()` helper for CSV/Excel file copy in `services/python-ingestion/src/tasks/download_tasks.py`
-- [ ] T026 [US1] Implement `_download_file()` helper for URL download in `services/python-ingestion/src/tasks/download_tasks.py`
-- [ ] T027 [US1] Implement `_compute_md5()` checksum function in `services/python-ingestion/src/tasks/download_tasks.py`
-- [ ] T028 [US1] Implement `_write_metadata_sidecar()` function in `services/python-ingestion/src/tasks/download_tasks.py`
-- [ ] T029 [US1] Implement `_update_job_phase()` Redis helper in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T023 [US1] Create `download_and_trigger_ml` task function in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T024 [US1] Implement `_download_file()` helper for Google Sheets export to XLSX in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T025 [US1] Implement `_download_file()` helper for CSV/Excel file copy in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T026 [US1] Implement `_download_file()` helper for URL download in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T027 [US1] Implement `_compute_md5()` checksum function in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T028 [US1] Implement `_write_metadata_sidecar()` function in `services/python-ingestion/src/tasks/download_tasks.py`
+- [X] T029 [US1] Implement `_update_job_phase()` Redis helper in `services/python-ingestion/src/tasks/download_tasks.py`
 
 ### Backend: Google Sheets Export
 
-- [ ] T030 [US1] Add `export_to_xlsx()` method to `GoogleSheetsParser` class in `services/python-ingestion/src/parsers/google_sheets_parser.py`
+- [X] T030 [US1] Add `export_to_xlsx()` method to `GoogleSheetsParser` class in `services/python-ingestion/src/parsers/google_sheets_parser.py`
 
 ### Backend: Job State Management
 
-- [ ] T031 [US1] Create job creation helper `create_job()` in `services/python-ingestion/src/services/job_state.py`
-- [ ] T032 [US1] Create job update helper `update_job()` in `services/python-ingestion/src/services/job_state.py`
-- [ ] T033 [US1] Create job getter `get_job()` in `services/python-ingestion/src/services/job_state.py`
-- [ ] T034 [US1] Create job listing `get_recent_jobs()` in `services/python-ingestion/src/services/job_state.py`
+- [X] T031 [US1] Create job creation helper `create_job()` in `services/python-ingestion/src/services/job_state.py`
+- [X] T032 [US1] Create job update helper `update_job()` in `services/python-ingestion/src/services/job_state.py`
+- [X] T033 [US1] Create job getter `get_job()` in `services/python-ingestion/src/services/job_state.py`
+- [X] T034 [US1] Create job listing `get_recent_jobs()` in `services/python-ingestion/src/services/job_state.py`
 
 ### Backend: Worker Registration
 
-- [ ] T035 [US1] Register `download_and_trigger_ml` task in `services/python-ingestion/src/worker.py`
+- [X] T035 [US1] Register `download_and_trigger_ml` task in `services/python-ingestion/src/worker.py`
 
 ### API: Enhanced Status Endpoint (Bun)
 
-- [ ] T036 [US1] Extend `GET /admin/sync/status` response with `jobs` array in `services/bun-api/src/controllers/admin/sync.controller.ts`
-- [ ] T037 [US1] Extend `GET /admin/sync/status` response with `current_phase` field in `services/bun-api/src/controllers/admin/sync.controller.ts`
-- [ ] T038 [US1] Create `SyncService.getJobsFromRedis()` method in `services/bun-api/src/services/sync.service.ts`
+- [X] T036 [US1] Extend `GET /admin/sync/status` response with `jobs` array in `services/bun-api/src/services/ingestion.service.ts`
+- [X] T037 [US1] Extend `GET /admin/sync/status` response with `current_phase` field in `services/bun-api/src/services/ingestion.service.ts`
+- [X] T038 [US1] Create `IngestionService.getRecentJobsFromRedis()` method in `services/bun-api/src/services/ingestion.service.ts`
 
 ### API: Upload with ML Toggle (Bun)
 
-- [ ] T039 [US1] Update `POST /admin/suppliers` to accept `use_ml_processing` field in `services/bun-api/src/controllers/admin/suppliers.controller.ts`
-- [ ] T040 [US1] Store `use_ml_processing` in supplier meta JSONB in `services/bun-api/src/services/supplier.service.ts`
+- [X] T039 [US1] Update `POST /admin/suppliers` to accept `use_ml_processing` field in `services/bun-api/src/db/repositories/supplier.repository.ts`
+- [X] T040 [US1] Store `use_ml_processing` in supplier meta JSONB in `services/bun-api/src/services/supplier.service.ts`
 
 ### Frontend: Phase Indicator Component
 
-- [ ] T041 [US1] Create `JobPhaseIndicator.tsx` component in `services/frontend/src/components/admin/JobPhaseIndicator.tsx`
-- [ ] T042 [US1] Implement phase-specific icons and colors in `JobPhaseIndicator.tsx`
-- [ ] T043 [US1] Implement progress bar with percentage in `JobPhaseIndicator.tsx`
+- [X] T041 [US1] Create `JobPhaseIndicator.tsx` component in `services/frontend/src/components/admin/JobPhaseIndicator.tsx`
+- [X] T042 [US1] Implement phase-specific icons and colors in `JobPhaseIndicator.tsx`
+- [X] T043 [US1] Implement progress bar with percentage in `JobPhaseIndicator.tsx`
 
 ### Frontend: Status Integration
 
-- [ ] T044 [US1] Update `useIngestionStatus` hook to parse `jobs` array in `services/frontend/src/hooks/useIngestionStatus.ts`
-- [ ] T045 [US1] Update `SyncControlCard` to render `JobPhaseIndicator` for active jobs in `services/frontend/src/components/admin/SyncControlCard.tsx`
+- [X] T044 [US1] Update `useIngestionStatus` hook to parse `jobs` array in `services/frontend/src/types/ingestion.ts`
+- [X] T045 [US1] Update `SyncControlCard` to render `JobPhaseIndicator` for active jobs in `services/frontend/src/components/admin/SyncControlCard.tsx`
 
 ### Frontend: ML Toggle in Upload Modal
 
-- [ ] T046 [US1] Add "Process via ML" toggle to `SupplierAddModal` in `services/frontend/src/components/admin/SupplierAddModal.tsx`
-- [ ] T047 [US1] Wire toggle to `use_ml_processing` field in form submission in `services/frontend/src/components/admin/SupplierAddModal.tsx`
+- [X] T046 [US1] Add "Process via ML" toggle to `SupplierAddModal` in `services/frontend/src/components/admin/SupplierAddModal.tsx`
+- [X] T047 [US1] Wire toggle to `use_ml_processing` field in form submission in `services/frontend/src/components/admin/SupplierAddModal.tsx`
 
 ### Frontend: Translations
 
-- [ ] T048 [P] [US1] Add phase translations to `services/frontend/public/locales/en/common.json`
-- [ ] T049 [P] [US1] Add phase translations to `services/frontend/public/locales/ru/common.json`
-- [ ] T050 [P] [US1] Add ML toggle translations to `services/frontend/public/locales/en/common.json`
-- [ ] T051 [P] [US1] Add ML toggle translations to `services/frontend/public/locales/ru/common.json`
+- [X] T048 [P] [US1] Add phase translations to `services/frontend/public/locales/en/translation.json`
+- [X] T049 [P] [US1] Add phase translations to `services/frontend/public/locales/ru/translation.json`
+- [X] T050 [P] [US1] Add ML toggle translations to `services/frontend/public/locales/en/translation.json`
+- [X] T051 [P] [US1] Add ML toggle translations to `services/frontend/public/locales/ru/translation.json`
 
 ---
 

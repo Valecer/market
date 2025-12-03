@@ -288,7 +288,31 @@
       "masterSheetError": "Failed to read the Master Sheet. Please check the URL and permissions.",
       "networkError": "Network error. Please check your connection and try again.",
       "genericError": "An unexpected error occurred. Please try again."
-    }
+    },
+    "phase": {
+      "downloading": "Downloading",
+      "analyzing": "Analyzing",
+      "matching": "Matching",
+      "complete": "Complete",
+      "failed": "Failed"
+    },
+    "activeJobs": "Active Ingestion Jobs",
+    "phaseProgress": {
+      "downloading": "Downloaded {{downloaded}}MB / {{total}}MB",
+      "analyzing": "Processed {{processed}} / {{total}} items",
+      "complete": "Processing complete",
+      "failedGeneric": "Processing failed"
+    },
+    "recentJobs": "Recent Jobs",
+    "jobProgress": "Job Progress",
+    "itemsProcessed": "{{processed}} / {{total}} items processed",
+    "itemsProcessedTotal": "items processed",
+    "matchesFound": "{{count}} matches found",
+    "inReviewQueue": "{{count}} in review queue",
+    "processingErrors": "{{count}} errors",
+    "matched": "matched",
+    "inReview": "in review",
+    "retryAttempt": "Retry {{current}} of {{max}}"
   },
 
   "settings": {
@@ -341,6 +365,7 @@
       "fileTooLarge": "File is too large. Maximum size is 50MB.",
       "uploadError": "Failed to process file",
       "activeLabel": "Supplier is active for sync",
+      "useMlProcessingLabel": "Process via ML (recommended)",
       "notes": "Notes",
       "notesPlaceholder": "Optional notes about this supplier...",
       "create": "Create Supplier"

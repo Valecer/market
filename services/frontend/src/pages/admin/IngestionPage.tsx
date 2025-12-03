@@ -119,6 +119,7 @@ export function IngestionPage() {
           progress={status?.progress || null}
           lastSyncAt={status?.last_sync_at || null}
           nextScheduledAt={status?.next_scheduled_at || new Date().toISOString()}
+          jobs={status?.jobs || []}
           onSyncNow={handleSyncNow}
           isSyncing={isSyncing}
           isLoading={isStatusLoading}
