@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Inter-Service API Contracts",
+  "description": "API contracts between python-ingestion and ml-analyze services",
+  "version": "1.0.0",
+
+  "endpoints": {
+    "trigger_analysis": {
+      "method": "POST",
+      "path": "/analyze/file",
+      "service": "ml-analyze",
+      "description": "Trigger file analysis from python-ingestion to ml-analyze",
+      "request": {
+        "type": "object",
+        "required": ["file_url", "supplier_id", "file_type"],
+        "properties": {
+          "file_url": {
+            "type": "string",
+            "description": "Local file path on shared volume",
+            "examples": ["/shared/uploads/uuid_1701619200_pricelist.xlsx"]
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of supplier owning the file"
+          },
+          "file_type": {
+            "type": "string",
+            "enum": ["pdf", "excel", "csv"],
+            "description": "Type of file being analyzed"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 202,
+          "body": {
+            "type": "object",
+            "properties": {
+              "job_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["pending"]
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "errors": {
+          "400": {
+            "description": "Invalid request - validation error",
+            "body": {
+              "error": "ValidationError",
+              "message": "string",
+              "details": {}
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "body": {
+              "error": "InternalError",
+              "message": "string"
+            }
+          }
+        }
+      }
+    },
+
+    "check_status": {
+      "method": "GET",
+      "path": "/analyze/status/{job_id}",
+      "service": "ml-analyze",
+      "description": "Check analysis job status",
+      "request": {
+        "path_params": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "format": "uuid" },
+              "status": {
+                "type": "string",
+                "enum": ["pending", "processing", "completed", "failed"]
+              },
+              "progress_percentage": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "items_processed": { "type": "integer", "minimum": 0 },
+              "items_total": { "type": "integer", "minimum": 0 },
+              "errors": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "created_at": { "type": "string", "format": "date-time" },
+              "started_at": { "type": ["string", "null"], "format": "date-time" },
+              "completed_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
+        "errors": {
+          "404": {
+            "description": "Job not found",
+            "body": {
+              "error": "NotFound",
+              "message": "Job {job_id} not found"
+            }
+          }
+        }
+      }
+    },
+
+    "health_check": {
+      "method": "GET",
+      "path": "/health",
+      "service": "ml-analyze",
+      "description": "Check ML service health before processing",
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["healthy", "unhealthy", "degraded"]
+              },
+              "version": { "type": "string" },
+              "service": { "type": "string" },
+              "checks": {
+                "type": "object",
+                "properties": {
+                  "database": { "type": "object" },
+                  "ollama": { "type": "object" },
+                  "redis": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "internal_urls": {
+    "ml_analyze_base": "http://ml-analyze:8001",
+    "notes": "Internal Docker network communication. Not exposed externally."
+  },
+
+  "retry_policy": {
+    "max_retries": 3,
+    "initial_delay_seconds": 1,
+    "backoff_multiplier": 2,
+    "max_delay_seconds": 30,
+    "retry_on_status_codes": [500, 502, 503, 504],
+    "timeout_seconds": 30
+  },
+
+  "job_polling": {
+    "interval_seconds": 5,
+    "max_duration_seconds": 1800,
+    "backoff_on_error": true
+  }
+}
+

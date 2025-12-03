@@ -1,0 +1,246 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Frontend API Contracts - Enhanced Ingestion Status",
+  "description": "Updated API responses for multi-phase job status display",
+  "version": "1.0.0",
+
+  "endpoints": {
+    "get_ingestion_status": {
+      "method": "GET",
+      "path": "/api/admin/sync/status",
+      "description": "Get current ingestion status with multi-phase job tracking",
+      "authentication": "JWT (admin role required)",
+      "response": {
+        "type": "object",
+        "properties": {
+          "sync_state": {
+            "type": "string",
+            "enum": ["idle", "syncing_master", "downloading_suppliers", "processing_suppliers"],
+            "description": "Overall sync pipeline state"
+          },
+          "current_phase": {
+            "type": ["string", "null"],
+            "enum": ["downloading", "analyzing", "matching", "complete", "failed", null],
+            "description": "Current phase of active job"
+          },
+          "jobs": {
+            "type": "array",
+            "description": "Active and recent jobs",
+            "items": {
+              "$ref": "#/definitions/IngestionJob"
+            }
+          },
+          "suppliers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SupplierStatus"
+            }
+          },
+          "recent_logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ParsingLog"
+            }
+          },
+          "progress": {
+            "type": ["object", "null"],
+            "properties": {
+              "current": { "type": "integer" },
+              "total": { "type": "integer" },
+              "phase": { "type": "string" }
+            }
+          },
+          "last_sync_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "next_scheduled_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+
+    "trigger_sync": {
+      "method": "POST",
+      "path": "/api/admin/sync/trigger",
+      "description": "Manually trigger sync (unchanged from Phase 6)",
+      "authentication": "JWT (admin role required)",
+      "request": {
+        "type": "object",
+        "properties": {
+          "supplier_ids": {
+            "type": "array",
+            "items": { "type": "string", "format": "uuid" },
+            "description": "Optional: specific suppliers to sync"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 202,
+          "body": {
+            "task_id": "string",
+            "status": "triggered",
+            "message": "string"
+          }
+        }
+      }
+    },
+
+    "retry_job": {
+      "method": "POST",
+      "path": "/api/admin/jobs/{job_id}/retry",
+      "description": "Retry a failed job",
+      "authentication": "JWT (admin role required)",
+      "request": {
+        "path_params": {
+          "job_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 202,
+          "body": {
+            "job_id": "string",
+            "status": "retrying",
+            "message": "Job retry initiated"
+          }
+        },
+        "errors": {
+          "404": { "message": "Job not found" },
+          "409": { "message": "Job is not in failed state" }
+        }
+      }
+    },
+
+    "create_supplier": {
+      "method": "POST",
+      "path": "/api/admin/suppliers",
+      "description": "Create supplier with ML processing option",
+      "authentication": "JWT (admin role required)",
+      "request": {
+        "type": "object",
+        "required": ["name", "source_type"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "source_type": {
+            "type": "string",
+            "enum": ["google_sheets", "csv", "excel"]
+          },
+          "source_url": { "type": "string" },
+          "use_ml_processing": {
+            "type": "boolean",
+            "default": true,
+            "description": "NEW: Enable ML-based parsing for this supplier"
+          }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "IngestionJob": {
+      "type": "object",
+      "properties": {
+        "job_id": { "type": "string", "format": "uuid" },
+        "supplier_id": { "type": "string", "format": "uuid" },
+        "supplier_name": { "type": "string" },
+        "phase": {
+          "type": "string",
+          "enum": ["downloading", "analyzing", "matching", "complete", "failed"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "processing", "completed", "failed"]
+        },
+        "download_progress": {
+          "type": ["object", "null"],
+          "properties": {
+            "bytes_downloaded": { "type": "integer" },
+            "bytes_total": { "type": ["integer", "null"] },
+            "percentage": { "type": "integer" }
+          }
+        },
+        "analysis_progress": {
+          "type": ["object", "null"],
+          "properties": {
+            "items_processed": { "type": "integer" },
+            "items_total": { "type": "integer" },
+            "matches_found": { "type": "integer" },
+            "review_queue": { "type": "integer" },
+            "errors": { "type": "integer" },
+            "percentage": { "type": "integer" }
+          }
+        },
+        "file_type": {
+          "type": "string",
+          "enum": ["excel", "csv", "pdf"]
+        },
+        "error": { "type": ["string", "null"] },
+        "error_details": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "can_retry": {
+          "type": "boolean",
+          "description": "True if job is in failed state and can be retried"
+        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+
+    "SupplierStatus": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "source_type": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "use_ml_processing": {
+          "type": "boolean",
+          "description": "NEW: Whether ML processing is enabled"
+        },
+        "last_parsed_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_status": {
+          "type": "string",
+          "enum": ["success", "partial", "failed", "pending"]
+        },
+        "items_count": { "type": "integer" }
+      }
+    },
+
+    "ParsingLog": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "supplier_id": { "type": "string", "format": "uuid" },
+        "level": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "message": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["python-ingestion", "ml-analyze"],
+          "description": "NEW: Which service generated this log"
+        },
+        "job_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "NEW: Associated job for correlation"
+        },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+
+  "websocket": {
+    "enabled": false,
+    "notes": "Polling-based approach. WebSocket deferred to future phase."
+  }
+}
+
