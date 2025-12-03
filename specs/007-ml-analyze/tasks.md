@@ -187,26 +187,26 @@ Each phase represents a complete, independently testable increment.
 **Goal:** Implement LLM-based product matching with confidence scoring and review queue integration.
 
 **Independent Test Criteria:**
-- [ ] LLM receives structured prompt with item + Top-5 candidates
-- [ ] LLM returns valid JSON with confidence scores
-- [ ] High-confidence matches (>90%) update supplier_items.product_id
-- [ ] Medium-confidence matches (70-90%) insert into match_review_queue
-- [ ] Low-confidence matches (<70%) are logged
-- [ ] Integration test: Match item → verify database updates correct
+- [X] LLM receives structured prompt with item + Top-5 candidates
+- [X] LLM returns valid JSON with confidence scores
+- [X] High-confidence matches (>90%) update supplier_items.product_id
+- [X] Medium-confidence matches (70-90%) insert into match_review_queue
+- [X] Low-confidence matches (<70%) are logged
+- [X] Integration test: Match item → verify database updates correct
 
 ### Tasks
 
-- [ ] T051 [US2] Create src/rag/prompt_templates.py with MATCH_PROMPT template using LangChain ChatPromptTemplate
-- [ ] T052 [US2] Create src/rag/merger_agent.py with MergerAgent class (find_matches method)
-- [ ] T053 [US2] Implement find_matches method: vector search → construct prompt → LLM call → parse JSON
-- [ ] T054 [US2] Implement LLM JSON response parsing with error handling (try/except for JSONDecodeError)
-- [ ] T055 [US2] Implement confidence threshold logic (>0.9 auto, 0.7-0.9 review, <0.7 reject)
-- [ ] T056 [P] [US2] Create src/db/repositories/match_review_repo.py for match_review_queue operations
-- [ ] T057 [US2] Create src/services/matching_service.py to orchestrate VectorService + MergerAgent + database writes
-- [ ] T058 [P] [US2] Write unit tests for MergerAgent in tests/unit/test_merger_agent.py (mock LLM responses)
-- [ ] T059 [P] [US2] Write unit tests for prompt templates in tests/unit/test_prompt_templates.py
-- [ ] T060 [US2] Write integration test for LLM matching in tests/integration/test_llm_matching.py (real Ollama llama3)
-- [ ] T061 [US2] Write integration test for matching service in tests/integration/test_matching_service.py (end-to-end)
+- [X] T051 [US2] Create src/rag/prompt_templates.py with MATCH_PROMPT template using LangChain ChatPromptTemplate
+- [X] T052 [US2] Create src/rag/merger_agent.py with MergerAgent class (find_matches method)
+- [X] T053 [US2] Implement find_matches method: vector search → construct prompt → LLM call → parse JSON
+- [X] T054 [US2] Implement LLM JSON response parsing with error handling (try/except for JSONDecodeError)
+- [X] T055 [US2] Implement confidence threshold logic (>0.9 auto, 0.7-0.9 review, <0.7 reject)
+- [X] T056 [P] [US2] Create src/db/repositories/match_review_repo.py for match_review_queue operations
+- [X] T057 [US2] Create src/services/matching_service.py to orchestrate VectorService + MergerAgent + database writes
+- [X] T058 [P] [US2] Write unit tests for MergerAgent in tests/unit/test_merger_agent.py (mock LLM responses)
+- [X] T059 [P] [US2] Write unit tests for prompt templates in tests/unit/test_prompt_templates.py
+- [X] T060 [US2] Write integration test for LLM matching in tests/integration/test_llm_matching.py (real Ollama llama3)
+- [X] T061 [US2] Write integration test for matching service in tests/integration/test_matching_service.py (end-to-end)
 
 **Dependencies:** Phase 4 (US3: Vector Embeddings)
 
@@ -318,10 +318,10 @@ Phase 7: Polish
 - [X] Similarity search returns Top-5 in <500ms (achieved: ~1ms warm, <5ms cold)
 
 ### Phase 5 (US2): LLM Matching ✓ Complete When:
-- [ ] Item + Top-5 candidates → LLM prompt → JSON response
-- [ ] >90% confidence → supplier_items.product_id updated
-- [ ] 70-90% confidence → match_review_queue entry
-- [ ] <70% confidence → parsing_logs entry
+- [X] Item + Top-5 candidates → LLM prompt → JSON response
+- [X] >90% confidence → supplier_items.product_id updated
+- [X] 70-90% confidence → match_review_queue entry
+- [X] <70% confidence → parsing_logs entry
 
 ### Phase 6 (US4): Job Status API ✓ Complete When:
 - [ ] POST /analyze/file → job_id returned, task enqueued
