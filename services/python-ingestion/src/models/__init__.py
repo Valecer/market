@@ -47,6 +47,20 @@ from src.models.extraction import (
     ExtractionResult,
 )
 
+# ML integration models (Phase 8)
+from src.models.ml_models import (
+    FileType,
+    SourceType as MLSourceType,
+    JobStatus,
+    JobPhase,
+    MLAnalyzeRequest,
+    MLAnalyzeResponse,
+    MLJobStatus,
+    JobProgressUpdate,
+    FileMetadata,
+    DownloadTaskMessage,
+)
+
 __all__ = [
     # Existing models
     "ParsedSupplierItem",
@@ -85,5 +99,16 @@ __all__ = [
     "DimensionsCm",
     "ExtractedFeatures",
     "ExtractionResult",
+    # ML integration models (Phase 8)
+    "FileType",
+    "MLSourceType",
+    "JobStatus",
+    "JobPhase",
+    "MLAnalyzeRequest",
+    "MLAnalyzeResponse",
+    "MLJobStatus",
+    "JobProgressUpdate",
+    "FileMetadata",
+    "DownloadTaskMessage",
 ]
 

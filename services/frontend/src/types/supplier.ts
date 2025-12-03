@@ -19,6 +19,7 @@ export type SourceType = 'google_sheets' | 'csv' | 'excel'
 
 /**
  * Supplier entity
+ * Extended in Phase 8 with use_ml_processing flag
  */
 export interface Supplier {
   id: string
@@ -27,6 +28,7 @@ export interface Supplier {
   source_url: string | null
   contact_email: string | null
   is_active: boolean
+  use_ml_processing: boolean
   notes: string | null
   items_count: number
   created_at: string
@@ -39,6 +41,7 @@ export interface Supplier {
 
 /**
  * POST /api/v1/admin/suppliers request
+ * Extended in Phase 8 with use_ml_processing flag
  */
 export interface CreateSupplierRequest {
   name: string
@@ -46,11 +49,13 @@ export interface CreateSupplierRequest {
   source_url?: string
   contact_email?: string
   is_active?: boolean
+  use_ml_processing?: boolean
   notes?: string
 }
 
 /**
  * PUT /api/v1/admin/suppliers/:id request
+ * Extended in Phase 8 with use_ml_processing flag
  */
 export interface UpdateSupplierRequest {
   name?: string
@@ -58,6 +63,7 @@ export interface UpdateSupplierRequest {
   source_url?: string
   contact_email?: string
   is_active?: boolean
+  use_ml_processing?: boolean
   notes?: string
 }
 

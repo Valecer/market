@@ -4,6 +4,7 @@
  * TypeScript types for the Admin Control Panel & Master Sync Scheduler feature.
  *
  * @see /specs/006-admin-sync-scheduler/plan/data-model.md
+ * @see /specs/008-ml-ingestion-integration/plan/data-model.md
  */
 
 // =============================================================================
@@ -24,6 +25,26 @@ export type SyncState = 'idle' | 'syncing_master' | 'processing_suppliers'
  */
 export type SupplierSyncStatus = 'success' | 'error' | 'pending' | 'inactive'
 
+/**
+ * Job processing phases for multi-phase status display (Phase 8)
+ * - downloading: File is being fetched from source
+ * - analyzing: ML service is parsing the file
+ * - matching: ML service is matching items to products
+ * - complete: Processing finished successfully
+ * - failed: Processing failed (may be retryable)
+ */
+export type JobPhase = 'downloading' | 'analyzing' | 'matching' | 'complete' | 'failed'
+
+/**
+ * Job status from ML service
+ */
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+/**
+ * Supported file types for ML processing
+ */
+export type FileType = 'excel' | 'csv' | 'pdf'
+
 // =============================================================================
 // Data Types
 // =============================================================================
@@ -36,8 +57,56 @@ export interface SyncProgress {
   total: number
 }
 
+// =============================================================================
+// ML Job Progress Types (Phase 8)
+// =============================================================================
+
+/**
+ * Download progress for downloading phase
+ */
+export interface DownloadProgress {
+  bytes_downloaded: number
+  bytes_total: number | null
+  percentage: number
+}
+
+/**
+ * Analysis progress for analyzing/matching phases
+ */
+export interface AnalysisProgress {
+  items_processed: number
+  items_total: number
+  matches_found: number
+  review_queue: number
+  errors: number
+  percentage: number
+}
+
+/**
+ * Ingestion job with multi-phase status tracking
+ */
+export interface IngestionJob {
+  job_id: string
+  supplier_id: string
+  supplier_name: string
+  phase: JobPhase
+  status: JobStatus
+  download_progress: DownloadProgress | null
+  analysis_progress: AnalysisProgress | null
+  file_type: FileType
+  error: string | null
+  error_details: string[]
+  can_retry: boolean
+  retry_count: number
+  max_retries: number
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+}
+
 /**
  * Supplier status in the ingestion status response
+ * Extended in Phase 8 with use_ml_processing flag
  */
 export interface SupplierStatus {
   id: string
@@ -46,6 +115,7 @@ export interface SupplierStatus {
   last_sync_at: string | null
   status: SupplierSyncStatus
   items_count: number
+  use_ml_processing: boolean
 }
 
 /**
@@ -64,12 +134,15 @@ export interface ParsingLogEntry {
 
 /**
  * Full ingestion status response from API
+ * Extended in Phase 8 with jobs array and current_phase
  */
 export interface IngestionStatus {
   sync_state: SyncState
+  current_phase: JobPhase | null
   progress: SyncProgress | null
   last_sync_at: string | null
   next_scheduled_at: string
+  jobs: IngestionJob[]
   suppliers: SupplierStatus[]
   recent_logs: ParsingLogEntry[]
 }

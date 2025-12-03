@@ -26,6 +26,7 @@ export const SourceTypeEnum = Type.Union([
 
 /**
  * POST /api/v1/admin/suppliers request body
+ * Extended in Phase 8 with use_ml_processing flag
  */
 export const CreateSupplierRequestSchema = Type.Object({
   name: Type.String({
@@ -50,6 +51,12 @@ export const CreateSupplierRequestSchema = Type.Object({
     Type.Boolean({
       default: true,
       description: 'Whether supplier is active for sync',
+    })
+  ),
+  use_ml_processing: Type.Optional(
+    Type.Boolean({
+      default: true,
+      description: 'Whether to use ML pipeline for processing (Phase 8)',
     })
   ),
   notes: Type.Optional(
@@ -100,6 +107,7 @@ export const UploadSupplierFileRequestSchema = Type.Object({
 
 /**
  * Supplier entity response
+ * Extended in Phase 8 with use_ml_processing flag
  */
 export const SupplierResponseSchema = Type.Object({
   id: Type.String({ format: 'uuid' }),
@@ -108,6 +116,7 @@ export const SupplierResponseSchema = Type.Object({
   source_url: Type.Union([Type.String(), Type.Null()]),
   contact_email: Type.Union([Type.String(), Type.Null()]),
   is_active: Type.Boolean(),
+  use_ml_processing: Type.Boolean({ description: 'Whether ML processing is enabled' }),
   notes: Type.Union([Type.String(), Type.Null()]),
   items_count: Type.Number({ minimum: 0 }),
   created_at: Type.String(),

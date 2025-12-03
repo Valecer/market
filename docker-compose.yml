@@ -58,6 +58,12 @@ services:
       UPLOADS_DIR: /shared/uploads
       QUEUE_NAME: ${QUEUE_NAME:-price-ingestion-queue}
       DLQ_NAME: ${DLQ_NAME:-price-ingestion-dlq}
+      # Phase 8: ML-Analyze Integration
+      ML_ANALYZE_URL: ${ML_ANALYZE_URL:-http://ml-analyze:8001}
+      USE_ML_PROCESSING: ${USE_ML_PROCESSING:-true}
+      ML_POLL_INTERVAL_SECONDS: ${ML_POLL_INTERVAL_SECONDS:-5}
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
+      FILE_CLEANUP_TTL_HOURS: ${FILE_CLEANUP_TTL_HOURS:-24}
     volumes:
       - ./services/python-ingestion:/app
       - ./credentials:/app/credentials:ro
@@ -96,6 +102,8 @@ services:
       DB_POOL_MIN: ${DB_POOL_MIN:-5}
       DB_POOL_MAX: ${DB_POOL_MAX:-20}
       UPLOADS_DIR: /shared/uploads
+      # Phase 8: ML-Analyze Integration
+      ML_ANALYZE_URL: ${ML_ANALYZE_URL:-http://ml-analyze:8001}
     volumes:
       - ./uploads:/shared/uploads
     ports:

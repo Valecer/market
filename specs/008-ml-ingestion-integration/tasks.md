@@ -30,11 +30,11 @@ This task list implements the refactored ingestion pipeline where `python-ingest
 
 **Independent Test:** Both services can access shared volume; internal network works.
 
-- [ ] T001 Add environment variables to `services/python-ingestion/.env.example`: ML_ANALYZE_URL, USE_ML_PROCESSING
-- [ ] T002 Add environment variables to `services/bun-api/.env.example`: ML_ANALYZE_URL
-- [ ] T003 [P] Verify shared volume access from worker container via docker-compose exec
-- [ ] T004 [P] Verify shared volume access from ml-analyze container via docker-compose exec
-- [ ] T005 [P] Test internal network connectivity: worker → ml-analyze:8001/health
+- [X] T001 Add environment variables to `services/python-ingestion/.env.example`: ML_ANALYZE_URL, USE_ML_PROCESSING
+- [X] T002 Add environment variables to `services/bun-api/.env.example`: ML_ANALYZE_URL
+- [X] T003 [P] Verify shared volume access from worker container via docker-compose exec
+- [X] T004 [P] Verify shared volume access from ml-analyze container via docker-compose exec
+- [X] T005 [P] Test internal network connectivity: worker → ml-analyze:8001/health
 
 ---
 
@@ -46,24 +46,24 @@ This task list implements the refactored ingestion pipeline where `python-ingest
 
 ### Python Models
 
-- [ ] T006 Create Pydantic model `MLAnalyzeRequest` in `services/python-ingestion/src/models/ml_models.py`
-- [ ] T007 Create Pydantic model `MLAnalyzeResponse` in `services/python-ingestion/src/models/ml_models.py`
-- [ ] T008 Create Pydantic model `MLJobStatus` in `services/python-ingestion/src/models/ml_models.py`
-- [ ] T009 Create Pydantic model `JobProgressUpdate` in `services/python-ingestion/src/models/ml_models.py`
-- [ ] T010 [P] Create Pydantic model `FileMetadata` for sidecar JSON in `services/python-ingestion/src/models/ml_models.py`
+- [X] T006 Create Pydantic model `MLAnalyzeRequest` in `services/python-ingestion/src/models/ml_models.py`
+- [X] T007 Create Pydantic model `MLAnalyzeResponse` in `services/python-ingestion/src/models/ml_models.py`
+- [X] T008 Create Pydantic model `MLJobStatus` in `services/python-ingestion/src/models/ml_models.py`
+- [X] T009 Create Pydantic model `JobProgressUpdate` in `services/python-ingestion/src/models/ml_models.py`
+- [X] T010 [P] Create Pydantic model `FileMetadata` for sidecar JSON in `services/python-ingestion/src/models/ml_models.py`
 
 ### TypeScript Types
 
-- [ ] T011 [P] Create TypeScript type `JobPhase` in `services/frontend/src/types/ingestion.ts`
-- [ ] T012 [P] Create TypeScript interface `DownloadProgress` in `services/frontend/src/types/ingestion.ts`
-- [ ] T013 [P] Create TypeScript interface `AnalysisProgress` in `services/frontend/src/types/ingestion.ts`
-- [ ] T014 [P] Create TypeScript interface `IngestionJob` in `services/frontend/src/types/ingestion.ts`
-- [ ] T015 [P] Extend TypeScript interface `Supplier` with `use_ml_processing` in `services/frontend/src/types/supplier.ts`
+- [X] T011 [P] Create TypeScript type `JobPhase` in `services/frontend/src/types/ingestion.ts`
+- [X] T012 [P] Create TypeScript interface `DownloadProgress` in `services/frontend/src/types/ingestion.ts`
+- [X] T013 [P] Create TypeScript interface `AnalysisProgress` in `services/frontend/src/types/ingestion.ts`
+- [X] T014 [P] Create TypeScript interface `IngestionJob` in `services/frontend/src/types/ingestion.ts`
+- [X] T015 [P] Extend TypeScript interface `Supplier` with `use_ml_processing` in `services/frontend/src/types/supplier.ts`
 
 ### Bun API Types
 
-- [ ] T016 [P] Create TypeBox schema `IngestionJobSchema` in `services/bun-api/src/schemas/ingestion.schema.ts`
-- [ ] T017 [P] Create TypeBox schema `RetryJobSchema` in `services/bun-api/src/schemas/ingestion.schema.ts`
+- [X] T016 [P] Create TypeBox schema `IngestionJobSchema` in `services/bun-api/src/types/ingestion.types.ts`
+- [X] T017 [P] Create TypeBox schema `RetryJobSchema` in `services/bun-api/src/types/ingestion.types.ts`
 
 ---
 

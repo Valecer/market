@@ -188,6 +188,34 @@ class Settings(BaseSettings):
         le=168,
         description="Interval between automatic Master Sheet syncs (default: 8 hours)"
     )
+    
+    # ML-Analyze Integration (Phase 8)
+    ml_analyze_url: str = Field(
+        default="http://ml-analyze:8001",
+        description="URL of the ML-Analyze service for file processing"
+    )
+    use_ml_processing: bool = Field(
+        default=True,
+        description="Enable ML-based file processing (set to false for legacy pipeline)"
+    )
+    ml_poll_interval_seconds: int = Field(
+        default=5,
+        ge=1,
+        le=60,
+        description="Interval between ML job status polling (seconds)"
+    )
+    max_file_size_mb: int = Field(
+        default=50,
+        ge=1,
+        le=500,
+        description="Maximum file size allowed for upload (MB)"
+    )
+    file_cleanup_ttl_hours: int = Field(
+        default=24,
+        ge=1,
+        le=168,
+        description="Hours before uploaded files are cleaned up"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
