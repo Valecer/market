@@ -17,8 +17,7 @@ from uuid import UUID
 from arq.connections import ArqRedis
 
 from src.config import settings
-from src.db.base import async_session_maker
-from src.db.operations import log_parsing_error
+from src.db.operations import log_parsing_event
 from src.services.ml_client import (
     MLClient,
     MLServiceUnavailableError,
@@ -49,40 +48,6 @@ POLL_BATCH_SIZE = 10  # Number of jobs to poll per cycle
 # =============================================================================
 # Parsing Log Helper
 # =============================================================================
-
-
-async def _log_parsing_event(
-    task_id: str,
-    supplier_id: Optional[UUID],
-    error_type: str,
-    message: str,
-) -> None:
-    """
-    Log a parsing event to the database for UI visibility.
-
-    Args:
-        task_id: Task identifier (can be job_id)
-        supplier_id: Supplier UUID
-        error_type: Event type (SUCCESS, ERROR, etc.)
-        message: Human-readable message
-    """
-    try:
-        async with async_session_maker() as session:
-            await log_parsing_error(
-                session=session,
-                task_id=task_id,
-                supplier_id=supplier_id,
-                error_type=error_type,
-                error_message=message,
-            )
-            await session.commit()
-    except Exception as e:
-        logger.warning(
-            "failed_to_log_parsing_event",
-            task_id=task_id,
-            error_type=error_type,
-            error=str(e),
-        )
 
 
 # =============================================================================
@@ -178,7 +143,7 @@ async def _sync_ml_job_status(
                 items_processed=ml_status.items_processed,
             )
             # Log to parsing_logs for UI visibility
-            await _log_parsing_event(
+            await log_parsing_event(
                 task_id=str(job_id),
                 supplier_id=supplier_id_uuid,
                 error_type="SUCCESS",
@@ -202,7 +167,7 @@ async def _sync_ml_job_status(
                 errors=ml_status.errors,
             )
             # Log to parsing_logs for UI visibility
-            await _log_parsing_event(
+            await log_parsing_event(
                 task_id=str(job_id),
                 supplier_id=supplier_id_uuid,
                 error_type="ERROR",

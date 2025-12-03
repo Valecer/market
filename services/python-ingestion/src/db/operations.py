@@ -311,6 +311,44 @@ async def log_parsing_error(
         raise DatabaseError(f"Failed to log parsing error: {e}") from e
 
 
+async def log_parsing_event(
+    task_id: str,
+    supplier_id: Optional[uuid.UUID],
+    error_type: str,
+    message: str,
+) -> None:
+    """
+    Log a parsing event to the database for UI visibility.
+    
+    Convenience wrapper that creates a session and calls log_parsing_error.
+    This enables events from the ML pipeline to appear in LiveLogViewer.
+    
+    Args:
+        task_id: Task identifier
+        supplier_id: Supplier UUID
+        error_type: Event type (INFO, SUCCESS, WARNING, ERROR, etc.)
+        message: Human-readable message
+    """
+    try:
+        async with async_session_maker() as session:
+            await log_parsing_error(
+                session=session,
+                task_id=task_id,
+                supplier_id=supplier_id,
+                error_type=error_type,
+                error_message=message,
+            )
+            await session.commit()
+    except Exception as e:
+        # Don't fail the task if logging fails
+        logger.warning(
+            "failed_to_log_parsing_event",
+            task_id=task_id,
+            error_type=error_type,
+            error=str(e),
+        )
+
+
 async def clear_parsing_logs(
     session: AsyncSession,
     keep_last_n: int = 0,

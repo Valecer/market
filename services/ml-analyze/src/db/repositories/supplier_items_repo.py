@@ -37,12 +37,12 @@ class SupplierItemsRepository:
         id: UUID (PK)
         supplier_id: UUID (FK → suppliers)
         product_id: UUID | None (FK → products)
+        supplier_sku: str (required)
         name: str
-        price: Decimal
-        sku: str | None
+        current_price: Decimal
         characteristics: JSONB
-        match_status: str ('pending_match', 'matched', 'review', 'new_product')
-        source_type: str ('ml_analyzed', 'parsed', etc.)
+        match_status: enum ('unmatched', 'matched', 'review', 'auto_matched')
+        last_ingested_at: datetime
         created_at: datetime
         updated_at: datetime
     """
@@ -68,18 +68,18 @@ class SupplierItemsRepository:
         Args:
             supplier_id: Reference to suppliers table
             row: Normalized row data
-            source_type: Source identifier (default: 'ml_analyzed')
+            source_type: Source identifier (stored in characteristics._source_type)
 
         Returns:
             Created item's UUID
         """
         query = text("""
             INSERT INTO supplier_items (
-                supplier_id, name, price, sku, characteristics,
-                match_status, source_type, created_at, updated_at
+                supplier_id, name, current_price, supplier_sku, characteristics,
+                match_status, last_ingested_at, created_at, updated_at
             ) VALUES (
                 :supplier_id, :name, :price, :sku, :characteristics::jsonb,
-                'pending_match', :source_type, NOW(), NOW()
+                'unmatched', NOW(), NOW(), NOW()
             )
             RETURNING id
         """)
@@ -94,18 +94,22 @@ class SupplierItemsRepository:
             characteristics["_unit"] = row.unit
         if row.description:
             characteristics["_description"] = row.description
+        # Store source_type in characteristics since column doesn't exist
+        characteristics["_source_type"] = source_type
 
         import json
+
+        # Generate SKU if not provided (required field)
+        sku = row.sku or f"ML-{supplier_id}-{hash(row.name) % 10000000:07d}"
 
         result = await self._session.execute(
             query,
             {
                 "supplier_id": str(supplier_id),
                 "name": row.name,
-                "price": float(row.price) if row.price else None,
-                "sku": row.sku,
+                "price": float(row.price) if row.price else 0.0,
+                "sku": sku,
                 "characteristics": json.dumps(characteristics),
-                "source_type": source_type,
             },
         )
 
@@ -127,7 +131,7 @@ class SupplierItemsRepository:
         Args:
             supplier_id: Reference to suppliers table
             rows: List of normalized rows
-            source_type: Source identifier
+            source_type: Source identifier (stored in characteristics._source_type)
 
         Returns:
             List of created item UUIDs
@@ -138,7 +142,7 @@ class SupplierItemsRepository:
         import json
 
         values = []
-        for row in rows:
+        for idx, row in enumerate(rows):
             characteristics = row.characteristics.copy() if row.characteristics else {}
             if row.category:
                 characteristics["_category"] = row.category
@@ -148,30 +152,34 @@ class SupplierItemsRepository:
                 characteristics["_unit"] = row.unit
             if row.description:
                 characteristics["_description"] = row.description
+            # Store source_type in characteristics since column doesn't exist
+            characteristics["_source_type"] = source_type
+
+            # Generate SKU if not provided (required field)
+            sku = row.sku or f"ML-{supplier_id}-{idx:05d}-{hash(row.name) % 10000:04d}"
 
             values.append({
                 "supplier_id": str(supplier_id),
                 "name": row.name,
-                "price": float(row.price) if row.price else None,
-                "sku": row.sku,
+                "price": float(row.price) if row.price else 0.0,
+                "sku": sku,
                 "characteristics": json.dumps(characteristics),
-                "source_type": source_type,
             })
 
         # Build multi-row INSERT
         query = text("""
             INSERT INTO supplier_items (
-                supplier_id, name, price, sku, characteristics,
-                match_status, source_type, created_at, updated_at
+                supplier_id, name, current_price, supplier_sku, characteristics,
+                match_status, last_ingested_at, created_at, updated_at
             )
             SELECT
                 (v->>'supplier_id')::uuid,
                 v->>'name',
-                (v->>'price')::numeric,
+                COALESCE((v->>'price')::numeric, 0),
                 v->>'sku',
                 (v->>'characteristics')::jsonb,
-                'pending_match',
-                v->>'source_type',
+                'unmatched',
+                NOW(),
                 NOW(),
                 NOW()
             FROM jsonb_array_elements(CAST(:values AS jsonb)) AS v
@@ -240,9 +248,9 @@ class SupplierItemsRepository:
             Item dict or None if not found
         """
         query = text("""
-            SELECT id, supplier_id, product_id, name, price, sku,
-                   characteristics, match_status, source_type,
-                   created_at, updated_at
+            SELECT id, supplier_id, product_id, name, current_price as price,
+                   supplier_sku as sku, characteristics, match_status,
+                   last_ingested_at, created_at, updated_at
             FROM supplier_items
             WHERE id = :item_id
         """)
@@ -258,7 +266,7 @@ class SupplierItemsRepository:
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         """
-        Get items pending matching.
+        Get items pending matching (unmatched status).
 
         Args:
             supplier_id: Optional filter by supplier
@@ -269,9 +277,10 @@ class SupplierItemsRepository:
         """
         if supplier_id:
             query = text("""
-                SELECT id, supplier_id, name, price, sku, characteristics
+                SELECT id, supplier_id, name, current_price as price,
+                       supplier_sku as sku, characteristics
                 FROM supplier_items
-                WHERE match_status = 'pending_match'
+                WHERE match_status = 'unmatched'
                   AND supplier_id = :supplier_id
                 ORDER BY created_at DESC
                 LIMIT :limit
@@ -282,9 +291,10 @@ class SupplierItemsRepository:
             )
         else:
             query = text("""
-                SELECT id, supplier_id, name, price, sku, characteristics
+                SELECT id, supplier_id, name, current_price as price,
+                       supplier_sku as sku, characteristics
                 FROM supplier_items
-                WHERE match_status = 'pending_match'
+                WHERE match_status = 'unmatched'
                 ORDER BY created_at DESC
                 LIMIT :limit
             """)
@@ -306,7 +316,8 @@ class SupplierItemsRepository:
             List of item dicts
         """
         query = text("""
-            SELECT si.id, si.supplier_id, si.name, si.price, si.sku, si.characteristics
+            SELECT si.id, si.supplier_id, si.name, si.current_price as price,
+                   si.supplier_sku as sku, si.characteristics
             FROM supplier_items si
             LEFT JOIN product_embeddings pe ON si.id = pe.supplier_item_id
             WHERE pe.id IS NULL

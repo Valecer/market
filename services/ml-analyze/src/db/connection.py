@@ -9,8 +9,7 @@ Provides session management, health checks, and pgvector type registration.
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from pgvector.asyncpg import register_vector
-from sqlalchemy import event, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -79,6 +78,8 @@ class DatabaseManager:
             )
 
             # Create async engine with connection pooling
+            # Note: pgvector types are handled via CAST in SQL queries, no need
+            # for type registration on the Python side
             instance._engine = create_async_engine(
                 settings.database_url,
                 echo=False,
@@ -87,13 +88,10 @@ class DatabaseManager:
                 pool_recycle=3600,  # Recycle connections after 1 hour
                 pool_pre_ping=True,  # Verify connection health before use
                 poolclass=AsyncAdaptedQueuePool,
+                connect_args={
+                    "server_settings": {"jit": "off"},  # Disable JIT for pgvector
+                },
             )
-
-            # Register pgvector types on connect
-            @event.listens_for(instance._engine.sync_engine, "connect")
-            def on_connect(dbapi_connection, connection_record):
-                """Register pgvector types when connection is established."""
-                dbapi_connection.run_async(register_vector)
 
             # Create session factory
             instance._session_factory = async_sessionmaker(

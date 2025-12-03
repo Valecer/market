@@ -227,21 +227,21 @@ This task list implements the refactored ingestion pipeline where `python-ingest
 
 ### Documentation
 
-- [ ] T079 Update `CLAUDE.md` with new architecture diagram showing courier pattern
-- [ ] T080 Add ADR for courier pattern decision in `docs/adr/008-courier-pattern.md`
-- [ ] T081 Update `services/python-ingestion/CLAUDE.md` with ML client documentation
-- [ ] T082 Update `services/frontend/CLAUDE.md` with new components
+- [X] T079 Update `CLAUDE.md` with new architecture diagram showing courier pattern
+- [X] T080 Add ADR for courier pattern decision in `docs/adr/008-courier-pattern.md`
+- [X] T081 Update `services/python-ingestion/CLAUDE.md` with ML client documentation
+- [X] T082 Update `services/frontend/CLAUDE.md` with new components
 
 ### Configuration
 
-- [ ] T083 Add `MAX_FILE_SIZE_MB` environment variable with default 50 in `services/python-ingestion/src/config.py`
-- [ ] T084 Add `ML_POLL_INTERVAL_SECONDS` environment variable with default 5 in `services/python-ingestion/src/config.py`
-- [ ] T085 Add `FILE_CLEANUP_TTL_HOURS` environment variable with default 24 in `services/python-ingestion/src/config.py`
+- [X] T083 Add `MAX_FILE_SIZE_MB` environment variable with default 50 in `services/python-ingestion/src/config.py`
+- [X] T084 Add `ML_POLL_INTERVAL_SECONDS` environment variable with default 5 in `services/python-ingestion/src/config.py`
+- [X] T085 Add `FILE_CLEANUP_TTL_HOURS` environment variable with default 24 in `services/python-ingestion/src/config.py`
 
 ### Code Cleanup
 
-- [ ] T086 Add deprecation warnings to old `parse_task` function in `services/python-ingestion/src/tasks/`
-- [ ] T087 Remove unused regex parsing imports from refactored parsers
+- [X] T086 Add deprecation warnings to old `parse_task` function in `services/python-ingestion/src/tasks/`
+- [X] T087 Remove unused regex parsing imports from refactored parsers (NOTE: Regex imports are still used by legacy pipeline, kept for backward compatibility)
 
 ---
 

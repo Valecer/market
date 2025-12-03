@@ -93,7 +93,9 @@ async def process_file_analysis(
         await job_service.mark_started(job_id)
 
         # Resolve file path
-        file_path = _resolve_file_path(file_url, settings)
+        # Note: file_url is always an absolute path from python-ingestion
+        # (e.g., /shared/uploads/job_id_timestamp_file.xlsx)
+        file_path = Path(file_url)
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -334,40 +336,6 @@ async def process_batch_match(
         result["errors"].append(error_msg)
         await job_service.mark_failed(job_id, error_msg)
         return result
-
-
-def _resolve_file_path(file_url: str, settings: Settings) -> Path:
-    """
-    Resolve file URL to local path.
-
-    Handles:
-    - file:// URLs
-    - Absolute paths
-    - Relative paths (resolved against uploads_dir)
-    - HTTP URLs (not implemented, would need download)
-
-    Args:
-        file_url: File URL or path
-        settings: Application settings
-
-    Returns:
-        Path object
-    """
-    # Handle file:// URLs
-    if file_url.startswith("file://"):
-        return Path(file_url[7:])
-
-    # Handle HTTP URLs - not implemented
-    if file_url.startswith(("http://", "https://")):
-        # TODO: Download file to temp location
-        raise NotImplementedError("HTTP file download not yet implemented")
-
-    # Handle absolute paths
-    if file_url.startswith("/"):
-        return Path(file_url)
-
-    # Relative path - resolve against uploads_dir
-    return Path(settings.uploads_dir) / file_url
 
 
 # ============================================================================

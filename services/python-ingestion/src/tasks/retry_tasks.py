@@ -16,8 +16,7 @@ from uuid import UUID
 from arq.connections import ArqRedis
 
 from src.config import settings
-from src.db.base import async_session_maker
-from src.db.operations import log_parsing_error
+from src.db.operations import log_parsing_event
 from src.services.job_state import (
     get_job,
     update_job,
@@ -39,40 +38,6 @@ MAX_RETRIES = 3
 # =============================================================================
 # Helper Functions
 # =============================================================================
-
-
-async def _log_retry_event(
-    task_id: str,
-    supplier_id: Optional[UUID],
-    error_type: str,
-    message: str,
-) -> None:
-    """
-    Log a retry event to the database for UI visibility.
-
-    Args:
-        task_id: Task identifier
-        supplier_id: Supplier UUID
-        error_type: Event type (INFO, SUCCESS, WARNING, ERROR)
-        message: Human-readable message
-    """
-    try:
-        async with async_session_maker() as session:
-            await log_parsing_error(
-                session=session,
-                task_id=task_id,
-                supplier_id=supplier_id,
-                error_type=error_type,
-                error_message=message,
-            )
-            await session.commit()
-    except Exception as e:
-        logger.warning(
-            "failed_to_log_retry_event",
-            task_id=task_id,
-            error_type=error_type,
-            error=str(e),
-        )
 
 
 def _find_existing_file(job_id: str) -> Optional[Path]:
@@ -207,7 +172,7 @@ async def retry_job_task(
         )
 
         # Log retry event
-        await _log_retry_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=UUID(supplier_id) if supplier_id else None,
             error_type="INFO",
@@ -224,7 +189,7 @@ async def retry_job_task(
             )
             
             # Log file reuse
-            await _log_retry_event(
+            await log_parsing_event(
                 task_id=task_id,
                 supplier_id=UUID(supplier_id) if supplier_id else None,
                 error_type="INFO",
@@ -258,7 +223,7 @@ async def retry_job_task(
                 ml_job_id=result.get("ml_job_id"),
             )
             
-            await _log_retry_event(
+            await log_parsing_event(
                 task_id=task_id,
                 supplier_id=UUID(supplier_id) if supplier_id else None,
                 error_type="SUCCESS",
@@ -292,7 +257,7 @@ async def retry_job_task(
                 can_retry=can_retry,
             )
 
-            await _log_retry_event(
+            await log_parsing_event(
                 task_id=task_id,
                 supplier_id=UUID(supplier_id) if supplier_id else None,
                 error_type="ERROR",

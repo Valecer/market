@@ -1,7 +1,8 @@
 """arq worker configuration for processing parse tasks.
 
 This module configures the arq worker with:
-    - parse_task: Data source parsing (Google Sheets, CSV, Excel)
+    - parse_task: Data source parsing (Google Sheets, CSV, Excel) [DEPRECATED]
+    - download_and_trigger_ml: ML-powered file processing (Phase 8) [PREFERRED]
     - match_items_task: Product matching pipeline
     - recalc_product_aggregates_task: Aggregate recalculation
     - enrich_item_task: Feature extraction and enrichment
@@ -15,6 +16,7 @@ from typing import Dict, Any, Optional
 from datetime import timedelta, datetime, timezone
 import structlog
 import asyncio
+import warnings
 from src.config import settings, matching_settings, configure_logging
 # Import parsers package to trigger __init__.py registration
 import src.parsers  # noqa: F401
@@ -61,6 +63,12 @@ RETRY_DELAYS = [1, 5, 25]  # seconds
 async def parse_task(ctx: Dict[str, Any], message: Dict[str, Any] = None, **kwargs) -> Dict[str, Any]:
     """Process a parse task from the queue.
     
+    .. deprecated:: Phase 8
+        This function is deprecated in favor of `download_and_trigger_ml` which
+        delegates parsing to the `ml-analyze` service for better data extraction.
+        Use `download_and_trigger_ml` for new integrations. This function remains
+        available for backward compatibility when `USE_ML_PROCESSING=false`.
+    
     This function is called by arq worker when a task is received from Redis queue.
     It validates the message using ParseTaskMessage, creates parser instance,
     validates config, and parses the data source.
@@ -85,6 +93,20 @@ async def parse_task(ctx: Dict[str, Any], message: Dict[str, Any] = None, **kwar
         ParserError: If parser fails permanently (after max retries)
         DatabaseError: If database operation fails permanently (after max retries)
     """
+    # DEPRECATION WARNING: Phase 8 introduces download_and_trigger_ml as the preferred task
+    warnings.warn(
+        "parse_task is deprecated since Phase 8. Use download_and_trigger_ml "
+        "for ML-powered parsing. Set USE_ML_PROCESSING=true (default) or "
+        "supplier.meta.use_ml_processing=true to use the new pipeline.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    logger.warning(
+        "parse_task_deprecated",
+        message="Using legacy parse_task. Consider migrating to download_and_trigger_ml.",
+        task_id=kwargs.get("task_id") or (message or {}).get("task_id"),
+    )
+    
     # Merge message dict with kwargs (kwargs take precedence)
     task_data = {}
     if message:

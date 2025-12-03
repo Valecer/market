@@ -165,7 +165,7 @@ services:
       REDIS_DB: 0
       OLLAMA_BASE_URL: http://host.docker.internal:11434
       OLLAMA_EMBEDDING_MODEL: nomic-embed-text
-      OLLAMA_LLM_MODEL: llama3
+      OLLAMA_LLM_MODEL: gpt-oss:20b-cloud
       EMBEDDING_DIMENSIONS: 768
       MATCH_CONFIDENCE_AUTO_THRESHOLD: 0.9
       MATCH_CONFIDENCE_REVIEW_THRESHOLD: 0.7

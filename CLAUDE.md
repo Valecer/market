@@ -14,6 +14,7 @@
 | 5 | Frontend i18n | ✅ Complete |
 | 6 | Admin Sync Scheduler | ✅ Complete |
 | 7 | ML-Analyze Service (RAG Pipeline) | ✅ Complete |
+| 8 | ML-Ingestion Integration (Courier Pattern) | ✅ Complete |
 
 **Before implementation:** Use mcp context7 to collect up-to-date documentation.  
 **For frontend:** Use i18n (add text to translation files in `public/locales/`).
@@ -65,14 +66,20 @@
 ```
 marketbel/
 ├── services/
-│   ├── python-ingestion/    # Phases 1, 4, 6 - Worker
+│   ├── python-ingestion/    # Phases 1, 4, 6, 8 - Worker (Data Courier)
 │   │   ├── src/
 │   │   │   ├── db/models/   # SQLAlchemy ORM
 │   │   │   ├── parsers/     # Data source parsers
-│   │   │   ├── services/    # Matching, extraction (Phase 4)
+│   │   │   ├── services/    # Matching, ML client (Phase 8)
+│   │   │   │   ├── ml_client.py      # HTTP client for ml-analyze
+│   │   │   │   └── job_state.py      # Redis job state management
 │   │   │   └── tasks/       # arq tasks
+│   │   │       ├── download_tasks.py # File download + ML trigger (Phase 8)
+│   │   │       ├── ml_polling_tasks.py # ML job status polling (Phase 8)
+│   │   │       ├── cleanup_tasks.py  # Shared file cleanup (Phase 8)
+│   │   │       └── retry_tasks.py    # Failed job retry (Phase 8)
 │   │   └── migrations/      # Alembic
-│   ├── ml-analyze/          # Phase 7 - AI Service
+│   ├── ml-analyze/          # Phase 7 - AI Service (Intelligence)
 │   │   └── src/
 │   │       ├── api/         # FastAPI endpoints
 │   │       ├── db/          # Repositories, models
@@ -82,14 +89,19 @@ marketbel/
 │   ├── bun-api/             # Phase 2 - API
 │   │   └── src/
 │   │       ├── controllers/ # auth/, catalog/, admin/
-│   │       ├── services/    # Business logic
+│   │       ├── services/    # Business logic, job.service.ts (Phase 8)
 │   │       └── db/          # Drizzle schemas
-│   └── frontend/            # Phases 3, 5 - UI
+│   └── frontend/            # Phases 3, 5, 8 - UI
 │       └── src/
 │           ├── components/  # catalog/, admin/, cart/, shared/
+│           │   └── admin/
+│           │       ├── JobPhaseIndicator.tsx  # Phase 8
+│           │       └── SupplierStatusTable.tsx # Phase 8 enhancements
 │           ├── pages/       # Route components
 │           ├── hooks/       # Custom hooks
+│           │   └── useRetryJob.ts  # Phase 8
 │           └── lib/         # API client, utils
+├── uploads/                 # Shared Docker volume for file handoff
 ├── specs/                   # Feature specifications
 │   ├── 001-data-ingestion-infra/
 │   ├── 002-api-layer/
@@ -97,7 +109,8 @@ marketbel/
 │   ├── 004-product-matching-pipeline/
 │   ├── 005-frontend-i18n/
 │   ├── 006-admin-sync-scheduler/
-│   └── 007-ml-analyze/
+│   ├── 007-ml-analyze/
+│   └── 008-ml-ingestion-integration/
 └── docker-compose.yml
 ```
 
@@ -159,7 +172,7 @@ bun run type-check
 
 ---
 
-## Phase 6: Admin Sync Scheduler (Current)
+## Phase 6: Admin Sync Scheduler
 
 ### Purpose
 Centralized admin panel for monitoring and controlling supplier data ingestion with automated scheduled synchronization from Master Google Sheet.
@@ -171,10 +184,6 @@ Centralized admin panel for monitoring and controlling supplier data ingestion w
 - **Scheduled Sync:** Default 8h interval via `SYNC_INTERVAL_HOURS`
 - **Admin UI:** Status dashboard, manual sync trigger, live log stream
 
-### New API Endpoints
-- `POST /admin/sync/trigger` - Manual sync trigger (admin only)
-- `GET /admin/sync/status` - Current sync state + progress + logs
-
 ### Key Files (Phase 6)
 - `services/python-ingestion/src/parsers/master_sheet_parser.py`
 - `services/python-ingestion/src/tasks/sync_tasks.py`
@@ -183,11 +192,10 @@ Centralized admin panel for monitoring and controlling supplier data ingestion w
 
 ### Spec Reference
 - `/specs/006-admin-sync-scheduler/spec.md`
-- `/specs/006-admin-sync-scheduler/plan/`
 
 ---
 
-## Phase 7: ML-Analyze Service (Planned)
+## Phase 7: ML-Analyze Service
 
 ### Purpose
 AI-powered service for parsing complex unstructured supplier data (PDFs with tables, Excel with merged cells) using RAG (Retrieval-Augmented Generation) pipeline with local LLM for intelligent product matching.
@@ -198,7 +206,6 @@ AI-powered service for parsing complex unstructured supplier data (PDFs with tab
 - **Semantic Search:** pgvector with IVFFLAT indexing for cosine similarity search
 - **LLM Matching:** llama3 (Ollama) for reasoning-based product matching with confidence scores
 - **Confidence Thresholds:** >90% auto-match, 70-90% review queue, <70% reject
-- **Background Jobs:** arq-based async processing with job status tracking
 
 ### API Endpoints
 - `POST /analyze/file` - Trigger file analysis (returns job_id)
@@ -215,8 +222,142 @@ AI-powered service for parsing complex unstructured supplier data (PDFs with tab
 
 ### Spec Reference
 - `/specs/007-ml-analyze/spec.md`
-- `/specs/007-ml-analyze/plan/`
-- `/specs/007-ml-analyze/plan/quickstart.md` - 15-minute setup guide
+
+---
+
+## Phase 8: ML-Ingestion Integration (Courier Pattern)
+
+### Purpose
+Refactored ingestion pipeline where `python-ingestion` acts as a **data courier** (fetching/downloading files) and delegates all parsing intelligence to the `ml-analyze` service for superior data extraction quality.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Admin UI (React)                                   │
+│  ┌──────────────┐  ┌───────────────────┐  ┌─────────────────────────────┐   │
+│  │ Upload File  │  │ JobPhaseIndicator │  │ Retry Button (failed jobs)  │   │
+│  └──────┬───────┘  └─────────┬─────────┘  └──────────────┬──────────────┘   │
+└─────────┼───────────────────┼────────────────────────────┼──────────────────┘
+          │                   │ Poll status                │
+          ▼                   ▼                            ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Bun API (ElysiaJS)                                 │
+│  POST /admin/suppliers    GET /admin/sync/status    POST /admin/jobs/:id/retry │
+└─────────┬───────────────────────────────────────────────┬──────────────────┘
+          │ Enqueue task                                  │ Enqueue retry
+          ▼                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Redis Queue                                     │
+│  ┌────────────────┐  ┌──────────────────┐  ┌────────────────────────────┐   │
+│  │ job:{job_id}   │  │ download tasks   │  │ retry_job_task             │   │
+│  │ (phase, progress)│ │ poll_ml_status   │  │ cleanup_shared_files       │   │
+│  └────────────────┘  └──────────────────┘  └────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      Python Worker (Data Courier)                            │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ download_and_trigger_ml task                                          │   │
+│  │   1. Download file (Google Sheets → XLSX, CSV, Excel)                 │   │
+│  │   2. Save to /shared/uploads/{supplier_id}_{timestamp}_{filename}     │   │
+│  │   3. Write metadata sidecar (.meta.json)                              │   │
+│  │   4. HTTP POST → ml-analyze /analyze/file                             │   │
+│  │   5. Update Redis job state: phase=downloading → analyzing            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌────────────────────────┐     │
+│  │ poll_ml_status   │  │ cleanup_files    │  │ retry_job_task         │     │
+│  │ (every 10s)      │  │ (every 6h, 24h   │  │ (max 3 retries)        │     │
+│  │                  │  │  TTL)            │  │                        │     │
+│  └──────────────────┘  └──────────────────┘  └────────────────────────┘     │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+                   ┌─────────────────┼─────────────────┐
+                   │                 │                 │
+                   ▼                 ▼                 ▼
+┌──────────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐
+│  Shared Volume       │  │  HTTP REST       │  │  PostgreSQL              │
+│  /shared/uploads     │  │  (Internal       │  │  (Results)               │
+│  (Docker volume)     │  │   Docker net)    │  │                          │
+└──────────┬───────────┘  └────────┬─────────┘  └──────────────────────────┘
+           │                       │                          ▲
+           │ Read file             │ POST /analyze/file       │ Save items
+           ▼                       ▼                          │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      ML-Analyze Service (Intelligence)                       │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │ /analyze/file endpoint                                              │     │
+│  │   1. Read file from shared volume                                   │     │
+│  │   2. Parse (PDF via pymupdf4llm, Excel via openpyxl)                │     │
+│  │   3. Generate embeddings (nomic-embed-text via Ollama)              │     │
+│  │   4. Match products (llama3 via Ollama, pgvector similarity)        │     │
+│  │   5. Save to supplier_items table                                   │     │
+│  │   6. Return job status with progress                                │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+```
+[Admin Upload] → [Bun API] → [Redis: job created] → [Worker picks up]
+                                                           │
+                                                           ▼
+[Google Sheets API] ← authenticate ← [Worker: download_task]
+         │                                    │
+         │ export XLSX                        │ save file
+         ▼                                    ▼
+[/shared/uploads/file.xlsx]           [Redis: phase=downloading]
+         │                                    │
+         │                                    │ trigger ML
+         ▼                                    ▼
+[ml-analyze reads file] ← HTTP POST ← [Worker: ml_client]
+         │                                    │
+         │ parse + match                      │ poll status
+         ▼                                    ▼
+[PostgreSQL: supplier_items] → [Redis: phase=complete] → [Frontend polls]
+```
+
+### Key Features
+- **Courier Pattern:** `python-ingestion` downloads files only; no parsing logic
+- **Shared Volume:** Zero-copy file handoff via Docker volume (`/shared/uploads`)
+- **Multi-Phase Status:** Downloading → Analyzing → Matching → Complete/Failed
+- **ML Toggle:** Per-supplier `use_ml_processing` flag (default: true)
+- **Retry Logic:** Failed jobs can be retried via Admin UI (max 3 attempts)
+- **File Cleanup:** Automatic 24-hour TTL cleanup cron task
+
+### API Endpoints (Phase 8)
+- `POST /admin/jobs/:id/retry` - Retry a failed job (admin only)
+- `GET /admin/sync/status` - Extended with `jobs` array and `current_phase`
+
+### Environment Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ML_ANALYZE_URL` | `http://ml-analyze:8001` | ML service URL |
+| `USE_ML_PROCESSING` | `true` | Global toggle for ML pipeline |
+| `ML_POLL_INTERVAL_SECONDS` | `5` | Status polling interval |
+| `MAX_FILE_SIZE_MB` | `50` | Maximum upload file size |
+| `FILE_CLEANUP_TTL_HOURS` | `24` | File retention before cleanup |
+
+### Key Files (Phase 8)
+- `services/python-ingestion/src/services/ml_client.py` - HTTP client for ml-analyze
+- `services/python-ingestion/src/services/job_state.py` - Redis job state helpers
+- `services/python-ingestion/src/tasks/download_tasks.py` - Download + ML trigger
+- `services/python-ingestion/src/tasks/ml_polling_tasks.py` - ML status polling
+- `services/python-ingestion/src/tasks/cleanup_tasks.py` - File cleanup cron
+- `services/python-ingestion/src/tasks/retry_tasks.py` - Job retry logic
+- `services/bun-api/src/services/job.service.ts` - Job retry service
+- `services/frontend/src/components/admin/JobPhaseIndicator.tsx` - Phase UI
+- `services/frontend/src/hooks/useRetryJob.ts` - Retry mutation hook
+
+### Spec Reference
+- `/specs/008-ml-ingestion-integration/spec.md`
+- `/specs/008-ml-ingestion-integration/plan.md`
+- `/docs/adr/008-courier-pattern.md` - Architecture Decision Record
 
 ---
 
@@ -242,6 +383,7 @@ AI-powered service for parsing complex unstructured supplier data (PDFs with tab
 3. **Type safety:** End-to-end types from DB → API → Frontend
 4. **KISS:** No WebSockets (polling), no Redux, no complex abstractions
 5. **Queue-based:** Python worker consumes tasks, API publishes
+6. **Courier Pattern (Phase 8):** `python-ingestion` acts as data courier; `ml-analyze` handles intelligence (see [ADR-008](/docs/adr/008-courier-pattern.md))
 
 ---
 

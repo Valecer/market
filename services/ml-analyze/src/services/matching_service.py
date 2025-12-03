@@ -201,23 +201,30 @@ class MatchingService:
             return result
 
         except LLMError as e:
+            # Rollback to reset transaction state before any DB operations
+            await self._session.rollback()
             logger.error(
                 "LLM error during matching",
                 supplier_item_id=str(supplier_item_id),
                 error=e.message,
             )
-            await self._log_error(supplier_item_id, "llm_error", str(e))
+            await self._safe_log_error(supplier_item_id, "llm_error", str(e))
             return ItemMatchResult(
                 supplier_item_id=supplier_item_id,
                 status="error",
                 error_message=e.message,
             )
         except Exception as e:
+            # Rollback to reset transaction state - critical for PostgreSQL
+            # Without rollback, the transaction stays in "aborted" state
+            # and all subsequent queries on this session will fail with:
+            # "current transaction is aborted, commands ignored until end of transaction block"
+            await self._session.rollback()
             logger.exception(
                 "Unexpected error during matching",
                 supplier_item_id=str(supplier_item_id),
             )
-            await self._log_error(supplier_item_id, "matching_error", str(e))
+            await self._safe_log_error(supplier_item_id, "matching_error", str(e))
             return ItemMatchResult(
                 supplier_item_id=supplier_item_id,
                 status="error",
@@ -263,6 +270,9 @@ class MatchingService:
                     stats.errors += 1
 
             except Exception as e:
+                # Rollback to ensure clean state for next iteration
+                # This is a safety net - match_item should catch its own exceptions
+                await self._session.rollback()
                 logger.error(
                     "Error matching item in batch",
                     supplier_item_id=str(item_id),
@@ -519,6 +529,29 @@ class MatchingService:
             )
         except Exception as e:
             logger.warning("Failed to log error", error=str(e))
+
+    async def _safe_log_error(
+        self,
+        supplier_item_id: UUID,
+        error_type: str,
+        message: str,
+    ) -> None:
+        """
+        Log a matching error safely after a rollback.
+
+        IMPORTANT: After rollback, we CANNOT write to the database because:
+        1. We don't have the real supplier_id (would need DB query)
+        2. Even if we had it, writing could corrupt the transaction again
+        
+        So we only log to structlog (console/file) - no database writes.
+        """
+        # Log to structlog only - no database operations after rollback
+        logger.error(
+            "Matching error (post-rollback)",
+            supplier_item_id=str(supplier_item_id),
+            error_type=error_type,
+            error_message=message[:500],  # Truncate long messages
+        )
 
     async def _update_item_status(
         self,

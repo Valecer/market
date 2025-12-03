@@ -21,8 +21,7 @@ from uuid import UUID, uuid4
 import httpx
 
 from src.config import settings
-from src.db.base import async_session_maker
-from src.db.operations import log_parsing_error
+from src.db.operations import log_parsing_event
 from src.models.ml_models import (
     FileMetadata,
     FileType,
@@ -55,43 +54,6 @@ DOWNLOAD_TIMEOUT = 300  # 5 minutes
 # =============================================================================
 # Parsing Log Helper
 # =============================================================================
-
-
-async def _log_parsing_event(
-    task_id: str,
-    supplier_id: Optional[UUID],
-    error_type: str,
-    message: str,
-) -> None:
-    """
-    Log a parsing event to the database for UI visibility.
-
-    This enables events from the ML pipeline to appear in LiveLogViewer.
-
-    Args:
-        task_id: Task identifier
-        supplier_id: Supplier UUID
-        error_type: Event type (INFO, SUCCESS, WARNING, ERROR, etc.)
-        message: Human-readable message
-    """
-    try:
-        async with async_session_maker() as session:
-            await log_parsing_error(
-                session=session,
-                task_id=task_id,
-                supplier_id=supplier_id,
-                error_type=error_type,
-                error_message=message,
-            )
-            await session.commit()
-    except Exception as e:
-        # Don't fail the task if logging fails
-        logger.warning(
-            "failed_to_log_parsing_event",
-            task_id=task_id,
-            error_type=error_type,
-            error=str(e),
-        )
 
 
 # =============================================================================
@@ -513,7 +475,7 @@ async def download_and_trigger_ml(
         )
 
         # Log download start to parsing_logs for UI visibility
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="INFO",
@@ -552,7 +514,7 @@ async def download_and_trigger_ml(
                 status="failed",
                 error=error_msg,
             )
-            await _log_parsing_event(
+            await log_parsing_event(
                 task_id=task_id,
                 supplier_id=supplier_id_uuid,
                 error_type="ERROR",
@@ -569,7 +531,7 @@ async def download_and_trigger_ml(
         await _write_metadata_sidecar(file_path, metadata)
 
         # Log download complete
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="INFO",
@@ -590,7 +552,7 @@ async def download_and_trigger_ml(
                 phase="complete",
                 status="completed",
             )
-            await _log_parsing_event(
+            await log_parsing_event(
                 task_id=task_id,
                 supplier_id=supplier_id_uuid,
                 error_type="SUCCESS",
@@ -613,7 +575,7 @@ async def download_and_trigger_ml(
         )
 
         # Log ML analysis trigger
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="INFO",
@@ -652,7 +614,7 @@ async def download_and_trigger_ml(
             )
 
             # Log success
-            await _log_parsing_event(
+            await log_parsing_event(
                 task_id=task_id,
                 supplier_id=supplier_id_uuid,
                 error_type="SUCCESS",
@@ -677,7 +639,7 @@ async def download_and_trigger_ml(
             error=f"ML service unavailable: {e}",
             error_details=["ML service is not reachable. Will retry."],
         )
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="WARNING",
@@ -695,7 +657,7 @@ async def download_and_trigger_ml(
             status="failed",
             error=str(e),
         )
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="ERROR",
@@ -717,7 +679,7 @@ async def download_and_trigger_ml(
             status="failed",
             error=f"File not found: {e}",
         )
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="ERROR",
@@ -741,7 +703,7 @@ async def download_and_trigger_ml(
                 error=str(e),
                 error_details=[f"{type(e).__name__}: {e}"],
             )
-        await _log_parsing_event(
+        await log_parsing_event(
             task_id=task_id,
             supplier_id=supplier_id_uuid,
             error_type="ERROR",
