@@ -97,22 +97,22 @@ Each phase represents a complete, independently testable increment.
 **Goal:** Implement shared infrastructure and base classes that all user stories depend on.
 
 **Independent Test Criteria:**
-- [ ] Database connection pool works with async operations
-- [ ] Pydantic models validate request/response data correctly
-- [ ] Logging produces structured JSON output
-- [ ] Abstract base classes define clear contracts
+- [X] Database connection pool works with async operations
+- [X] Pydantic models validate request/response data correctly
+- [X] Logging produces structured JSON output
+- [X] Abstract base classes define clear contracts
 
 ### Tasks
 
-- [ ] T020 [P] [FOUND] Create src/db/models.py with SQLAlchemy ProductEmbedding model
-- [ ] T021 [P] [FOUND] Create src/db/connection.py for asyncpg connection pool management
-- [ ] T022 [P] [FOUND] Create src/schemas/requests.py with Pydantic models (FileAnalysisRequest, BatchMatchRequest)
-- [ ] T023 [P] [FOUND] Create src/schemas/responses.py with Pydantic models (FileAnalysisResponse, JobStatus, HealthResponse)
-- [ ] T024 [P] [FOUND] Create src/schemas/domain.py with domain models (MatchResult, NormalizedRow, ProductEmbedding)
-- [ ] T025 [FOUND] Create src/ingest/table_normalizer.py with abstract base class TableNormalizer (parse method signature)
-- [ ] T026 [P] [FOUND] Create src/utils/logger.py for structured JSON logging configuration
-- [ ] T027 [P] [FOUND] Create src/utils/errors.py for custom exception classes (ParsingError, EmbeddingError, LLMError)
-- [ ] T028 [FOUND] Update src/api/main.py to configure logging, database connection lifecycle, and OpenAPI metadata
+- [X] T020 [P] [FOUND] Create src/db/models.py with SQLAlchemy ProductEmbedding model
+- [X] T021 [P] [FOUND] Create src/db/connection.py for asyncpg connection pool management
+- [X] T022 [P] [FOUND] Create src/schemas/requests.py with Pydantic models (FileAnalysisRequest, BatchMatchRequest)
+- [X] T023 [P] [FOUND] Create src/schemas/responses.py with Pydantic models (FileAnalysisResponse, JobStatus, HealthResponse)
+- [X] T024 [P] [FOUND] Create src/schemas/domain.py with domain models (MatchResult, NormalizedRow, ProductEmbedding)
+- [X] T025 [FOUND] Create src/ingest/table_normalizer.py with abstract base class TableNormalizer (parse method signature)
+- [X] T026 [P] [FOUND] Create src/utils/logger.py for structured JSON logging configuration
+- [X] T027 [P] [FOUND] Create src/utils/errors.py for custom exception classes (ParsingError, EmbeddingError, LLMError)
+- [X] T028 [FOUND] Update src/api/main.py to configure logging, database connection lifecycle, and OpenAPI metadata
 
 **Dependencies:** Phase 1 (Setup)
 

@@ -10,18 +10,24 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
 import httpx
+import redis.asyncio as aioredis
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src import __version__
 from src.config.settings import get_settings
+from src.db.connection import close_database, init_database
+from src.db.connection import health_check as db_health_check
 from src.utils.errors import MLAnalyzeError
 from src.utils.logger import configure_logging, get_logger
 
 # Configure logging at module load
 configure_logging()
 logger = get_logger(__name__)
+
+# Global Redis connection for health checks
+_redis_client: aioredis.Redis | None = None
 
 
 @asynccontextmanager
@@ -34,6 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - Redis connections
     - Resource cleanup
     """
+    global _redis_client
+
     settings = get_settings()
     logger.info(
         "ml-analyze service starting",
@@ -42,15 +50,47 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         port=settings.fastapi_port,
     )
 
-    # TODO: Initialize database connection pool
-    # TODO: Initialize Redis connection for arq
+    # Initialize database connection pool
+    try:
+        await init_database(settings)
+        logger.info("Database connection pool initialized")
+    except Exception as e:
+        logger.error("Failed to initialize database", error=str(e))
+        # Continue startup - service can work in degraded mode
+
+    # Initialize Redis connection for health checks and arq
+    try:
+        _redis_client = aioredis.from_url(
+            settings.redis_url,
+            encoding="utf-8",
+            decode_responses=True,
+        )
+        await _redis_client.ping()
+        logger.info("Redis connection established")
+    except Exception as e:
+        logger.error("Failed to connect to Redis", error=str(e))
+        _redis_client = None
+        # Continue startup - service can work in degraded mode
 
     yield
 
     # Shutdown: cleanup resources
     logger.info("ml-analyze service shutting down")
-    # TODO: Close database connections
-    # TODO: Close Redis connections
+
+    # Close database connections
+    try:
+        await close_database()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error("Error closing database connections", error=str(e))
+
+    # Close Redis connection
+    if _redis_client:
+        try:
+            await _redis_client.close()
+            logger.info("Redis connection closed")
+        except Exception as e:
+            logger.error("Error closing Redis connection", error=str(e))
 
 
 def create_app() -> FastAPI:
@@ -170,11 +210,36 @@ def create_app() -> FastAPI:
             }
             health_status["status"] = "degraded"
 
-        # TODO: Add database health check
-        health_status["checks"]["database"] = {"status": "pending"}
+        # Check database connection
+        db_status = await db_health_check()
+        health_status["checks"]["database"] = db_status
+        if db_status.get("status") != "healthy":
+            health_status["status"] = "degraded"
 
-        # TODO: Add Redis health check
-        health_status["checks"]["redis"] = {"status": "pending"}
+        # Check Redis connection
+        if _redis_client:
+            try:
+                import time
+
+                start = time.perf_counter()
+                await _redis_client.ping()
+                latency = (time.perf_counter() - start) * 1000
+                health_status["checks"]["redis"] = {
+                    "status": "healthy",
+                    "latency_ms": round(latency, 2),
+                }
+            except Exception as e:
+                health_status["checks"]["redis"] = {
+                    "status": "unhealthy",
+                    "error": str(e),
+                }
+                health_status["status"] = "degraded"
+        else:
+            health_status["checks"]["redis"] = {
+                "status": "not_initialized",
+                "error": "Redis client not available",
+            }
+            health_status["status"] = "degraded"
 
         return health_status
 
