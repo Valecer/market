@@ -35,20 +35,20 @@ _No setup tasks required - existing project infrastructure._
 
 ### Tasks
 
-- [ ] T001 Create Alembic migration file in `services/python-ingestion/migrations/versions/009_add_pricing_fields.py`
-- [ ] T002 [P] Update SQLAlchemy Product model with new fields in `services/python-ingestion/src/db/models/product.py`
-- [ ] T003 Run migration and verify schema changes via `alembic upgrade head`
-- [ ] T004 Regenerate Drizzle schema via `bun run drizzle-kit introspect` in `services/bun-api/`
-- [ ] T005 [P] Manually verify/update Drizzle schema in `services/bun-api/src/db/schema/schema.ts` if introspect misses constraints
+- [X] T001 Create Alembic migration file in `services/python-ingestion/migrations/versions/009_add_pricing_fields.py`
+- [X] T002 [P] Update SQLAlchemy Product model with new fields in `services/python-ingestion/src/db/models/product.py`
+- [X] T003 Run migration and verify schema changes via `alembic upgrade head`
+- [X] T004 Regenerate Drizzle schema via `bun run drizzle-kit introspect` in `services/bun-api/`
+- [X] T005 [P] Manually verify/update Drizzle schema in `services/bun-api/src/db/schema/schema.ts` if introspect misses constraints
 
 ### Acceptance Criteria
 
-- [ ] Migration runs without error (`alembic upgrade head`)
-- [ ] Migration rollback works (`alembic downgrade -1`)
-- [ ] Products table has `retail_price`, `wholesale_price`, `currency_code` columns
-- [ ] CHECK constraints exist for non-negative prices
-- [ ] SQLAlchemy model has type hints and docstrings
-- [ ] Drizzle schema includes new fields with correct types
+- [X] Migration runs without error (`alembic upgrade head`)
+- [X] Migration rollback works (`alembic downgrade -1`)
+- [X] Products table has `retail_price`, `wholesale_price`, `currency_code` columns
+- [X] CHECK constraints exist for non-negative prices
+- [X] SQLAlchemy model has type hints and docstrings
+- [X] Drizzle schema includes new fields with correct types
 
 ---
 
@@ -68,14 +68,14 @@ _No setup tasks required - existing project infrastructure._
 
 ### Tasks
 
-- [ ] T006 [US1] [US2] Create Pydantic validation model in `services/python-ingestion/src/models/product_pricing.py`
-- [ ] T007 [US1] [US2] Add unit test for Product model pricing fields in `services/python-ingestion/tests/unit/test_product_pricing.py`
+- [X] T006 [US1] [US2] Create Pydantic validation model in `services/python-ingestion/src/models/product_pricing.py`
+- [X] T007 [US1] [US2] Add unit test for Product model pricing fields in `services/python-ingestion/tests/unit/test_product_pricing.py`
 
 ### Acceptance Criteria
 
-- [ ] Pydantic model validates currency_code format (^[A-Z]{3}$)
-- [ ] Pydantic model validates price >= 0
-- [ ] Unit tests cover valid and invalid pricing scenarios
+- [X] Pydantic model validates currency_code format (^[A-Z]{3}$)
+- [X] Pydantic model validates price >= 0
+- [X] Unit tests cover valid and invalid pricing scenarios
 
 ---
 
@@ -96,22 +96,22 @@ _No setup tasks required - existing project infrastructure._
 
 ### Tasks
 
-- [ ] T008 [P] [US4] Create TypeBox schema for pricing fields in `services/bun-api/src/types/product.types.ts`
-- [ ] T009 [US4] Update ProductRepository to select new pricing fields in `services/bun-api/src/db/repositories/product.repository.ts`
-- [ ] T010 [US4] Update catalog products controller GET response in `services/bun-api/src/controllers/catalog/products.controller.ts`
-- [ ] T011 [US4] Create pricing update service in `services/bun-api/src/services/product.service.ts`
-- [ ] T012 [US4] Create admin pricing PATCH endpoint in `services/bun-api/src/controllers/admin/products.controller.ts`
-- [ ] T013 [P] [US4] Add TypeBox currency code validation schema with regex pattern in `services/bun-api/src/types/product.types.ts`
-- [ ] T014 [US4] Add API integration test for pricing endpoints in `services/bun-api/tests/admin/products.test.ts`
+- [X] T008 [P] [US4] Create TypeBox schema for pricing fields in `services/bun-api/src/types/product.types.ts`
+- [X] T009 [US4] Update ProductRepository to select new pricing fields in `services/bun-api/src/db/repositories/product.repository.ts`
+- [X] T010 [US4] Update catalog products controller GET response in `services/bun-api/src/controllers/catalog/products.controller.ts`
+- [X] T011 [US4] Create pricing update service in `services/bun-api/src/services/product.service.ts`
+- [X] T012 [US4] Create admin pricing PATCH endpoint in `services/bun-api/src/controllers/admin/products.controller.ts`
+- [X] T013 [P] [US4] Add TypeBox currency code validation schema with regex pattern in `services/bun-api/src/types/product.types.ts`
+- [X] T014 [US4] Add API integration test for pricing endpoints in `services/bun-api/tests/admin/products.test.ts`
 
 ### Acceptance Criteria
 
-- [ ] GET /api/products returns pricing fields (nullable)
-- [ ] GET /api/products/{id} returns pricing fields
-- [ ] PATCH /api/admin/products/{id}/pricing requires admin role
-- [ ] PATCH validates currency_code format (400 on invalid)
-- [ ] PATCH accepts partial updates (can update just retail_price)
-- [ ] API tests pass
+- [X] GET /api/products returns pricing fields (nullable)
+- [X] GET /api/products/{id} returns pricing fields
+- [X] PATCH /api/admin/products/{id}/pricing requires admin role
+- [X] PATCH validates currency_code format (400 on invalid)
+- [X] PATCH accepts partial updates (can update just retail_price)
+- [X] API tests pass
 
 ---
 
@@ -132,21 +132,21 @@ _No setup tasks required - existing project infrastructure._
 
 ### Tasks
 
-- [ ] T015 [P] [US5] Add Product TypeScript type with pricing fields in `services/frontend/src/types/product.ts`
-- [ ] T016 [P] [US5] Add i18n keys for pricing labels in `services/frontend/public/locales/en/translation.json`
-- [ ] T017 [P] [US5] Add i18n keys for pricing labels in `services/frontend/public/locales/ru/translation.json`
-- [ ] T018 [US5] Create PriceDisplay component in `services/frontend/src/components/shared/PriceDisplay.tsx`
-- [ ] T019 [US5] Update ProductCard to show primary price in `services/frontend/src/components/catalog/ProductCard.tsx`
-- [ ] T020 [US5] Update ProductDetail to show dual pricing in `services/frontend/src/components/catalog/ProductDetail.tsx`
+- [X] T015 [P] [US5] Add Product TypeScript type with pricing fields in `services/frontend/src/types/product.ts`
+- [X] T016 [P] [US5] Add i18n keys for pricing labels in `services/frontend/public/locales/en/translation.json`
+- [X] T017 [P] [US5] Add i18n keys for pricing labels in `services/frontend/public/locales/ru/translation.json`
+- [X] T018 [US5] Create PriceDisplay component in `services/frontend/src/components/shared/PriceDisplay.tsx`
+- [X] T019 [US5] Update ProductCard to show primary price in `services/frontend/src/components/catalog/ProductCard.tsx`
+- [X] T020 [US5] Update ProductDetail to show dual pricing in `services/frontend/src/pages/ProductDetailPage.tsx`
 
 ### Acceptance Criteria
 
-- [ ] ProductCard shows retail_price (fallback to wholesale_price)
-- [ ] ProductDetail shows both prices labeled
-- [ ] Currency code displays next to price values
-- [ ] Null prices show "—" placeholder
-- [ ] All labels use t() for i18n
-- [ ] No TypeScript errors
+- [X] ProductCard shows retail_price (fallback to wholesale_price)
+- [X] ProductDetail shows both prices labeled
+- [X] Currency code displays next to price values
+- [X] Null prices show "—" placeholder
+- [X] All labels use t() for i18n
+- [X] No TypeScript errors
 
 ---
 
@@ -156,14 +156,14 @@ _No setup tasks required - existing project infrastructure._
 
 ### Tasks
 
-- [ ] T021 Verify migration rollback works via `alembic downgrade -1` then `alembic upgrade head`
-- [ ] T022 Update CLAUDE.md with Phase 9 context in `/Users/valecer/work/sites/marketbel/CLAUDE.md`
+- [X] T021 Verify migration rollback works via `alembic downgrade -1` then `alembic upgrade head`
+- [X] T022 Update CLAUDE.md with Phase 9 context in `/Users/valecer/work/sites/marketbel/CLAUDE.md`
 
 ### Acceptance Criteria
 
-- [ ] Migration is fully reversible
-- [ ] CLAUDE.md documents new pricing fields
-- [ ] All services start without errors
+- [X] Migration is fully reversible
+- [X] CLAUDE.md documents new pricing fields
+- [X] All services start without errors
 
 ---
 
@@ -349,13 +349,13 @@ This delivers:
 
 Before marking feature complete:
 
-- [ ] All 22 tasks completed
-- [ ] Migration runs forward and backward cleanly
-- [ ] Python unit tests pass (`pytest tests/unit/`)
-- [ ] Bun API tests pass (`bun test`)
-- [ ] Frontend type-checks (`bun run type-check`)
-- [ ] No console errors in browser
-- [ ] Pricing displays correctly for products with/without prices
-- [ ] Admin can update pricing via API
-- [ ] i18n works for EN and RU locales
+- [X] All 22 tasks completed
+- [X] Migration runs forward and backward cleanly
+- [X] Python unit tests pass (`pytest tests/unit/`)
+- [X] Bun API tests pass (`bun test`)
+- [X] Frontend type-checks (`bun run type-check`)
+- [X] No console errors in browser
+- [X] Pricing displays correctly for products with/without prices
+- [X] Admin can update pricing via API
+- [X] i18n works for EN and RU locales
 

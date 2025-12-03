@@ -111,11 +111,23 @@ export class ProductRepository implements IProductRepository {
         min_price: sql<string>`COALESCE(MIN(${supplierItems.currentPrice})::text, '0.00')`,
         max_price: sql<string>`COALESCE(MAX(${supplierItems.currentPrice})::text, '0.00')`,
         supplier_count: sql<number>`COUNT(DISTINCT ${supplierItems.supplierId})`,
+        // Phase 9: Canonical pricing fields
+        retail_price: products.retailPrice,
+        wholesale_price: products.wholesalePrice,
+        currency_code: products.currencyCode,
       })
       .from(products)
       .leftJoin(supplierItems, eq(products.id, supplierItems.productId))
       .where(and(...conditions))
-      .groupBy(products.id, products.internalSku, products.name, products.categoryId)
+      .groupBy(
+        products.id,
+        products.internalSku,
+        products.name,
+        products.categoryId,
+        products.retailPrice,
+        products.wholesalePrice,
+        products.currencyCode
+      )
 
     // Apply HAVING clause if price filters exist
     if (havingConditions.length > 0) {
@@ -139,6 +151,10 @@ export class ProductRepository implements IProductRepository {
       min_price: parseFloat(row.min_price || '0').toFixed(2),
       max_price: parseFloat(row.max_price || '0').toFixed(2),
       supplier_count: Number(row.supplier_count) || 0,
+      // Phase 9: Format canonical pricing fields
+      retail_price: row.retail_price ? parseFloat(row.retail_price).toFixed(2) : null,
+      wholesale_price: row.wholesale_price ? parseFloat(row.wholesale_price).toFixed(2) : null,
+      currency_code: row.currency_code || null,
     }))
   }
 

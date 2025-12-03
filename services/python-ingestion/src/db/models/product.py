@@ -1,5 +1,11 @@
-"""Product ORM model with status enum and aggregate fields."""
-from sqlalchemy import String, ForeignKey, Enum as SQLEnum, Numeric, Boolean
+"""Product ORM model with status enum and aggregate fields.
+
+Phase 9 adds canonical pricing fields:
+- retail_price: End-customer price
+- wholesale_price: Bulk/dealer price  
+- currency_code: ISO 4217 currency code (e.g., USD, EUR, RUB)
+"""
+from sqlalchemy import String, ForeignKey, Enum as SQLEnum, Numeric, Boolean, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base, UUIDMixin, TimestampMixin
 from enum import Enum as PyEnum
@@ -30,6 +36,9 @@ class Product(Base, UUIDMixin, TimestampMixin):
         min_price: Lowest price among linked active supplier items (Phase 4)
         availability: TRUE if any linked supplier has stock (Phase 4)
         mrp: Manufacturer's recommended price placeholder (Phase 4)
+        retail_price: End-customer price (Phase 9)
+        wholesale_price: Bulk/dealer price (Phase 9)
+        currency_code: ISO 4217 currency code e.g. USD, EUR, RUB (Phase 9)
     
     Relationships:
         category: Reference to Category
@@ -37,6 +46,16 @@ class Product(Base, UUIDMixin, TimestampMixin):
     """
     
     __tablename__ = "products"
+    __table_args__ = (
+        CheckConstraint(
+            'retail_price IS NULL OR retail_price >= 0',
+            name='check_retail_price_non_negative'
+        ),
+        CheckConstraint(
+            'wholesale_price IS NULL OR wholesale_price >= 0',
+            name='check_wholesale_price_non_negative'
+        ),
+    )
     
     internal_sku: Mapped[str] = mapped_column(
         String(100),
@@ -81,6 +100,23 @@ class Product(Base, UUIDMixin, TimestampMixin):
         Numeric(10, 2),
         nullable=True,
         doc="Manufacturer's recommended price (placeholder)"
+    )
+    
+    # Phase 9: Canonical pricing fields (distinct from aggregate min_price)
+    retail_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True,
+        doc="End-customer price (canonical product-level)"
+    )
+    wholesale_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2),
+        nullable=True,
+        doc="Bulk/dealer price (canonical product-level)"
+    )
+    currency_code: Mapped[str | None] = mapped_column(
+        String(3),
+        nullable=True,
+        doc="ISO 4217 currency code (e.g., USD, EUR, RUB)"
     )
     
     # Relationships

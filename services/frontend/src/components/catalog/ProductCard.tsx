@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn, formatPrice, getPlaceholderImage, truncate } from '@/lib/utils'
 import type { CatalogProduct } from '@/lib/api-client'
+import { PriceDisplay } from '@/components/shared/PriceDisplay'
 
 interface ProductCardProps {
   /** Product data from API */
@@ -40,11 +41,25 @@ export function ProductCard({
     max_price,
     supplier_count,
     category_id,
-  } = product
+    // Phase 9: Canonical pricing fields
+    retail_price,
+    wholesale_price,
+    currency_code,
+  } = product as CatalogProduct & {
+    retail_price?: string | null
+    wholesale_price?: string | null
+    currency_code?: string | null
+  }
 
-  // Format price display
-  const priceDisplay =
-    min_price === max_price
+  // Phase 9: Determine primary display price
+  // Priority: retail_price > wholesale_price > supplier price range
+  const hasCatalogPricing = retail_price || wholesale_price
+  const primaryPrice = retail_price ?? wholesale_price ?? null
+  
+  // Format price display - use canonical pricing if available, else supplier range
+  const priceDisplay = hasCatalogPricing
+    ? null // Will use PriceDisplay component
+    : min_price === max_price
       ? formatPrice(min_price)
       : `${formatPrice(min_price)} - ${formatPrice(max_price)}`
 
@@ -102,7 +117,16 @@ export function ProductCard({
 
         {/* Price and Actions */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <span className="text-lg font-bold text-slate-900">{priceDisplay}</span>
+          {hasCatalogPricing ? (
+            <PriceDisplay
+              price={primaryPrice}
+              currencyCode={currency_code}
+              size="lg"
+              showCurrency
+            />
+          ) : (
+            <span className="text-lg font-bold text-slate-900">{priceDisplay}</span>
+          )}
 
           {onAddToCart && (
             <button

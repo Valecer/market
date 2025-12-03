@@ -82,7 +82,16 @@
     "suppliersLinked_many": "{{count}} поставщиков привязано",
     "priceRange": "{{min}} - {{max}}",
     "outOfStock": "Нет в наличии",
-    "inStock": "В наличии"
+    "inStock": "В наличии",
+    "pricing": {
+      "retail": "Розничная цена",
+      "wholesale": "Оптовая цена",
+      "currency": "Валюта",
+      "notSet": "—",
+      "fromSuppliers_one": "От {{count}} поставщика",
+      "fromSuppliers_few": "От {{count}} поставщиков",
+      "fromSuppliers_many": "От {{count}} поставщиков"
+    }
   },
 
   "cart": {

@@ -80,7 +80,15 @@
     "suppliersLinked_plural": "{{count}} suppliers linked",
     "priceRange": "{{min}} - {{max}}",
     "outOfStock": "Out of Stock",
-    "inStock": "In Stock"
+    "inStock": "In Stock",
+    "pricing": {
+      "retail": "Retail Price",
+      "wholesale": "Wholesale Price",
+      "currency": "Currency",
+      "notSet": "—",
+      "fromSuppliers": "From {{count}} supplier",
+      "fromSuppliers_plural": "From {{count}} suppliers"
+    }
   },
 
   "cart": {

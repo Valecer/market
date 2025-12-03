@@ -37,6 +37,30 @@ export const CatalogQuerySchema = Type.Object({
 
 export type CatalogQuery = Static<typeof CatalogQuerySchema>
 
+// Phase 9: Currency code validation schema (ISO 4217 format)
+export const CurrencyCodeSchema = Type.Union(
+  [
+    Type.String({
+      pattern: '^[A-Z]{3}$',
+      description: 'ISO 4217 currency code (3 uppercase letters, e.g., USD, EUR, RUB)',
+    }),
+    Type.Null(),
+  ],
+  { description: 'Currency code or null' }
+)
+
+// Phase 9: Decimal price schema (non-negative, 2 decimal places)
+export const PriceDecimalSchema = Type.Union(
+  [
+    Type.String({
+      pattern: '^\\d+\\.\\d{2}$',
+      description: 'Price as decimal string (e.g., "99.99")',
+    }),
+    Type.Null(),
+  ],
+  { description: 'Price or null' }
+)
+
 export const CatalogProductSchema = Type.Object(
   {
     id: Type.String({ format: 'uuid', description: 'Product UUID' }),
@@ -54,6 +78,10 @@ export const CatalogProductSchema = Type.Object(
       description: 'Highest supplier price as decimal string',
     }),
     supplier_count: Type.Integer({ minimum: 0, description: 'Number of suppliers for this product' }),
+    // Phase 9: Canonical pricing fields
+    retail_price: PriceDecimalSchema,
+    wholesale_price: PriceDecimalSchema,
+    currency_code: CurrencyCodeSchema,
   },
   {
     examples: [
@@ -65,6 +93,9 @@ export const CatalogProductSchema = Type.Object(
         min_price: '9.99',
         max_price: '14.99',
         supplier_count: 3,
+        retail_price: '14.99',
+        wholesale_price: '11.99',
+        currency_code: 'USD',
       },
     ],
   }

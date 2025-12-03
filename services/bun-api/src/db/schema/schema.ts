@@ -1,4 +1,4 @@
-import { pgTable, varchar, index, foreignKey, unique, uuid, timestamp, check, jsonb, numeric, text, integer, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, varchar, index, foreignKey, unique, uuid, timestamp, check, jsonb, numeric, text, integer, pgEnum, boolean } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const productStatus = pgEnum("product_status", ['draft', 'active', 'archived'])
@@ -32,6 +32,14 @@ export const products = pgTable("products", {
 	status: productStatus().default('draft').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	// Aggregate fields (from supplier items)
+	minPrice: numeric("min_price", { precision: 10, scale: 2 }),
+	availability: boolean().default(false).notNull(),
+	mrp: numeric({ precision: 10, scale: 2 }),
+	// Phase 9: Canonical pricing fields
+	retailPrice: numeric("retail_price", { precision: 10, scale: 2 }),
+	wholesalePrice: numeric("wholesale_price", { precision: 10, scale: 2 }),
+	currencyCode: varchar("currency_code", { length: 3 }),
 }, (table) => [
 	index("idx_products_category").using("btree", table.categoryId.asc().nullsLast().op("uuid_ops")),
 	index("idx_products_name").using("btree", table.name.asc().nullsLast().op("varchar_pattern_ops")),
@@ -43,6 +51,9 @@ export const products = pgTable("products", {
 			name: "products_category_id_fkey"
 		}).onDelete("set null"),
 	unique("products_internal_sku_key").on(table.internalSku),
+	// Phase 9: Price constraints
+	check("check_retail_price_non_negative", sql`retail_price IS NULL OR retail_price >= 0`),
+	check("check_wholesale_price_non_negative", sql`wholesale_price IS NULL OR wholesale_price >= 0`),
 ]);
 
 export const suppliers = pgTable("suppliers", {

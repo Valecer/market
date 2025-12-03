@@ -10,11 +10,13 @@
 
 import { useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useCatalog } from '@/hooks/useCatalog'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, getPlaceholderImage, cn } from '@/lib/utils'
 import { ProductDetailSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { DualPricingDisplay, PriceDisplay } from '@/components/shared/PriceDisplay'
 import type { CartProduct } from '@/types/cart'
 
 /**
@@ -70,6 +72,8 @@ export function ProductDetailPage() {
     )
   }
 
+  const { t } = useTranslation()
+  
   const {
     name,
     internal_sku,
@@ -79,23 +83,41 @@ export function ProductDetailPage() {
     category_id,
   } = product
 
+  // Phase 9: Extract canonical pricing fields
+  const productWithPricing = product as typeof product & {
+    retail_price?: string | null
+    wholesale_price?: string | null
+    currency_code?: string | null
+  }
+  const { retail_price, wholesale_price, currency_code } = productWithPricing
+
+  // Phase 9: Check if product has canonical pricing
+  const hasCatalogPricing = retail_price || wholesale_price
+  const primaryPrice = retail_price ?? wholesale_price
+
   // Current quantity in cart
   const quantityInCart = getItemQuantity(id!)
 
-  // Handle add to cart
+  // Handle add to cart - use canonical pricing if available
   const handleAddToCart = useCallback(() => {
+    const priceValue = primaryPrice
+      ? parseFloat(primaryPrice)
+      : typeof min_price === 'string'
+        ? parseFloat(min_price)
+        : min_price
+    
     const cartProduct: CartProduct = {
       id: product.id,
       name: product.name,
       sku: product.internal_sku,
-      price: typeof product.min_price === 'string' ? parseFloat(product.min_price) : product.min_price,
+      price: priceValue,
       category: product.category_id ?? undefined,
     }
     addItem(cartProduct)
-  }, [product, addItem])
+  }, [product, addItem, primaryPrice, min_price])
 
-  // Price display
-  const priceDisplay =
+  // Supplier price display (fallback when no canonical pricing)
+  const supplierPriceDisplay =
     min_price === max_price
       ? formatPrice(min_price)
       : `${formatPrice(min_price)} - ${formatPrice(max_price)}`
@@ -195,10 +217,34 @@ export function ProductDetailPage() {
               {/* SKU */}
               <p className="text-slate-500 font-mono">SKU: {internal_sku}</p>
 
-              {/* Price */}
-              <div className="py-4 border-y border-border">
-                <p className="text-sm text-slate-500 mb-1">Price Range</p>
-                <p className="text-3xl font-bold text-slate-900">{priceDisplay}</p>
+              {/* Price - Phase 9: Show canonical pricing when available */}
+              <div className="py-4 border-y border-border space-y-3">
+                {hasCatalogPricing ? (
+                  <>
+                    {/* Canonical dual pricing (Phase 9) */}
+                    <DualPricingDisplay
+                      retailPrice={retail_price ?? null}
+                      wholesalePrice={wholesale_price ?? null}
+                      currencyCode={currency_code}
+                      showBoth={!!(retail_price && wholesale_price)}
+                    />
+                    {/* Show supplier range if different */}
+                    {supplier_count > 0 && (
+                      <p className="text-sm text-slate-500">
+                        {t('product.pricing.fromSuppliers', { count: supplier_count })}:{' '}
+                        <span className="text-slate-700">{supplierPriceDisplay}</span>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Fallback: Supplier price range */}
+                    <p className="text-sm text-slate-500 mb-1">
+                      {t('product.pricing.fromSuppliers', { count: supplier_count })}
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900">{supplierPriceDisplay}</p>
+                  </>
+                )}
               </div>
 
               {/* Product Details */}

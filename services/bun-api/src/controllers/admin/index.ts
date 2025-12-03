@@ -3,6 +3,7 @@ import { adminService } from '../../services/admin.service'
 import { ingestionService } from '../../services/ingestion.service'
 import { settingsService } from '../../services/settings.service'
 import { supplierService } from '../../services/supplier.service'
+import { productService } from '../../services/product.service'
 import {
   AdminProductsResponseSchema,
   MatchRequestSchema,
@@ -38,6 +39,10 @@ import {
   SuppliersListResponseSchema,
   UploadSupplierFileResponseSchema,
 } from '../../types/supplier.types'
+import {
+  UpdateProductPricingRequestSchema,
+  UpdateProductPricingResponseSchema,
+} from '../../types/product.types'
 import { createErrorResponse } from '../../types/errors'
 import { authMiddleware } from '../../middleware/auth'
 import { rateLimiter } from '../../middleware/rate-limiter'
@@ -450,6 +455,61 @@ export const adminController = (app: Elysia) =>
             tags: ['admin', 'products'],
             summary: 'Update product status',
             description: 'Update the status of a single product (draft, active, archived). Requires sales, procurement or admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // =============================================================================
+      // Product Pricing Endpoints (Phase 9)
+      // =============================================================================
+      // PATCH /products/:id/pricing - Update product pricing (admin only)
+      .patch(
+        '/products/:id/pricing',
+        async ({ params, body, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for pricing updates')
+          }
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Invalid product ID format')
+          }
+          // Validate currency code format if provided
+          if (body.currency_code && !/^[A-Z]{3}$/.test(body.currency_code)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Currency code must be 3 uppercase letters (ISO 4217 format)')
+          }
+          return productService.updateProductPricing(params.id, body)
+        },
+        {
+          body: UpdateProductPricingRequestSchema,
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'NOT_FOUND') {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: UpdateProductPricingResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'products'],
+            summary: 'Update product pricing',
+            description: 'Update retail price, wholesale price, and/or currency code for a product. Supports partial updates. Requires admin role.',
             security: [{ bearerAuth: [] }],
           },
         }
