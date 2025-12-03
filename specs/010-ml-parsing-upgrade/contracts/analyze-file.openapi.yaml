@@ -1,0 +1,476 @@
+openapi: 3.1.0
+info:
+  title: ML-Analyze File API
+  description: |
+    API contract for the extended /analyze/file endpoint.
+    Supports both file_path (preferred) and file_url (deprecated) parameters.
+  version: 2.0.0
+  contact:
+    name: Marketbel Team
+
+servers:
+  - url: http://ml-analyze:8001
+    description: Internal Docker network
+  - url: http://localhost:8001
+    description: Local development
+
+paths:
+  /analyze/file:
+    post:
+      operationId: analyzeFile
+      summary: Trigger file analysis
+      description: |
+        Submit a file for analysis. The file will be parsed using the two-stage
+        LLM strategy, items extracted with pricing and category information,
+        and results saved to database.
+        
+        **Preferred:** Use `file_path` for files in shared volume.
+        **Deprecated:** `file_url` still supported for backward compatibility.
+      tags:
+        - Analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileAnalysisRequest'
+            examples:
+              filePath:
+                summary: Using file_path (preferred)
+                value:
+                  file_path: "/shared/uploads/supplier_123_20251203_price-list.xlsx"
+                  supplier_id: "123e4567-e89b-12d3-a456-426614174000"
+                  file_type: "excel"
+                  default_currency: "RUB"
+                  composite_delimiter: "|"
+              fileUrl:
+                summary: Using file_url (deprecated)
+                value:
+                  file_url: "https://storage.example.com/files/price-list.xlsx"
+                  supplier_id: "123e4567-e89b-12d3-a456-426614174000"
+                  file_type: "excel"
+      responses:
+        '202':
+          description: Job accepted and enqueued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileAnalysisResponse'
+              example:
+                job_id: "550e8400-e29b-41d4-a716-446655440000"
+                status: "pending"
+                message: "File analysis job enqueued successfully"
+                metrics: null
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                noFileSource:
+                  summary: Neither file_path nor file_url provided
+                  value:
+                    error: "ValidationError"
+                    message: "Either file_path or file_url must be provided"
+                pathTraversal:
+                  summary: Path traversal attempt blocked
+                  value:
+                    error: "SecurityError"
+                    message: "File path is outside allowed directory"
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "FileNotFoundError"
+                message: "File not found: /shared/uploads/missing-file.xlsx"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    FileAnalysisRequest:
+      type: object
+      required:
+        - supplier_id
+        - file_type
+      properties:
+        file_path:
+          type: string
+          description: |
+            Path to file in shared volume (preferred).
+            Must be within configured upload directory.
+          example: "/shared/uploads/supplier_123_20251203_price-list.xlsx"
+          nullable: true
+        file_url:
+          type: string
+          format: uri
+          description: |
+            HTTP URL or file:// path (deprecated, use file_path).
+            Maintained for backward compatibility.
+          example: "https://storage.example.com/files/price-list.xlsx"
+          nullable: true
+          deprecated: true
+        supplier_id:
+          type: string
+          format: uuid
+          description: UUID of the supplier this file belongs to
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        file_type:
+          type: string
+          enum: [pdf, excel, csv]
+          description: Type of file being analyzed
+          example: "excel"
+        default_currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          pattern: "^[A-Z]{3}$"
+          description: |
+            Default ISO 4217 currency code if not detected in document.
+            Applied when currency symbol/text not found in price values.
+          example: "RUB"
+          nullable: true
+        composite_delimiter:
+          type: string
+          minLength: 1
+          maxLength: 5
+          default: "|"
+          description: |
+            Delimiter for parsing composite product name strings.
+            E.g., "Category | Product Name | Description"
+          example: "|"
+      oneOf:
+        - required: [file_path]
+        - required: [file_url]
+
+    FileAnalysisResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - message
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Unique job identifier for status tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum: [pending, processing, complete, failed]
+          description: Current job status
+          example: "pending"
+        message:
+          type: string
+          description: Human-readable status message
+          example: "File analysis job enqueued successfully"
+        metrics:
+          $ref: '#/components/schemas/ParsingMetrics'
+          nullable: true
+          description: Parsing metrics (populated when status is complete)
+
+    ParsingMetrics:
+      type: object
+      required:
+        - total_rows
+        - parsed_rows
+        - duration_ms
+      properties:
+        total_rows:
+          type: integer
+          minimum: 0
+          description: Total rows in source document
+          example: 500
+        parsed_rows:
+          type: integer
+          minimum: 0
+          description: Successfully parsed rows
+          example: 480
+        skipped_rows:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Intentionally skipped rows (headers, totals, empty)
+          example: 15
+        error_rows:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Rows with parsing errors
+          example: 5
+        stage_a_tokens:
+          type: integer
+          minimum: 0
+          default: 0
+          description: LLM tokens used for structure analysis (Stage A)
+          example: 1200
+        stage_b_tokens:
+          type: integer
+          minimum: 0
+          default: 0
+          description: LLM tokens used for data extraction (Stage B)
+          example: 8500
+        duration_ms:
+          type: integer
+          minimum: 0
+          description: Total processing time in milliseconds
+          example: 45000
+        file_read_ms:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Time to read and parse file (ms)
+          example: 500
+        stage_a_ms:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Time for Stage A structure analysis (ms)
+          example: 3000
+        stage_b_ms:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Time for Stage B data extraction (ms)
+          example: 40000
+        db_write_ms:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Time for database writes (ms)
+          example: 1500
+        field_extraction_rates:
+          type: object
+          additionalProperties:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: Per-field extraction success rates (0.0-1.0)
+          example:
+            name: 1.0
+            sku: 0.95
+            retail_price: 0.98
+            category: 0.85
+
+    StructureAnalysis:
+      type: object
+      description: Stage A output - document structure analysis
+      required:
+        - header_rows
+        - data_start_row
+        - data_end_row
+        - column_mapping
+        - confidence
+      properties:
+        header_rows:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+          description: Row indices containing headers (0-indexed)
+          example: [0, 1]
+        data_start_row:
+          type: integer
+          minimum: 0
+          description: First row with product data
+          example: 2
+        data_end_row:
+          type: integer
+          description: Last row with product data (-1 = end of document)
+          example: -1
+        column_mapping:
+          $ref: '#/components/schemas/ColumnMapping'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: LLM confidence in analysis (0.0-1.0)
+          example: 0.92
+        detected_currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: true
+          description: ISO 4217 currency code if detected in document
+          example: "RUB"
+        has_merged_cells:
+          type: boolean
+          default: false
+          description: Whether document appears to have merged cells
+          example: false
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: LLM notes about document structure
+
+    ColumnMapping:
+      type: object
+      description: Mapping of column indices to field purposes
+      properties:
+        name_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for product name
+          example: 1
+        sku_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for SKU/article
+          example: 0
+        retail_price_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for retail price
+          example: 2
+        wholesale_price_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for wholesale price
+          example: 3
+        category_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for category
+          example: null
+        unit_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for unit of measure
+          example: 4
+        description_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for description
+          example: null
+        brand_column:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Column index for brand
+          example: null
+
+    NormalizedRow:
+      type: object
+      description: Normalized product data from parser
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Product name
+          example: "Shtenli Model Gt11"
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Product description
+          example: "Li-ion 48V 15Ah electric bicycle"
+        sku:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Supplier SKU
+          example: "SHTGT11-48V"
+        retail_price:
+          type: number
+          minimum: 0
+          nullable: true
+          description: End-customer retail price
+          example: 95000.00
+        wholesale_price:
+          type: number
+          minimum: 0
+          nullable: true
+          description: Dealer/bulk wholesale price
+          example: 85000.00
+        currency_code:
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: true
+          description: ISO 4217 currency code
+          example: "RUB"
+        category_path:
+          type: array
+          items:
+            type: string
+            maxLength: 255
+          description: Hierarchical category path
+          example: ["Electric Bicycle", "Adult"]
+        unit:
+          type: string
+          maxLength: 50
+          nullable: true
+          description: Unit of measure
+          example: "шт"
+        brand:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Brand name
+          example: "Shtenli"
+        characteristics:
+          type: object
+          additionalProperties: true
+          description: Additional attributes
+          example:
+            voltage: "48V"
+            battery: "15Ah"
+        raw_composite:
+          type: string
+          maxLength: 1000
+          nullable: true
+          description: Original composite string before parsing
+          example: "Electric Bicycle | Shtenli Model Gt11 | Li-ion 48V 15Ah"
+        # Deprecated fields (for backward compatibility)
+        price:
+          type: number
+          minimum: 0
+          nullable: true
+          description: Product price (deprecated, use retail_price)
+          deprecated: true
+        category:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Category (deprecated, use category_path)
+          deprecated: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type/code
+          example: "ValidationError"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Either file_path or file_url must be provided"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional error details
+
