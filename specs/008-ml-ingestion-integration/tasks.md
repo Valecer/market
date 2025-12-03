@@ -195,29 +195,29 @@ This task list implements the refactored ingestion pipeline where `python-ingest
 
 ### Backend: Retry Logic (python-ingestion)
 
-- [ ] T065 [US3] Create `retry_job_task` function in `services/python-ingestion/src/tasks/retry_tasks.py`
-- [ ] T066 [US3] Implement retry count validation (max 3) in `services/python-ingestion/src/tasks/retry_tasks.py`
-- [ ] T067 [US3] Reuse existing file if available, re-download if not in `services/python-ingestion/src/tasks/retry_tasks.py`
-- [ ] T068 [US3] Register `retry_job_task` in worker in `services/python-ingestion/src/worker.py`
+- [X] T065 [US3] Create `retry_job_task` function in `services/python-ingestion/src/tasks/retry_tasks.py`
+- [X] T066 [US3] Implement retry count validation (max 3) in `services/python-ingestion/src/tasks/retry_tasks.py`
+- [X] T067 [US3] Reuse existing file if available, re-download if not in `services/python-ingestion/src/tasks/retry_tasks.py`
+- [X] T068 [US3] Register `retry_job_task` in worker in `services/python-ingestion/src/worker.py`
 
 ### API: Retry Endpoint (Bun)
 
-- [ ] T069 [US3] Create `POST /admin/jobs/:id/retry` endpoint in `services/bun-api/src/controllers/admin/jobs.controller.ts`
-- [ ] T070 [US3] Validate job is in "failed" state before allowing retry in `services/bun-api/src/controllers/admin/jobs.controller.ts`
-- [ ] T071 [US3] Enqueue retry task to Redis in `services/bun-api/src/services/job.service.ts`
-- [ ] T072 [US3] Add route to admin router in `services/bun-api/src/routes/admin.routes.ts`
+- [X] T069 [US3] Create `POST /admin/jobs/:id/retry` endpoint in `services/bun-api/src/controllers/admin/index.ts`
+- [X] T070 [US3] Validate job is in "failed" state before allowing retry in `services/bun-api/src/services/job.service.ts`
+- [X] T071 [US3] Enqueue retry task to Redis in `services/bun-api/src/services/job.service.ts`
+- [X] T072 [US3] Add route to admin controller in `services/bun-api/src/controllers/admin/index.ts`
 
 ### Frontend: Retry Button
 
-- [ ] T073 [US3] Add `can_retry` field to job status response type in `services/frontend/src/types/ingestion.ts`
-- [ ] T074 [US3] Create `useRetryJob` mutation hook in `services/frontend/src/hooks/useRetryJob.ts`
-- [ ] T075 [US3] Add "Retry" button to failed job row in `services/frontend/src/components/admin/SyncControlCard.tsx`
-- [ ] T076 [US3] Show retry count and max retries in UI in `services/frontend/src/components/admin/SyncControlCard.tsx`
+- [X] T073 [US3] Add `can_retry` field to job status response type in `services/frontend/src/types/ingestion.ts`
+- [X] T074 [US3] Create `useRetryJob` mutation hook in `services/frontend/src/hooks/useRetryJob.ts`
+- [X] T075 [US3] Add "Retry" button to failed job row in `services/frontend/src/components/admin/JobPhaseIndicator.tsx`
+- [X] T076 [US3] Show retry count and max retries in UI in `services/frontend/src/components/admin/JobPhaseIndicator.tsx`
 
 ### Frontend: Translations
 
-- [ ] T077 [P] [US3] Add retry button translations to `services/frontend/public/locales/en/common.json`
-- [ ] T078 [P] [US3] Add retry button translations to `services/frontend/public/locales/ru/common.json`
+- [X] T077 [P] [US3] Add retry button translations to `services/frontend/public/locales/en/translation.json`
+- [X] T078 [P] [US3] Add retry button translations to `services/frontend/public/locales/ru/translation.json`
 
 ---
 

@@ -21,7 +21,9 @@ import {
   TriggerSyncResponseSchema,
   IngestionStatusResponseSchema,
   SyncAlreadyRunningResponseSchema,
+  RetryJobResponseSchema,
 } from '../../types/ingestion.types'
+import { jobService } from '../../services/job.service'
 import {
   MasterSheetUrlResponseSchema,
   UpdateMasterSheetUrlRequestSchema,
@@ -566,6 +568,73 @@ export const adminController = (app: Elysia) =>
             summary: 'Trigger master sync pipeline',
             description:
               'Reads Master Google Sheet, syncs suppliers, and enqueues parsing tasks for all active suppliers. Returns immediately with task_id. Rate limited to 10 requests per minute. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // =============================================================================
+      // Job Management Endpoints (Phase 8)
+      // =============================================================================
+      // POST /jobs/:id/retry - Retry a failed job
+      .post(
+        '/jobs/:id/retry',
+        async ({ params, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required to retry jobs')
+          }
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Job ID must be a valid UUID')
+          }
+
+          set.status = 202
+          return jobService.retryJob(params.id)
+        },
+        {
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid job ID')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+
+            if (customCode === 'NOT_FOUND' || message.includes('not found')) {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            if (customCode === 'INVALID_STATE' || message.includes('not in failed state')) {
+              set.status = 409
+              return createErrorResponse('CONFLICT', message)
+            }
+            if (customCode === 'MAX_RETRIES_EXCEEDED' || message.includes('Maximum retries')) {
+              set.status = 409
+              return createErrorResponse('CONFLICT', message)
+            }
+            if (customCode === 'REDIS_UNAVAILABLE') {
+              set.status = 503
+              return createErrorResponse('REDIS_UNAVAILABLE', 'Queue service is temporarily unavailable')
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            202: RetryJobResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            409: ErrorSchemas.conflict,
+            500: ErrorSchemas.internal,
+            503: ErrorSchemas.redisUnavailable,
+          },
+          detail: {
+            tags: ['admin', 'jobs'],
+            summary: 'Retry a failed ingestion job',
+            description:
+              'Enqueues a failed ingestion job for reprocessing. The job must be in a "failed" state and not have exceeded its maximum retry attempts. Requires admin role.',
             security: [{ bearerAuth: [] }],
           },
         }

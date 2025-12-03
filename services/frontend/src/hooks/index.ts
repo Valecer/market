@@ -30,6 +30,9 @@ export { useCreateProduct, type CreateProductRequest, type CreateProductResponse
 export { useIngestionStatus, type IngestionStatus } from './useIngestionStatus'
 export { useTriggerSync, type TriggerSyncResponse } from './useTriggerSync'
 
+// Phase 8: Retry failed jobs
+export { useRetryJob } from './useRetryJob'
+
 // Phase 7: Settings and Supplier Management hooks
 export { useMasterSheetUrl, useUpdateMasterSheetUrl } from './useSettings'
 export {

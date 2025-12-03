@@ -48,6 +48,7 @@ from src.tasks.sync_tasks import (
 from src.tasks.download_tasks import download_and_trigger_ml
 from src.tasks.ml_polling_tasks import poll_ml_job_status_task
 from src.tasks.cleanup_tasks import cleanup_shared_files_task
+from src.tasks.retry_tasks import retry_job_task, poll_retry_triggers
 
 # Configure logging
 configure_logging(settings.log_level)
@@ -641,6 +642,7 @@ class WorkerSettings:
         download_and_trigger_ml,
         poll_ml_job_status_task,
         cleanup_shared_files_task,
+        retry_job_task,
     ]
     
     # Register job lifecycle hooks
@@ -688,6 +690,13 @@ class WorkerSettings:
             cleanup_shared_files_task,
             hour={0, 6, 12, 18},  # Every 6 hours
             minute=30,  # Offset from other hourly tasks
+            unique=True,
+        ),
+        # Phase 8: Poll for retry triggers every 10 seconds
+        # Bun API sets retry:triggers list, worker polls and enqueues retry_job_task
+        cron(
+            poll_retry_triggers,
+            second={2, 12, 22, 32, 42, 52},  # Every 10 seconds, offset from other tasks
             unique=True,
         ),
     ]

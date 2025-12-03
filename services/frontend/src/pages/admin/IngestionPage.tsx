@@ -15,6 +15,7 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIngestionStatus, useTriggerSync, useDeleteSupplier } from '@/hooks'
+import { useRetryJob } from '@/hooks/useRetryJob'
 import {
   SyncControlCard,
   SupplierAddModal,
@@ -70,10 +71,21 @@ export function IngestionPage() {
     isPending: isDeletePending,
   } = useDeleteSupplier()
 
+  // Retry job mutation
+  const {
+    mutate: retryJob,
+    isPending: isRetryPending,
+  } = useRetryJob()
+
   // Handle sync button click
   const handleSyncNow = () => {
     triggerSync()
   }
+
+  // Handle retry job
+  const handleRetryJob = useCallback((jobId: string) => {
+    retryJob(jobId)
+  }, [retryJob])
 
   // Handle delete supplier
   const handleDeleteSupplier = useCallback((id: string, _name: string) => {
@@ -121,7 +133,9 @@ export function IngestionPage() {
           nextScheduledAt={status?.next_scheduled_at || new Date().toISOString()}
           jobs={status?.jobs || []}
           onSyncNow={handleSyncNow}
+          onRetryJob={handleRetryJob}
           isSyncing={isSyncing}
+          isRetrying={isRetryPending}
           isLoading={isStatusLoading}
           error={errorMessage}
         />

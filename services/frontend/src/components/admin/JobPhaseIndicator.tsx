@@ -21,6 +21,8 @@ import type { IngestionJob, JobPhase } from '@/types/ingestion'
 interface JobPhaseIndicatorProps {
   job: IngestionJob
   compact?: boolean
+  onRetry?: (jobId: string) => void
+  isRetrying?: boolean
 }
 
 // =============================================================================
@@ -200,6 +202,25 @@ function SpinnerIcon({ className = '' }: { className?: string }) {
   )
 }
 
+function RetryIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+      />
+    </svg>
+  )
+}
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -230,16 +251,22 @@ function formatBytes(bytes: number): string {
 // Component
 // =============================================================================
 
-export function JobPhaseIndicator({ job, compact = false }: JobPhaseIndicatorProps) {
+export function JobPhaseIndicator({
+  job,
+  compact = false,
+  onRetry,
+  isRetrying = false,
+}: JobPhaseIndicatorProps) {
   const { t } = useTranslation()
   const config = PHASE_CONFIG[job.phase]
   const Icon = config.icon
   const currentPhaseIndex = getPhaseIndex(job.phase)
   const isActive = job.status === 'processing' || job.status === 'pending'
   const progressPercent = getProgressPercent(job)
+  const canRetry = job.phase === 'failed' && job.can_retry && job.retry_count < job.max_retries
 
   if (compact) {
-    // Compact version - icon, supplier name, and status badge
+    // Compact version - icon, supplier name, status badge, and retry button
     return (
       <div className="flex items-center gap-3 py-1.5">
         <div
@@ -258,12 +285,41 @@ export function JobPhaseIndicator({ job, compact = false }: JobPhaseIndicatorPro
           {job.phase === 'failed' && job.error && (
             <p className="text-xs text-rose-600 truncate">{job.error}</p>
           )}
+          {job.phase === 'failed' && job.retry_count > 0 && (
+            <p className="text-xs text-slate-500">
+              {t('ingestion.retryAttempt', {
+                current: job.retry_count,
+                max: job.max_retries,
+              })}
+            </p>
+          )}
         </div>
-        <span
-          className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor} shrink-0`}
-        >
-          {t(`ingestion.phase.${job.phase}`)}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}
+          >
+            {t(`ingestion.phase.${job.phase}`)}
+          </span>
+          {canRetry && onRetry && (
+            <button
+              onClick={() => onRetry(job.job_id)}
+              disabled={isRetrying}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                isRetrying
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : 'bg-rose-100 text-rose-700 hover:bg-rose-200 active:bg-rose-300'
+              }`}
+              aria-label={t('ingestion.retryJob')}
+            >
+              {isRetrying ? (
+                <SpinnerIcon className="w-3 h-3" />
+              ) : (
+                <RetryIcon className="w-3 h-3" />
+              )}
+              {t('common.retry')}
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -414,15 +470,41 @@ export function JobPhaseIndicator({ job, compact = false }: JobPhaseIndicatorPro
           </div>
         )}
 
-        {job.phase === 'failed' && job.error && (
-          <div className="p-2 bg-rose-100 rounded border border-rose-200">
-            <p className="text-rose-700 font-medium">{job.error}</p>
-            {job.retry_count > 0 && (
-              <p className="text-rose-600 text-xs mt-1">
+        {job.phase === 'failed' && (
+          <div className="p-3 bg-rose-100 rounded border border-rose-200">
+            {job.error && (
+              <p className="text-rose-700 font-medium">{job.error}</p>
+            )}
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-rose-600 text-xs">
                 {t('ingestion.retryAttempt', {
                   current: job.retry_count,
                   max: job.max_retries,
                 })}
+              </p>
+              {canRetry && onRetry && (
+                <button
+                  onClick={() => onRetry(job.job_id)}
+                  disabled={isRetrying}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    isRetrying
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm'
+                  }`}
+                  aria-label={t('ingestion.retryJob')}
+                >
+                  {isRetrying ? (
+                    <SpinnerIcon className="w-4 h-4" />
+                  ) : (
+                    <RetryIcon className="w-4 h-4" />
+                  )}
+                  {t('common.retry')}
+                </button>
+              )}
+            </div>
+            {!canRetry && job.retry_count >= job.max_retries && (
+              <p className="text-rose-500 text-xs mt-1">
+                {t('ingestion.maxRetriesReached')}
               </p>
             )}
           </div>
@@ -433,5 +515,5 @@ export function JobPhaseIndicator({ job, compact = false }: JobPhaseIndicatorPro
 }
 
 // Also export individual icons for reuse
-export { DownloadIcon, AnalyzeIcon, MatchIcon, CheckIcon, ErrorIcon, SpinnerIcon }
+export { DownloadIcon, AnalyzeIcon, MatchIcon, CheckIcon, ErrorIcon, SpinnerIcon, RetryIcon }
 

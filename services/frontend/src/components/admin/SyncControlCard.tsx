@@ -123,7 +123,9 @@ export function SyncControlCard({
   nextScheduledAt,
   jobs,
   onSyncNow,
+  onRetryJob,
   isSyncing,
+  isRetrying = false,
   isLoading = false,
   error = null,
 }: SyncControlCardProps) {
@@ -137,7 +139,7 @@ export function SyncControlCard({
   )
   const recentJobs = jobs.filter(
     (job) => job.status === 'completed' || job.status === 'failed'
-  ).slice(0, 3)
+  ).slice(0, 5) // Show more recent jobs to include failed ones that can be retried
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-border overflow-hidden">
@@ -279,7 +281,12 @@ export function SyncControlCard({
               {t('ingestion.activeJobs')}
             </h4>
             {activeJobs.map((job) => (
-              <JobPhaseIndicator key={job.job_id} job={job} />
+              <JobPhaseIndicator
+                key={job.job_id}
+                job={job}
+                onRetry={onRetryJob}
+                isRetrying={isRetrying}
+              />
             ))}
           </div>
         )}
@@ -291,7 +298,13 @@ export function SyncControlCard({
               {t('ingestion.recentJobs')}
             </h4>
             {recentJobs.map((job) => (
-              <JobPhaseIndicator key={job.job_id} job={job} compact />
+              <JobPhaseIndicator
+                key={job.job_id}
+                job={job}
+                compact
+                onRetry={onRetryJob}
+                isRetrying={isRetrying}
+              />
             ))}
           </div>
         )}

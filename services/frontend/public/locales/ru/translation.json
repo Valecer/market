@@ -321,7 +321,9 @@
     "processingErrors": "{{count}} ошибок",
     "matched": "совпало",
     "inReview": "на проверке",
-    "retryAttempt": "Попытка {{current}} из {{max}}"
+    "retryAttempt": "Попытка {{current}} из {{max}}",
+    "retryJob": "Повторить задачу",
+    "maxRetriesReached": "Достигнуто максимальное количество попыток. Требуется расследование проблемы."
   },
 
   "settings": {

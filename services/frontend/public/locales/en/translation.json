@@ -313,7 +313,9 @@
     "processingErrors": "{{count}} errors",
     "matched": "matched",
     "inReview": "in review",
-    "retryAttempt": "Retry {{current}} of {{max}}"
+    "retryAttempt": "Retry {{current}} of {{max}}",
+    "retryJob": "Retry job",
+    "maxRetriesReached": "Maximum retries reached. Please investigate the issue."
   },
 
   "settings": {

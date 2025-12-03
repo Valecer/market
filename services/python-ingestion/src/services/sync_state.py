@@ -574,3 +574,53 @@ async def get_parse_trigger_count(
         logger.error("get_parse_trigger_count_failed", error=str(e))
         return 0
 
+
+# =============================================================================
+# Retry Trigger (for failed job retry integration)
+# =============================================================================
+
+RETRY_TRIGGERS_KEY = "retry:triggers"
+
+
+async def get_pending_retry_triggers(
+    redis: Redis,
+    max_count: int = 10,
+) -> list:
+    """Get pending retry triggers from Redis.
+    
+    Atomically pops triggers from the list to prevent duplicate processing.
+    Called by the Python worker to check for retry requests from Bun API.
+    
+    Args:
+        redis: Redis connection
+        max_count: Maximum triggers to retrieve at once
+    
+    Returns:
+        List of trigger data dicts containing job_id and task_id
+    """
+    triggers = []
+    
+    try:
+        for _ in range(max_count):
+            # LPOP atomically removes and returns the first element
+            trigger_json = await redis.lpop(RETRY_TRIGGERS_KEY)
+            
+            if not trigger_json:
+                break
+            
+            try:
+                trigger_data = json.loads(trigger_json.decode())
+                triggers.append(trigger_data)
+            except json.JSONDecodeError as e:
+                logger.warning("retry_trigger_invalid_json", error=str(e))
+                continue
+        
+        if triggers:
+            logger.debug("retry_triggers_retrieved", count=len(triggers))
+        
+        return triggers
+        
+    except RedisError as e:
+        logger.error("get_retry_triggers_failed", error=str(e))
+        return []
+
