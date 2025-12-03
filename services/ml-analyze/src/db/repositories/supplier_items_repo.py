@@ -174,7 +174,7 @@ class SupplierItemsRepository:
                 v->>'source_type',
                 NOW(),
                 NOW()
-            FROM jsonb_array_elements(:values::jsonb) AS v
+            FROM jsonb_array_elements(CAST(:values AS jsonb)) AS v
             RETURNING id
         """)
 

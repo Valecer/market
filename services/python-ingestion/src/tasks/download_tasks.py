@@ -21,6 +21,8 @@ from uuid import UUID, uuid4
 import httpx
 
 from src.config import settings
+from src.db.base import async_session_maker
+from src.db.operations import log_parsing_error
 from src.models.ml_models import (
     FileMetadata,
     FileType,
@@ -48,6 +50,48 @@ logger = structlog.get_logger(__name__)
 SHARED_UPLOADS_DIR = Path("/shared/uploads")
 MAX_DOWNLOAD_RETRIES = 3
 DOWNLOAD_TIMEOUT = 300  # 5 minutes
+
+
+# =============================================================================
+# Parsing Log Helper
+# =============================================================================
+
+
+async def _log_parsing_event(
+    task_id: str,
+    supplier_id: Optional[UUID],
+    error_type: str,
+    message: str,
+) -> None:
+    """
+    Log a parsing event to the database for UI visibility.
+
+    This enables events from the ML pipeline to appear in LiveLogViewer.
+
+    Args:
+        task_id: Task identifier
+        supplier_id: Supplier UUID
+        error_type: Event type (INFO, SUCCESS, WARNING, ERROR, etc.)
+        message: Human-readable message
+    """
+    try:
+        async with async_session_maker() as session:
+            await log_parsing_error(
+                session=session,
+                task_id=task_id,
+                supplier_id=supplier_id,
+                error_type=error_type,
+                error_message=message,
+            )
+            await session.commit()
+    except Exception as e:
+        # Don't fail the task if logging fails
+        logger.warning(
+            "failed_to_log_parsing_event",
+            task_id=task_id,
+            error_type=error_type,
+            error=str(e),
+        )
 
 
 # =============================================================================
@@ -264,7 +308,7 @@ async def _download_from_google_sheets(
     job_id: UUID,
     redis: Any,
     sheet_name: Optional[str] = None,
-) -> tuple[int, Optional[str]]:
+) -> tuple[Path, int, Optional[str]]:
     """
     Export Google Sheet to XLSX file.
 
@@ -276,7 +320,7 @@ async def _download_from_google_sheets(
         sheet_name: Optional sheet name to export
 
     Returns:
-        Tuple of (file_size_bytes, mime_type)
+        Tuple of (actual_dest_path, file_size_bytes, mime_type)
     """
     from src.parsers.google_sheets_parser import GoogleSheetsParser
 
@@ -300,7 +344,7 @@ async def _download_from_google_sheets(
     await update_download_progress(redis, job_id, file_size, file_size)
 
     mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    return file_size, mime_type
+    return dest_path, file_size, mime_type
 
 
 async def _download_file(
@@ -332,12 +376,10 @@ async def _download_file(
 
     # Download based on source type
     if source_type == "google_sheets":
-        file_size, mime_type = await _download_from_google_sheets(
+        # Google Sheets download returns updated path with .xlsx extension
+        dest_path, file_size, mime_type = await _download_from_google_sheets(
             source_url, dest_path, job_id, redis, sheet_name
         )
-        # Update dest_path if extension changed
-        if dest_path.suffix.lower() != ".xlsx":
-            dest_path = dest_path.with_suffix(".xlsx")
     elif source_type in ("csv", "excel"):
         # Check if source is local file or URL
         if source_url.startswith(("http://", "https://")):
@@ -446,10 +488,12 @@ async def download_and_trigger_ml(
 
     log.info("download_task_started", source_type=source_type)
 
+    # Parse UUIDs early so they're available in exception handlers
+    job_id_uuid = UUID(job_id)
+    supplier_id_uuid = UUID(supplier_id)
+
     try:
         # Create job in Redis
-        job_id_uuid = UUID(job_id)
-        supplier_id_uuid = UUID(supplier_id)
 
         await create_job(
             redis=redis,
@@ -468,6 +512,14 @@ async def download_and_trigger_ml(
             status="processing",
         )
 
+        # Log download start to parsing_logs for UI visibility
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="INFO",
+            message=f"Downloading file for {supplier_name}",
+        )
+
         # Determine original filename if not provided
         if not original_filename:
             if source_type == "google_sheets":
@@ -477,7 +529,7 @@ async def download_and_trigger_ml(
 
         # Download file
         file_path, metadata = await _download_file(
-            source_type=SourceType(source_type),
+            source_type=source_type,  # type: ignore[arg-type]
             source_url=source_url,
             original_filename=original_filename,
             job_id=job_id_uuid,
@@ -492,12 +544,19 @@ async def download_and_trigger_ml(
         # Check file size
         max_size_bytes = max_file_size_mb * 1024 * 1024
         if metadata.file_size_bytes > max_size_bytes:
+            error_msg = f"File too large: {metadata.file_size_bytes / (1024*1024):.1f}MB exceeds limit of {max_file_size_mb}MB"
             await update_job_phase(
                 redis=redis,
                 job_id=job_id_uuid,
                 phase="failed",
                 status="failed",
-                error=f"File too large: {metadata.file_size_bytes / (1024*1024):.1f}MB exceeds limit of {max_file_size_mb}MB",
+                error=error_msg,
+            )
+            await _log_parsing_event(
+                task_id=task_id,
+                supplier_id=supplier_id_uuid,
+                error_type="ERROR",
+                message=error_msg,
             )
             return {
                 "task_id": task_id,
@@ -508,6 +567,14 @@ async def download_and_trigger_ml(
 
         # Re-write metadata sidecar with correct info
         await _write_metadata_sidecar(file_path, metadata)
+
+        # Log download complete
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="INFO",
+            message=f"Download complete: {metadata.file_size_bytes / 1024:.1f}KB",
+        )
 
         log.info(
             "download_complete",
@@ -523,6 +590,12 @@ async def download_and_trigger_ml(
                 phase="complete",
                 status="completed",
             )
+            await _log_parsing_event(
+                task_id=task_id,
+                supplier_id=supplier_id_uuid,
+                error_type="SUCCESS",
+                message=f"File ready for processing: {original_filename}",
+            )
             return {
                 "task_id": task_id,
                 "job_id": job_id,
@@ -537,6 +610,14 @@ async def download_and_trigger_ml(
             job_id=job_id_uuid,
             phase="analyzing",
             status="processing",
+        )
+
+        # Log ML analysis trigger
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="INFO",
+            message=f"Triggering ML analysis for {supplier_name}",
         )
 
         # Trigger ML analysis
@@ -570,6 +651,14 @@ async def download_and_trigger_ml(
                 ml_status=ml_response.status,
             )
 
+            # Log success
+            await _log_parsing_event(
+                task_id=task_id,
+                supplier_id=supplier_id_uuid,
+                error_type="SUCCESS",
+                message=f"ML analysis started (job: {str(ml_response.job_id)[:8]}...)",
+            )
+
             return {
                 "task_id": task_id,
                 "job_id": job_id,
@@ -588,6 +677,12 @@ async def download_and_trigger_ml(
             error=f"ML service unavailable: {e}",
             error_details=["ML service is not reachable. Will retry."],
         )
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="WARNING",
+            message=f"ML service unavailable, will retry: {e}",
+        )
         # Re-raise to trigger retry
         raise
 
@@ -599,6 +694,12 @@ async def download_and_trigger_ml(
             phase="failed",
             status="failed",
             error=str(e),
+        )
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="ERROR",
+            message=f"ML client error: {e}",
         )
         return {
             "task_id": task_id,
@@ -615,6 +716,12 @@ async def download_and_trigger_ml(
             phase="failed",
             status="failed",
             error=f"File not found: {e}",
+        )
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="ERROR",
+            message=f"Source file not found: {e}",
         )
         return {
             "task_id": task_id,
@@ -634,5 +741,11 @@ async def download_and_trigger_ml(
                 error=str(e),
                 error_details=[f"{type(e).__name__}: {e}"],
             )
+        await _log_parsing_event(
+            task_id=task_id,
+            supplier_id=supplier_id_uuid,
+            error_type="ERROR",
+            message=f"Download failed: {type(e).__name__}: {e}",
+        )
         raise
 

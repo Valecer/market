@@ -265,6 +265,7 @@
     "step3": "Отслеживайте прогресс обработки прайс-листов каждого поставщика.",
     "suppliers": "Поставщики",
     "sourceType": "Тип источника",
+    "processing": "Обработка",
     "status": "Статус",
     "itemsCount": "Товары",
     "state": {
@@ -310,7 +311,17 @@
       "analyzing": "Обработано {{processed}} / {{total}} товаров",
       "complete": "Обработка завершена",
       "failedGeneric": "Обработка завершилась с ошибкой"
-    }
+    },
+    "recentJobs": "Недавние задачи",
+    "jobProgress": "Прогресс задачи",
+    "itemsProcessed": "{{processed}} / {{total}} товаров обработано",
+    "itemsProcessedTotal": "товаров обработано",
+    "matchesFound": "{{count}} совпадений найдено",
+    "inReviewQueue": "{{count}} на проверке",
+    "processingErrors": "{{count}} ошибок",
+    "matched": "совпало",
+    "inReview": "на проверке",
+    "retryAttempt": "Попытка {{current}} из {{max}}"
   },
 
   "settings": {
@@ -349,6 +360,12 @@
       "csv": "CSV файл",
       "excel": "Excel файл"
     },
+    "mlBadge": {
+      "enabled": "ML",
+      "enabledTooltip": "Включена ИИ-обработка",
+      "disabled": "Обычный",
+      "disabledTooltip": "Используется стандартный парсинг"
+    },
     "modal": {
       "title": "Добавить нового поставщика",
       "name": "Название поставщика",
@@ -365,6 +382,8 @@
       "uploadError": "Не удалось обработать файл",
       "activeLabel": "Поставщик активен для синхронизации",
       "useMlProcessingLabel": "Обработка через ML (рекомендуется)",
+      "mlProcessingLabel": "ИИ-обработка данных",
+      "mlProcessingHint": "Используйте ML для интеллектуального извлечения данных и сопоставления товаров",
       "notes": "Заметки",
       "notesPlaceholder": "Необязательные заметки о поставщике...",
       "create": "Создать поставщика"

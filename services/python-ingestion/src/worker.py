@@ -46,6 +46,8 @@ from src.tasks.sync_tasks import (
 )
 # Import ML integration tasks (Phase 8)
 from src.tasks.download_tasks import download_and_trigger_ml
+from src.tasks.ml_polling_tasks import poll_ml_job_status_task
+from src.tasks.cleanup_tasks import cleanup_shared_files_task
 
 # Configure logging
 configure_logging(settings.log_level)
@@ -637,6 +639,8 @@ class WorkerSettings:
         scheduled_sync_task,
         # Phase 8: ML integration pipeline
         download_and_trigger_ml,
+        poll_ml_job_status_task,
+        cleanup_shared_files_task,
     ]
     
     # Register job lifecycle hooks
@@ -669,6 +673,21 @@ class WorkerSettings:
         cron(
             poll_parse_triggers,
             second={0, 10, 20, 30, 40, 50},  # Every 10 seconds
+            unique=True,
+        ),
+        # Phase 8: Poll ML job status every 10 seconds
+        # Syncs job progress from ml-analyze to Redis
+        cron(
+            poll_ml_job_status_task,
+            second={5, 15, 25, 35, 45, 55},  # Every 10 seconds, offset from parse triggers
+            unique=True,
+        ),
+        # Phase 8: Cleanup shared files every 6 hours
+        # Removes files older than FILE_CLEANUP_TTL_HOURS (default 24)
+        cron(
+            cleanup_shared_files_task,
+            hour={0, 6, 12, 18},  # Every 6 hours
+            minute=30,  # Offset from other hourly tasks
             unique=True,
         ),
     ]

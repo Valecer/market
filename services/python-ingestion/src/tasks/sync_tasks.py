@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from arq.connections import ArqRedis
 from redis.asyncio import Redis
@@ -19,6 +20,7 @@ import structlog
 from src.config import settings
 from src.db.base import async_session_maker
 from src.db.models import Supplier
+from src.db.operations import log_parsing_error, clear_parsing_logs
 from src.services.master_sheet_ingestor import MasterSheetIngestor
 from src.services.sync_state import (
     acquire_sync_lock,
@@ -37,6 +39,59 @@ from src.models.master_sheet_config import MasterSyncResult
 from src.errors.exceptions import ParserError
 
 logger = structlog.get_logger(__name__)
+
+
+async def _log_sync_event(
+    task_id: str,
+    error_type: str,
+    message: str,
+    supplier_id: Optional[UUID] = None,
+) -> None:
+    """
+    Log a sync event to parsing_logs for UI visibility.
+
+    Args:
+        task_id: Sync task identifier
+        error_type: Event type (INFO, SUCCESS, WARNING, ERROR)
+        message: Human-readable message
+        supplier_id: Optional supplier UUID for context
+    """
+    try:
+        async with async_session_maker() as session:
+            await log_parsing_error(
+                session=session,
+                task_id=task_id,
+                supplier_id=supplier_id,
+                error_type=error_type,
+                error_message=message,
+            )
+            await session.commit()
+    except Exception as e:
+        logger.warning(
+            "failed_to_log_sync_event",
+            task_id=task_id,
+            error_type=error_type,
+            error=str(e),
+        )
+
+
+async def _clear_old_logs() -> int:
+    """
+    Clear old parsing logs before a new sync.
+    
+    Returns:
+        Number of deleted log entries
+    """
+    try:
+        async with async_session_maker() as session:
+            deleted = await clear_parsing_logs(session, keep_last_n=0)
+            return deleted
+    except Exception as e:
+        logger.warning(
+            "failed_to_clear_old_logs",
+            error=str(e),
+        )
+        return 0
 
 
 def get_sync_interval_hours() -> int:
@@ -108,6 +163,8 @@ class SyncMetrics:
     suppliers_deactivated: int = 0
     suppliers_skipped: int = 0
     parse_tasks_enqueued: int = 0
+    ml_jobs_triggered: int = 0
+    ml_job_ids: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     duration_seconds: float = 0.0
     
@@ -120,6 +177,8 @@ class SyncMetrics:
             "suppliers_deactivated": self.suppliers_deactivated,
             "suppliers_skipped": self.suppliers_skipped,
             "parse_tasks_enqueued": self.parse_tasks_enqueued,
+            "ml_jobs_triggered": self.ml_jobs_triggered,
+            "ml_job_ids": self.ml_job_ids,
             "errors": self.errors,
             "duration_seconds": round(self.duration_seconds, 3),
         }
@@ -167,6 +226,13 @@ async def trigger_master_sync_task(
     )
     log.info("trigger_master_sync_task_started")
     
+    # Log sync start to parsing_logs for UI visibility
+    await _log_sync_event(
+        task_id=task_id,
+        error_type="INFO",
+        message=f"Master sync started ({triggered_by})",
+    )
+    
     # Get Redis connection from arq context
     redis: Optional[ArqRedis] = ctx.get("redis")
     if not redis:
@@ -212,10 +278,15 @@ async def trigger_master_sync_task(
             }
         
         try:
-            # Step 2: Update status to syncing_master
+            # Step 2: Clear old logs for fresh sync display
+            deleted_logs = await _clear_old_logs()
+            if deleted_logs > 0:
+                log.info("old_logs_cleared", deleted_count=deleted_logs)
+            
+            # Step 3: Update status to syncing_master
             await set_sync_started(redis, task_id)
             
-            # Step 3: Parse Master Sheet (if URL is configured)
+            # Step 4: Parse Master Sheet (if URL is configured)
             if sheet_url:
                 log.info("parsing_master_sheet", sheet_url=sheet_url)
                 ingestor = MasterSheetIngestor()
@@ -274,13 +345,18 @@ async def trigger_master_sync_task(
             
             for idx, supplier in enumerate(active_suppliers, start=1):
                 try:
-                    await _enqueue_supplier_parse(
+                    job_id = await _enqueue_supplier_parse(
                         redis=redis,
                         supplier=supplier,
                         parent_task_id=task_id,
                         log=log,
                     )
                     metrics.parse_tasks_enqueued += 1
+                    
+                    # Track ML job IDs for status monitoring
+                    if job_id:
+                        metrics.ml_jobs_triggered += 1
+                        metrics.ml_job_ids.append(job_id)
                     
                     # Update progress
                     await update_sync_progress(redis, idx, len(active_suppliers))
@@ -313,6 +389,26 @@ async def trigger_master_sync_task(
                 **metrics.to_dict(),
             )
             
+            # Log completion to parsing_logs
+            if status == "success":
+                await _log_sync_event(
+                    task_id=task_id,
+                    error_type="SUCCESS",
+                    message=f"Sync completed: {metrics.parse_tasks_enqueued} suppliers queued for processing",
+                )
+            elif status == "partial_success":
+                await _log_sync_event(
+                    task_id=task_id,
+                    error_type="WARNING",
+                    message=f"Sync completed with warnings: {len(metrics.errors)} errors, {metrics.parse_tasks_enqueued} suppliers queued",
+                )
+            else:
+                await _log_sync_event(
+                    task_id=task_id,
+                    error_type="ERROR",
+                    message=f"Sync failed: {'; '.join(metrics.errors[:2])}",
+                )
+            
             return {
                 "task_id": task_id,
                 "status": status,
@@ -334,6 +430,13 @@ async def trigger_master_sync_task(
             error=str(e),
             error_type=type(e).__name__,
             **metrics.to_dict(),
+        )
+        
+        # Log error to parsing_logs
+        await _log_sync_event(
+            task_id=task_id,
+            error_type="ERROR",
+            message=f"Sync failed: {type(e).__name__}: {str(e)[:100]}",
         )
         
         return {
@@ -450,15 +553,23 @@ async def _enqueue_supplier_parse(
     supplier: Supplier,
     parent_task_id: str,
     log: Any,
-) -> None:
+) -> Optional[str]:
     """Enqueue a parse task for a supplier.
+    
+    Routes to either ML pipeline (download_and_trigger_ml) or legacy pipeline (parse_task)
+    based on the supplier's use_ml_processing flag.
     
     Args:
         redis: ArqRedis connection
         supplier: Supplier model with configuration
         parent_task_id: Parent sync task ID for correlation
         log: Logger instance
+        
+    Returns:
+        Job ID if ML processing was triggered, None for legacy pipeline
     """
+    from uuid import uuid4
+    
     meta = supplier.meta or {}
     source_url = meta.get("source_url")
     
@@ -475,35 +586,83 @@ async def _enqueue_supplier_parse(
         # Default to google_sheets for unknown types
         parser_type = "google_sheets"
     
-    # Build source config based on parser type
-    source_config: Dict[str, Any] = {
-        "sheet_url": source_url,
-    }
+    # Check if ML processing is enabled for this supplier (default: True for new flow)
+    use_ml_processing = meta.get("use_ml_processing", settings.use_ml_processing)
     
-    if parser_type == "google_sheets":
-        # Use default settings for Google Sheets
-        source_config.update({
-            "sheet_name": "Sheet1",
-            "header_row": 1,
-            "data_start_row": 2,
-        })
-    
-    # Enqueue parse_task
-    await redis.enqueue_job(
-        "parse_task",
-        task_id=task_id,
-        parser_type=parser_type,
-        supplier_name=supplier.name,
-        source_config=source_config,
-    )
-    
-    log.debug(
-        "parse_task_enqueued",
-        task_id=task_id,
-        supplier_name=supplier.name,
-        parser_type=parser_type,
-        parent_task_id=parent_task_id,
-    )
+    if use_ml_processing:
+        # Use ML pipeline: download file and trigger ml-analyze
+        job_id = str(uuid4())
+        
+        # Extract original filename from URL or use supplier name
+        original_filename = None
+        if source_url.startswith(("http://", "https://")):
+            from pathlib import Path
+            url_path = source_url.split("?")[0]  # Remove query params
+            original_filename = Path(url_path).name or None
+        
+        # Default filename if not extractable
+        if not original_filename:
+            ext = ".xlsx" if parser_type == "google_sheets" else f".{parser_type}"
+            original_filename = f"{supplier.name}_export{ext}"
+        
+        # Get sheet name for Google Sheets
+        sheet_name = meta.get("sheet_name", "Sheet1") if parser_type == "google_sheets" else None
+        
+        await redis.enqueue_job(
+            "download_and_trigger_ml",
+            task_id=task_id,
+            job_id=job_id,
+            supplier_id=str(supplier.id),
+            supplier_name=supplier.name,
+            source_type=parser_type,
+            source_url=source_url,
+            original_filename=original_filename,
+            sheet_name=sheet_name,
+            use_ml_processing=True,
+        )
+        
+        log.info(
+            "ml_download_task_enqueued",
+            task_id=task_id,
+            job_id=job_id,
+            supplier_name=supplier.name,
+            source_type=parser_type,
+            parent_task_id=parent_task_id,
+        )
+        
+        return job_id
+    else:
+        # Legacy pipeline: direct parse_task
+        source_config: Dict[str, Any] = {
+            "sheet_url": source_url,
+        }
+        
+        if parser_type == "google_sheets":
+            # Use default settings for Google Sheets
+            source_config.update({
+                "sheet_name": meta.get("sheet_name", "Sheet1"),
+                "header_row": 1,
+                "data_start_row": 2,
+            })
+        
+        # Enqueue parse_task
+        await redis.enqueue_job(
+            "parse_task",
+            task_id=task_id,
+            parser_type=parser_type,
+            supplier_name=supplier.name,
+            source_config=source_config,
+        )
+        
+        log.debug(
+            "parse_task_enqueued",
+            task_id=task_id,
+            supplier_name=supplier.name,
+            parser_type=parser_type,
+            parent_task_id=parent_task_id,
+        )
+        
+        return None
 
 
 async def poll_parse_triggers(

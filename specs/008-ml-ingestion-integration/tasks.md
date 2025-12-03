@@ -157,28 +157,28 @@ This task list implements the refactored ingestion pipeline where `python-ingest
 
 ### Backend: Update Sync Tasks
 
-- [ ] T052 [US2] Modify `_enqueue_supplier_parse()` to use `download_and_trigger_ml` in `services/python-ingestion/src/tasks/sync_tasks.py`
-- [ ] T053 [US2] Add `use_ml_processing` flag check in `_enqueue_supplier_parse()` in `services/python-ingestion/src/tasks/sync_tasks.py`
-- [ ] T054 [US2] Update `trigger_master_sync_task` to track ML job IDs in `services/python-ingestion/src/tasks/sync_tasks.py`
+- [X] T052 [US2] Modify `_enqueue_supplier_parse()` to use `download_and_trigger_ml` in `services/python-ingestion/src/tasks/sync_tasks.py`
+- [X] T053 [US2] Add `use_ml_processing` flag check in `_enqueue_supplier_parse()` in `services/python-ingestion/src/tasks/sync_tasks.py`
+- [X] T054 [US2] Update `trigger_master_sync_task` to track ML job IDs in `services/python-ingestion/src/tasks/sync_tasks.py`
 
 ### Backend: ML Job Status Polling
 
-- [ ] T055 [US2] Create `poll_ml_job_status_task` to poll ML service in `services/python-ingestion/src/tasks/ml_polling_tasks.py`
-- [ ] T056 [US2] Implement exponential backoff for ML polling in `services/python-ingestion/src/tasks/ml_polling_tasks.py`
-- [ ] T057 [US2] Update Redis job state from ML status response in `services/python-ingestion/src/tasks/ml_polling_tasks.py`
-- [ ] T058 [US2] Register `poll_ml_job_status_task` in worker in `services/python-ingestion/src/worker.py`
+- [X] T055 [US2] Create `poll_ml_job_status_task` to poll ML service in `services/python-ingestion/src/tasks/ml_polling_tasks.py`
+- [X] T056 [US2] Implement exponential backoff for ML polling in `services/python-ingestion/src/tasks/ml_polling_tasks.py`
+- [X] T057 [US2] Update Redis job state from ML status response in `services/python-ingestion/src/tasks/ml_polling_tasks.py`
+- [X] T058 [US2] Register `poll_ml_job_status_task` in worker in `services/python-ingestion/src/worker.py`
 
 ### Backend: File Cleanup
 
-- [ ] T059 [US2] Create `cleanup_shared_files_task` cron task in `services/python-ingestion/src/tasks/cleanup_tasks.py`
-- [ ] T060 [US2] Implement 24-hour TTL cleanup logic in `services/python-ingestion/src/tasks/cleanup_tasks.py`
-- [ ] T061 [US2] Delete both file and `.meta.json` sidecar in `services/python-ingestion/src/tasks/cleanup_tasks.py`
-- [ ] T062 [US2] Register cleanup task as cron (every 6 hours) in `services/python-ingestion/src/worker.py`
+- [X] T059 [US2] Create `cleanup_shared_files_task` cron task in `services/python-ingestion/src/tasks/cleanup_tasks.py`
+- [X] T060 [US2] Implement 24-hour TTL cleanup logic in `services/python-ingestion/src/tasks/cleanup_tasks.py`
+- [X] T061 [US2] Delete both file and `.meta.json` sidecar in `services/python-ingestion/src/tasks/cleanup_tasks.py`
+- [X] T062 [US2] Register cleanup task as cron (every 6 hours) in `services/python-ingestion/src/worker.py`
 
 ### Frontend: Per-Supplier Progress
 
-- [ ] T063 [US2] Update `SupplierStatusTable` to show ML processing status in `services/frontend/src/components/admin/SupplierStatusTable.tsx`
-- [ ] T064 [US2] Add `use_ml_processing` badge to supplier row in `services/frontend/src/components/admin/SupplierStatusTable.tsx`
+- [X] T063 [US2] Update `SupplierStatusTable` to show ML processing status in `services/frontend/src/components/admin/SupplierStatusTable.tsx`
+- [X] T064 [US2] Add `use_ml_processing` badge to supplier row in `services/frontend/src/components/admin/SupplierStatusTable.tsx`
 
 ---
 

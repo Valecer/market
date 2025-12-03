@@ -173,6 +173,17 @@ const DatabaseIcon = () => (
   </svg>
 )
 
+const SparklesIcon = () => (
+  <svg
+    className="w-3 h-3"
+    fill="currentColor"
+    viewBox="0 0 20 20"
+    aria-hidden="true"
+  >
+    <path d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" />
+  </svg>
+)
+
 const TrashIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg
     className={className}
@@ -314,6 +325,39 @@ function StatusBadge({ status, label }: StatusBadgeProps) {
 }
 
 // =============================================================================
+// ML Processing Badge Component
+// =============================================================================
+
+interface MLBadgeProps {
+  enabled: boolean
+  label: string
+  tooltip: string
+}
+
+function MLBadge({ enabled, label, tooltip }: MLBadgeProps) {
+  if (enabled) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm"
+        title={tooltip}
+      >
+        <SparklesIcon />
+        {label}
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-500"
+      title={tooltip}
+    >
+      {label}
+    </span>
+  )
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -418,6 +462,10 @@ export function SupplierStatusTable({
                   direction={sortDirection}
                   onSort={handleSort}
                 />
+                {/* Processing Mode - static header (not sortable) */}
+                <th className="px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider text-center">
+                  {t('ingestion.processing', 'Processing')}
+                </th>
                 <SortableHeader
                   label={t('ingestion.lastSync')}
                   field="last_sync_at"
@@ -476,6 +524,21 @@ export function SupplierStatusTable({
                   {/* Source Type */}
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                     {t(`suppliers.sourceTypes.${supplier.source_type}`, supplier.source_type)}
+                  </td>
+
+                  {/* Processing Mode (ML Badge) */}
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <MLBadge
+                      enabled={supplier.use_ml_processing}
+                      label={supplier.use_ml_processing 
+                        ? t('suppliers.mlBadge.enabled', 'ML')
+                        : t('suppliers.mlBadge.disabled', 'Legacy')
+                      }
+                      tooltip={supplier.use_ml_processing
+                        ? t('suppliers.mlBadge.enabledTooltip', 'AI-powered processing enabled')
+                        : t('suppliers.mlBadge.disabledTooltip', 'Using legacy parsing')
+                      }
+                    />
                   </td>
 
                   {/* Last Sync */}

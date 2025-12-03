@@ -239,11 +239,11 @@ export function JobPhaseIndicator({ job, compact = false }: JobPhaseIndicatorPro
   const progressPercent = getProgressPercent(job)
 
   if (compact) {
-    // Compact version - just icon and badge
+    // Compact version - icon, supplier name, and status badge
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 py-1.5">
         <div
-          className={`flex items-center justify-center w-8 h-8 rounded-full ${config.bgColor} ${config.textColor}`}
+          className={`flex items-center justify-center w-8 h-8 rounded-full ${config.bgColor} ${config.textColor} shrink-0`}
         >
           {isActive && job.phase !== 'complete' ? (
             <SpinnerIcon className="w-4 h-4" />
@@ -251,8 +251,16 @@ export function JobPhaseIndicator({ job, compact = false }: JobPhaseIndicatorPro
             <Icon className="w-4 h-4" />
           )}
         </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-700 truncate">
+            {job.supplier_name}
+          </p>
+          {job.phase === 'failed' && job.error && (
+            <p className="text-xs text-rose-600 truncate">{job.error}</p>
+          )}
+        </div>
         <span
-          className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}
+          className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor} shrink-0`}
         >
           {t(`ingestion.phase.${job.phase}`)}
         </span>

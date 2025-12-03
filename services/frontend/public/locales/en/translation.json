@@ -258,6 +258,7 @@
     "step3": "View progress as each supplier's price list is processed.",
     "suppliers": "Suppliers",
     "sourceType": "Source Type",
+    "processing": "Processing",
     "status": "Status",
     "itemsCount": "Items",
     "state": {
@@ -350,6 +351,12 @@
       "csv": "CSV File",
       "excel": "Excel File"
     },
+    "mlBadge": {
+      "enabled": "ML",
+      "enabledTooltip": "AI-powered processing enabled",
+      "disabled": "Legacy",
+      "disabledTooltip": "Using legacy parsing"
+    },
     "modal": {
       "title": "Add New Supplier",
       "name": "Supplier Name",
@@ -366,6 +373,8 @@
       "uploadError": "Failed to process file",
       "activeLabel": "Supplier is active for sync",
       "useMlProcessingLabel": "Process via ML (recommended)",
+      "mlProcessingLabel": "AI-Powered Processing",
+      "mlProcessingHint": "Use ML for intelligent data extraction and product matching",
       "notes": "Notes",
       "notesPlaceholder": "Optional notes about this supplier...",
       "create": "Create Supplier"

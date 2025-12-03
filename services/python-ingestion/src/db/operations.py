@@ -310,3 +310,56 @@ async def log_parsing_error(
         # But we should still log the failure
         raise DatabaseError(f"Failed to log parsing error: {e}") from e
 
+
+async def clear_parsing_logs(
+    session: AsyncSession,
+    keep_last_n: int = 0,
+) -> int:
+    """Clear parsing logs from the database.
+    
+    Args:
+        session: Async database session
+        keep_last_n: Number of recent logs to keep (0 = delete all)
+    
+    Returns:
+        Number of deleted log entries
+    
+    Raises:
+        DatabaseError: If database operation fails
+    """
+    from sqlalchemy import delete, text
+    
+    try:
+        if keep_last_n > 0:
+            # Keep the N most recent logs
+            subquery = text(f"""
+                DELETE FROM parsing_logs 
+                WHERE id NOT IN (
+                    SELECT id FROM parsing_logs 
+                    ORDER BY created_at DESC 
+                    LIMIT {keep_last_n}
+                )
+            """)
+            result = await session.execute(subquery)
+        else:
+            # Delete all logs
+            result = await session.execute(delete(ParsingLog))
+        
+        deleted_count = result.rowcount
+        await session.commit()
+        
+        logger.info(
+            "parsing_logs_cleared",
+            deleted_count=deleted_count,
+            kept_last_n=keep_last_n,
+        )
+        return deleted_count
+    
+    except Exception as e:
+        logger.error(
+            "clear_parsing_logs_failed",
+            error=str(e),
+            exception_type=type(e).__name__
+        )
+        raise DatabaseError(f"Failed to clear parsing logs: {e}") from e
+

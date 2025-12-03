@@ -10,7 +10,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import type { SyncControlCardProps, IngestionJob } from '@/types/ingestion'
+import type { SyncControlCardProps } from '@/types/ingestion'
 import { JobPhaseIndicator } from './JobPhaseIndicator'
 
 // Status indicator colors and styles

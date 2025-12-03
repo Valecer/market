@@ -42,14 +42,14 @@ class ParsingLogsRepository:
     The parsing_logs table stores structured error information
     for debugging and monitoring parsing operations.
 
-    Table Schema (from existing migrations):
+    Table Schema (actual):
         id: UUID (PK)
+        task_id: varchar(255) (job reference as string)
         supplier_id: UUID (FK → suppliers)
-        job_id: UUID | None (reference to job)
-        error_type: str
-        severity: str
-        message: str
-        context: JSONB (row data, file info, etc.)
+        error_type: varchar(100)
+        error_message: text
+        row_number: int | None
+        row_data: JSONB (context data)
         created_at: datetime
     """
 
@@ -89,11 +89,11 @@ class ParsingLogsRepository:
 
         query = text("""
             INSERT INTO parsing_logs (
-                supplier_id, job_id, error_type, severity,
-                message, context, created_at
+                task_id, supplier_id, error_type,
+                error_message, row_data, created_at
             ) VALUES (
-                :supplier_id, :job_id, :error_type, :severity,
-                :message, :context::jsonb, NOW()
+                :task_id, :supplier_id, :error_type,
+                :error_message, CAST(:row_data AS jsonb), NOW()
             )
             RETURNING id
         """)
@@ -101,12 +101,11 @@ class ParsingLogsRepository:
         result = await self._session.execute(
             query,
             {
+                "task_id": str(job_id) if job_id else f"ml-{supplier_id}",
                 "supplier_id": str(supplier_id),
-                "job_id": str(job_id) if job_id else None,
                 "error_type": error_type,
-                "severity": severity,
-                "message": message,
-                "context": json.dumps(context) if context else None,
+                "error_message": f"[{severity}] {message}",
+                "row_data": json.dumps(context) if context else None,
             },
         )
 
@@ -145,31 +144,32 @@ class ParsingLogsRepository:
 
         import json
 
+        task_id = str(job_id) if job_id else f"ml-{supplier_id}"
         values = []
         for err in errors:
+            severity = err.get("severity", "error")
+            message = err.get("message", "Unknown error")
             values.append({
+                "task_id": task_id,
                 "supplier_id": str(supplier_id),
-                "job_id": str(job_id) if job_id else None,
                 "error_type": err.get("error_type", "unknown"),
-                "severity": err.get("severity", "error"),
-                "message": err.get("message", "Unknown error"),
-                "context": json.dumps(err.get("context")) if err.get("context") else None,
+                "error_message": f"[{severity}] {message}",
+                "row_data": json.dumps(err.get("context")) if err.get("context") else None,
             })
 
         query = text("""
             INSERT INTO parsing_logs (
-                supplier_id, job_id, error_type, severity,
-                message, context, created_at
+                task_id, supplier_id, error_type,
+                error_message, row_data, created_at
             )
             SELECT
+                v->>'task_id',
                 (v->>'supplier_id')::uuid,
-                (v->>'job_id')::uuid,
                 v->>'error_type',
-                v->>'severity',
-                v->>'message',
-                (v->>'context')::jsonb,
+                v->>'error_message',
+                (v->>'row_data')::jsonb,
                 NOW()
-            FROM jsonb_array_elements(:values::jsonb) AS v
+            FROM jsonb_array_elements(CAST(:values AS jsonb)) AS v
             RETURNING id
         """)
 
