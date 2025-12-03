@@ -68,7 +68,7 @@ Each phase represents a complete, independently testable increment.
 
 ### Tasks
 
-- [X] T001 Create ml-analyze service directory structure in services/ml-analyze/
+ - [X] T001 Create ml-analyze service directory structure in services/ml-analyze/
 - [X] T002 [P] Create requirements.txt with all Python dependencies (fastapi, langchain, asyncpg, pgvector, etc.)
 - [X] T003 [P] Create pyproject.toml for project metadata and build configuration
 - [X] T004 [P] Create .env.example with all required environment variables
@@ -125,26 +125,26 @@ Each phase represents a complete, independently testable increment.
 **Goal:** Implement file parsing capabilities for PDF and Excel files with complex formatting.
 
 **Independent Test Criteria:**
-- [ ] PDF file with tables is parsed to Markdown format
-- [ ] Excel file with merged cells is normalized via forward-fill
-- [ ] Parsing errors are logged to parsing_logs table without crashing
-- [ ] Normalized data is returned as list of dicts with standard schema
-- [ ] Integration test: Upload sample PDF → verify supplier_items table populated
+- [X] PDF file with tables is parsed to Markdown format
+- [X] Excel file with merged cells is normalized via forward-fill
+- [X] Parsing errors are logged to parsing_logs table without crashing
+- [X] Normalized data is returned as list of dicts with standard schema
+- [X] Integration test: Upload sample PDF → verify supplier_items table populated
 
 ### Tasks
 
-- [ ] T029 [US1] Create src/ingest/chunker.py with Chunker class (chunk method: row → semantic chunk)
-- [ ] T030 [P] [US1] Implement ExcelStrategy in src/ingest/excel_strategy.py (openpyxl + pandas forward-fill)
-- [ ] T031 [P] [US1] Implement PdfStrategy in src/ingest/pdf_strategy.py (pymupdf4llm Markdown extraction)
-- [ ] T032 [US1] Create src/ingest/parser_factory.py to instantiate correct strategy based on file_type
-- [ ] T033 [P] [US1] Create src/db/repositories/supplier_items_repo.py for CRUD operations on supplier_items
-- [ ] T034 [P] [US1] Create src/db/repositories/parsing_logs_repo.py for error logging
-- [ ] T035 [US1] Create src/services/ingestion_service.py to orchestrate parsing → normalization → database insert
-- [ ] T036 [P] [US1] Write unit tests for ExcelStrategy in tests/unit/test_excel_strategy.py
-- [ ] T037 [P] [US1] Write unit tests for PdfStrategy in tests/unit/test_pdf_strategy.py
-- [ ] T038 [P] [US1] Write unit tests for Chunker in tests/unit/test_chunker.py
-- [ ] T039 [US1] Create integration test in tests/integration/test_file_parsing.py (end-to-end: file → database)
-- [ ] T040 [US1] Add sample test files (sample.pdf, sample_merged_cells.xlsx) to tests/fixtures/
+- [X] T029 [US1] Create src/ingest/chunker.py with Chunker class (chunk method: row → semantic chunk)
+- [X] T030 [P] [US1] Implement ExcelStrategy in src/ingest/excel_strategy.py (openpyxl + pandas forward-fill)
+- [X] T031 [P] [US1] Implement PdfStrategy in src/ingest/pdf_strategy.py (pymupdf4llm Markdown extraction)
+- [X] T032 [US1] Create src/ingest/parser_factory.py to instantiate correct strategy based on file_type
+- [X] T033 [P] [US1] Create src/db/repositories/supplier_items_repo.py for CRUD operations on supplier_items
+- [X] T034 [P] [US1] Create src/db/repositories/parsing_logs_repo.py for error logging
+- [X] T035 [US1] Create src/services/ingestion_service.py to orchestrate parsing → normalization → database insert
+- [X] T036 [P] [US1] Write unit tests for ExcelStrategy in tests/unit/test_excel_strategy.py
+- [X] T037 [P] [US1] Write unit tests for PdfStrategy in tests/unit/test_pdf_strategy.py
+- [X] T038 [P] [US1] Write unit tests for Chunker in tests/unit/test_chunker.py
+- [X] T039 [US1] Create integration test in tests/integration/test_file_parsing.py (end-to-end: file → database)
+- [X] T040 [US1] Add sample test files (sample.pdf, sample_merged_cells.xlsx) to tests/fixtures/
 
 **Dependencies:** Phase 2 (Foundational)
 
@@ -307,10 +307,10 @@ Phase 7: Polish
 ## Acceptance Criteria Summary
 
 ### Phase 3 (US1): File Parsing ✓ Complete When:
-- [ ] PDF with complex tables → Parsed to normalized dict list
-- [ ] Excel with merged cells → Forward-filled and normalized
-- [ ] Errors logged to parsing_logs without crashes
-- [ ] Data inserted into supplier_items with status 'pending_match'
+- [X] PDF with complex tables → Parsed to normalized dict list
+- [X] Excel with merged cells → Forward-filled and normalized
+- [X] Errors logged to parsing_logs without crashes
+- [X] Data inserted into supplier_items with status 'pending_match'
 
 ### Phase 4 (US3): Vector Embeddings ✓ Complete When:
 - [ ] Text → 768-dim vector via Ollama nomic-embed-text

@@ -80,7 +80,7 @@ class NormalizedRow(BaseModel):
     characteristics: Annotated[
         dict[str, Any],
         Field(default_factory=dict, description="Additional attributes"),
-    ] = {}
+    ]
     raw_data: Annotated[
         dict[str, Any] | None,
         Field(default=None, description="Original row data for debugging"),
@@ -235,7 +235,7 @@ class ChunkData(BaseModel):
     metadata: Annotated[
         dict[str, Any],
         Field(default_factory=dict, description="Chunk metadata"),
-    ] = {}
+    ]
 
 
 class FileAnalysisJob(BaseModel):
