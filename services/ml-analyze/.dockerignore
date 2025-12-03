@@ -1,4 +1,4 @@
-# Python
+# Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
@@ -25,6 +25,8 @@ venv/
 .venv/
 ENV/
 env/
+.env.local
+.env.*.local
 
 # Testing
 .pytest_cache/
@@ -32,6 +34,13 @@ env/
 htmlcov/
 .tox/
 .nox/
+.hypothesis/
+tests/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # IDEs
 .idea/
@@ -39,42 +48,67 @@ htmlcov/
 *.swp
 *.swo
 *~
+.spyderproject
+.spyproject
 
-# Git
-.git/
-.gitignore
-
-# Docker
-Dockerfile*
-docker-compose*.yml
-.docker/
-
-# Environment
-.env
-.env.*
-!.env.example
-
-# Logs
-*.log
-logs/
-
-# OS
-.DS_Store
-Thumbs.db
+# Jupyter
+.ipynb_checkpoints/
 
 # Documentation
 docs/
 *.md
 !README.md
 
-# Tests (not needed in production image)
-tests/
+# Git
+.git/
+.gitignore
+.gitattributes
 
-# Local development
-*.local
-*.local.*
+# Docker files (don't need to copy these into the image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
 
-# Alembic (migrations are handled separately)
-alembic.ini
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Makefile
+
+# Logs
+*.log
+*.log.*
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local development configs
+.env
+.env.*
+!.env.example
+
+# Alembic versions (migrations run from python-ingestion)
 migrations/
 
+# Cache directories
+.cache/
+*.cache
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Coverage reports
+coverage.xml
+*.cover
+
+# Profiling
+*.prof
+
+# Debug artifacts
+debug/
+*.pdb

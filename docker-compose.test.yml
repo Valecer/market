@@ -1,0 +1,152 @@
+# Docker Compose configuration for testing environment
+# Usage: docker-compose -f docker-compose.test.yml up -d
+#
+# This configuration provides isolated test infrastructure
+# with ephemeral volumes and test-specific settings.
+
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    container_name: marketbel-postgres-test
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: marketbel_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data  # Ephemeral storage for fast tests
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d marketbel_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - marketbel-test-network
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: marketbel-redis-test
+    command: redis-server --requirepass test_redis_password
+    ports:
+      - "6380:6379"
+    tmpfs:
+      - /data  # Ephemeral storage for fast tests
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "test_redis_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - marketbel-test-network
+
+  # Run ml-analyze tests
+  ml-analyze-test:
+    build:
+      context: ./services/ml-analyze
+      dockerfile: Dockerfile
+    container_name: marketbel-ml-analyze-test
+    environment:
+      ENVIRONMENT: test
+      LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql+asyncpg://test_user:test_password@postgres-test:5432/marketbel_test
+      REDIS_HOST: redis-test
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: test_redis_password
+      REDIS_DB: 1
+      # Use localhost for Ollama since tests may mock it
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+      OLLAMA_LLM_MODEL: llama3
+      EMBEDDING_DIMENSIONS: 768
+      # Test-specific settings
+      MATCH_CONFIDENCE_AUTO_THRESHOLD: 0.9
+      MATCH_CONFIDENCE_REVIEW_THRESHOLD: 0.7
+      FASTAPI_HOST: 0.0.0.0
+      FASTAPI_PORT: 8001
+      DB_POOL_MIN: 1
+      DB_POOL_MAX: 5
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: >
+      sh -c "
+        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=80 &&
+        echo 'All tests passed!'
+      "
+    networks:
+      - marketbel-test-network
+    profiles:
+      - test
+
+  # Run bun-api tests
+  bun-api-test:
+    build:
+      context: ./services/bun-api
+      dockerfile: Dockerfile
+    container_name: marketbel-bun-api-test
+    environment:
+      NODE_ENV: test
+      BUN_PORT: 3000
+      DATABASE_URL: postgresql://test_user:test_password@postgres-test:5432/marketbel_test
+      REDIS_URL: redis://:test_redis_password@redis-test:6379
+      JWT_SECRET: test-jwt-secret-for-testing-only
+      JWT_ISSUER: marketbel-api-test
+      JWT_EXPIRATION_HOURS: 1
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: bun test
+    networks:
+      - marketbel-test-network
+    profiles:
+      - test
+
+  # Run python-ingestion tests
+  worker-test:
+    build:
+      context: ./services/python-ingestion
+      dockerfile: Dockerfile
+    container_name: marketbel-worker-test
+    environment:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+asyncpg://test_user:test_password@postgres-test:5432/marketbel_test
+      REDIS_HOST: redis-test
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: test_redis_password
+      LOG_LEVEL: DEBUG
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: pytest tests/ -v --cov=src --cov-fail-under=80
+    networks:
+      - marketbel-test-network
+    profiles:
+      - test
+
+networks:
+  marketbel-test-network:
+    driver: bridge
+
+# Usage examples:
+#
+# Start test infrastructure only:
+#   docker-compose -f docker-compose.test.yml up -d postgres-test redis-test
+#
+# Run all tests:
+#   docker-compose -f docker-compose.test.yml --profile test up --abort-on-container-exit
+#
+# Run specific service tests:
+#   docker-compose -f docker-compose.test.yml run --rm ml-analyze-test
+#
+# Clean up:
+#   docker-compose -f docker-compose.test.yml down -v
+

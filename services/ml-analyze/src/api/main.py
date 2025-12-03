@@ -6,8 +6,10 @@ Main FastAPI application with health check, middleware,
 and lifecycle management.
 """
 
+import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
+from uuid import uuid4
 
 import httpx
 import redis.asyncio as aioredis
@@ -27,7 +29,8 @@ configure_logging()
 logger = get_logger(__name__)
 
 # Global Redis connection for health checks
-_redis_client: aioredis.Redis | None = None
+# Note: Redis type parameter not supported in all versions
+_redis_client: aioredis.Redis | None = None  # type: ignore[type-arg]
 
 
 @asynccontextmanager
@@ -126,6 +129,56 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # -------------------------------------------------------------------------
+    # Request Logging Middleware
+    # -------------------------------------------------------------------------
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next: Any) -> Any:
+        """
+        Log all incoming requests with timing and correlation ID.
+
+        Adds X-Request-ID header for tracing and X-Process-Time header
+        with request duration in seconds.
+        """
+        # Generate unique request ID for correlation
+        request_id = str(uuid4())
+
+        # Start timing
+        start_time = time.perf_counter()
+
+        # Log request details
+        logger.info(
+            "Request received",
+            request_id=request_id,
+            method=request.method,
+            path=str(request.url.path),
+            query=str(request.query_params) if request.query_params else None,
+            client_ip=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+
+        # Process request
+        response = await call_next(request)
+
+        # Calculate duration
+        process_time = time.perf_counter() - start_time
+
+        # Add correlation headers to response
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Process-Time"] = f"{process_time:.4f}"
+
+        # Log response details
+        logger.info(
+            "Request completed",
+            request_id=request_id,
+            method=request.method,
+            path=str(request.url.path),
+            status_code=response.status_code,
+            duration_ms=round(process_time * 1000, 2),
+        )
+
+        return response
 
     # -------------------------------------------------------------------------
     # Exception Handlers

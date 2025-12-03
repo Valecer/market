@@ -239,7 +239,6 @@ async def batch_match(
 
 @router.post(
     "/vision",
-    response_model=VisionAnalysisResponse,
     status_code=status.HTTP_501_NOT_IMPLEMENTED,
     summary="Vision analysis (stub)",
     description=(
@@ -252,7 +251,7 @@ async def batch_match(
 )
 async def vision_analysis(
     request: VisionAnalysisRequest,
-) -> VisionAnalysisResponse:
+) -> JSONResponse:
     """
     Vision analysis stub endpoint.
 

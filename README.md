@@ -79,12 +79,19 @@ This project adheres to a strict constitutional framework based on **SOLID**, **
    - Normalization algorithms
    - Result persistence to PostgreSQL
 
-3. **Communication**: Services communicate **ONLY** via Redis queues
+3. **ML-Analyze Service** (AI Analysis) - **Phase 7** ✅
+   - Complex file parsing (PDF tables, Excel merged cells)
+   - Vector embeddings via Ollama (nomic-embed-text)
+   - Semantic product matching with LLM reasoning (llama3)
+   - pgvector for similarity search
+   - Confidence-based auto-matching workflow
+
+4. **Communication**: Services communicate **ONLY** via Redis queues
    - No direct HTTP calls between services
    - Async, decoupled architecture
    - Improves resilience and scalability
 
-### API Endpoints (Phase 2)
+### API Endpoints (Phase 2 - Bun API)
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
@@ -97,6 +104,16 @@ This project adheres to a strict constitutional framework based on **SOLID**, **
 | `GET /health` | None | Health check |
 | `GET /docs` | None | Swagger UI documentation |
 
+### API Endpoints (Phase 7 - ML-Analyze)
+
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `GET /health` | None | Service health check (DB, Redis, Ollama) |
+| `POST /analyze/file` | None | Trigger file analysis (returns job_id) |
+| `GET /analyze/status/:job_id` | None | Check job progress and results |
+| `POST /analyze/merge` | None | Trigger batch product matching |
+| `POST /analyze/vision` | None | Vision analysis stub (501) |
+
 ### Data Flow
 
 ```
@@ -107,6 +124,16 @@ This project adheres to a strict constitutional framework based on **SOLID**, **
                             │                          │
                             │      PostgreSQL          │
                             └──────────────────────────┘
+
+┌──────┐     HTTP      ┌──────────┐     Ollama     ┌────────┐
+│Admin ├──────────────►│ML-Analyze├───────────────►│LLM +   │
+│UI    │               │Service   │     API        │Embed   │
+└──────┘               └────┬─────┘                └────────┘
+                            │
+                ┌───────────┴───────────┐
+                │     PostgreSQL        │
+                │    + pgvector         │
+                └───────────────────────┘
 ```
 
 ## Development Setup
@@ -310,10 +337,22 @@ marketbel/
 │   │   ├── migrations/        # SQL migrations (users table)
 │   │   ├── scripts/           # Utility scripts
 │   │   └── Dockerfile         # Production container
-│   └── python-ingestion/      # Python worker (Phase 1) ✅
-│       ├── src/               # Python source
+│   ├── python-ingestion/      # Python worker (Phase 1) ✅
+│   │   ├── src/               # Python source
+│   │   ├── tests/             # pytest suite
+│   │   ├── migrations/        # Alembic migrations
+│   │   └── Dockerfile         # Production container
+│   ├── frontend/              # React frontend (Phase 3) ✅
+│   │   ├── src/               # React/TypeScript source
+│   │   ├── public/            # Static assets + i18n
+│   │   └── Dockerfile         # Production container
+│   └── ml-analyze/            # ML service (Phase 7) ✅
+│       ├── src/               # FastAPI + RAG pipeline
+│       │   ├── api/           # FastAPI routes
+│       │   ├── ingest/        # PDF/Excel parsers
+│       │   ├── rag/           # Vector + LLM matching
+│       │   └── services/      # Business logic
 │       ├── tests/             # pytest suite
-│       ├── migrations/        # Alembic migrations
 │       └── Dockerfile         # Production container
 ├── docs/
 │   ├── adr/                   # Architecture Decision Records
