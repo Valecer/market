@@ -1,13 +1,22 @@
-"""Supplier ORM model."""
-from sqlalchemy import String, CheckConstraint, Text
+"""Supplier ORM model with semantic ETL feature flag."""
+from sqlalchemy import String, CheckConstraint, Text, Boolean
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base, UUIDMixin, TimestampMixin
-from typing import Dict, Any, List
+from typing import Dict, Any, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.db.models.supplier_item import SupplierItem
+    from src.db.models.parsing_log import ParsingLog
+    from src.db.models.category import Category
 
 
 class Supplier(Base, UUIDMixin, TimestampMixin):
-    """Supplier model representing external data sources."""
+    """Supplier model representing external data sources.
+    
+    Phase 9 additions:
+        - use_semantic_etl: Feature flag to enable LLM-based extraction for this supplier
+    """
     
     __tablename__ = "suppliers"
     __table_args__ = (
@@ -28,6 +37,15 @@ class Supplier(Base, UUIDMixin, TimestampMixin):
         server_default="{}"
     )
     
+    # Phase 9: Semantic ETL feature flag
+    use_semantic_etl: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default='false',
+        index=True,
+        doc="Enable semantic ETL for this supplier"
+    )
+    
     # Relationships
     supplier_items: Mapped[List["SupplierItem"]] = relationship(
         back_populates="supplier",
@@ -36,7 +54,10 @@ class Supplier(Base, UUIDMixin, TimestampMixin):
     parsing_logs: Mapped[List["ParsingLog"]] = relationship(
         back_populates="supplier"
     )
+    categories: Mapped[List["Category"]] = relationship(
+        back_populates="supplier"
+    )
     
     def __repr__(self) -> str:
-        return f"<Supplier(id={self.id}, name='{self.name}', source_type='{self.source_type}')>"
+        return f"<Supplier(id={self.id}, name='{self.name}', use_semantic_etl={self.use_semantic_etl})>"
 

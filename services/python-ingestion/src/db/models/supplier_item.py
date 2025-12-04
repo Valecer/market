@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from src.db.models.product import Product
     from src.db.models.price_history import PriceHistory
     from src.db.models.match_review_queue import MatchReviewQueue
+    from src.db.models.category import Category
 
 
 class MatchStatus(PyEnum):
@@ -51,11 +52,17 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
         match_score: Confidence score of last match 0-100 (Phase 4)
         match_candidates: Array of potential matches for review (Phase 4)
     
+    Phase 9 additions:
+        price_opt: Wholesale/optimal price in BYN (semantic ETL)
+        price_rrc: Retail/recommended price in BYN (semantic ETL)
+        category_id: Direct category reference from semantic ETL
+    
     Relationships:
         supplier: Reference to Supplier
         product: Reference to matched Product (if linked)
         price_history: Historical price records
         review_queue_item: Reference to review queue entry (if pending)
+        category: Direct category reference (Phase 9)
     """
     
     __tablename__ = "supplier_items"
@@ -66,6 +73,8 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
             'match_score IS NULL OR (match_score >= 0 AND match_score <= 100)',
             name='check_match_score'
         ),
+        CheckConstraint('price_opt IS NULL OR price_opt >= 0', name='chk_price_opt_positive'),
+        CheckConstraint('price_rrc IS NULL OR price_rrc >= 0', name='chk_price_rrc_positive'),
     )
     
     supplier_id: Mapped[uuid.UUID] = mapped_column(
@@ -123,6 +132,24 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
         doc="Array of potential matches [{product_id, product_name, score}]"
     )
     
+    # Phase 9: Semantic ETL pricing fields
+    price_opt: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2),
+        nullable=True,
+        doc="Wholesale/optimal price in BYN"
+    )
+    price_rrc: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2),
+        nullable=True,
+        doc="Retail/recommended price in BYN"
+    )
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Direct category reference from semantic ETL"
+    )
+    
     # Relationships
     supplier: Mapped["Supplier"] = relationship(back_populates="supplier_items")
     product: Mapped[Optional["Product"]] = relationship(back_populates="supplier_items")
@@ -133,6 +160,9 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
     review_queue_item: Mapped[Optional["MatchReviewQueue"]] = relationship(
         back_populates="supplier_item",
         uselist=False
+    )
+    category: Mapped[Optional["Category"]] = relationship(
+        back_populates="supplier_items"
     )
     
     def __repr__(self) -> str:

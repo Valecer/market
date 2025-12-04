@@ -7,11 +7,15 @@ python-multipart>=0.0.9
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
 
-# LLM Orchestration
+# LLM Orchestration (Phase 9: Semantic ETL)
 langchain>=0.3.0
-langchain-core>=0.3.0
+langchain-core>=0.3.21
 langchain-community>=0.3.0
 langchain-ollama>=0.2.0
+# Fuzzy string matching for category normalization
+rapidfuzz>=3.10.1
+# Retry logic for LLM calls
+tenacity>=9.0.0
 
 # Database
 sqlalchemy[asyncio]>=2.0.0

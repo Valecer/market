@@ -1,15 +1,23 @@
-"""ParsingLog ORM model for error tracking."""
+"""ParsingLog ORM model for error tracking with semantic ETL phase support."""
 from sqlalchemy import String, ForeignKey, Text, Integer, func, DateTime
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base, UUIDMixin
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 import uuid
+
+if TYPE_CHECKING:
+    from src.db.models.supplier import Supplier
 
 
 class ParsingLog(Base, UUIDMixin):
-    """ParsingLog model for structured error logging."""
+    """ParsingLog model for structured error logging.
+    
+    Phase 9 additions:
+        - chunk_id: Chunk identifier for sliding window extraction
+        - extraction_phase: Phase where error occurred (semantic ETL)
+    """
     
     __tablename__ = "parsing_logs"
     
@@ -33,9 +41,22 @@ class ParsingLog(Base, UUIDMixin):
         index=True
     )
     
+    # Phase 9: Semantic ETL tracking fields
+    chunk_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Chunk identifier for sliding window extraction"
+    )
+    extraction_phase: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+        doc="Phase: sheet_selection, markdown_conversion, llm_extraction, category_matching"
+    )
+    
     # Relationships
     supplier: Mapped[Optional["Supplier"]] = relationship(back_populates="parsing_logs")
     
     def __repr__(self) -> str:
-        return f"<ParsingLog(id={self.id}, type='{self.error_type}', task='{self.task_id}')>"
+        return f"<ParsingLog(id={self.id}, type='{self.error_type}', phase='{self.extraction_phase}')>"
 

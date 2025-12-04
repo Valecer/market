@@ -36,25 +36,25 @@ Each user story phase includes test criteria that can validate completion indepe
 
 ---
 
-## Phase 1: Setup & Infrastructure
+## Phase 1: Setup & Infrastructure ✅ COMPLETE
 
 **Goal:** Prepare environment and install dependencies
 
 **Independent Test Criteria:**
-- [ ] All services start with `docker-compose up`
-- [ ] Database migrations apply cleanly
-- [ ] LangChain imports work in Python
-- [ ] Environment variables loaded correctly
+- [X] All services start with `docker-compose up`
+- [X] Database migrations apply cleanly
+- [X] LangChain imports work in Python
+- [X] Environment variables loaded correctly
 
 ### Tasks
 
-- [ ] T001 Run database migrations in services/ml-analyze/migrations/009_add_category_hierarchy.sql
-- [ ] T002 Run database migrations in services/ml-analyze/migrations/009_validate_supplier_items.sql
-- [ ] T003 Run database migrations in services/ml-analyze/migrations/009_enhance_parsing_logs.sql
-- [ ] T004 [P] Install Python dependencies: langchain-core==0.3.21, langchain-ollama==0.2.0, openpyxl==3.1.5 in services/ml-analyze/requirements.txt
-- [ ] T005 [P] Add environment variables to docker-compose.yml: USE_SEMANTIC_ETL, FUZZY_MATCH_THRESHOLD, CHUNK_SIZE_ROWS, CHUNK_OVERLAP_ROWS, OLLAMA_MODEL_LLM
-- [ ] T006 Verify Ollama llama3 model availability via docker exec ollama ollama list
-- [ ] T007 Add feature flag column to suppliers table: ALTER TABLE suppliers ADD COLUMN use_semantic_etl BOOLEAN DEFAULT false
+- [X] T001 Run database migrations in services/ml-analyze/migrations/009_add_category_hierarchy.sql
+- [X] T002 Run database migrations in services/ml-analyze/migrations/009_validate_supplier_items.sql
+- [X] T003 Run database migrations in services/ml-analyze/migrations/009_enhance_parsing_logs.sql
+- [X] T004 [P] Install Python dependencies: langchain-core==0.3.21, langchain-ollama==0.2.0, openpyxl==3.1.5 in services/ml-analyze/requirements.txt
+- [X] T005 [P] Add environment variables to docker-compose.yml: USE_SEMANTIC_ETL, FUZZY_MATCH_THRESHOLD, CHUNK_SIZE_ROWS, CHUNK_OVERLAP_ROWS, OLLAMA_MODEL_LLM
+- [X] T006 Verify Ollama llama3 model availability via docker exec ollama ollama list
+- [X] T007 Add feature flag column to suppliers table: ALTER TABLE suppliers ADD COLUMN use_semantic_etl BOOLEAN DEFAULT false
 
 ---
 
