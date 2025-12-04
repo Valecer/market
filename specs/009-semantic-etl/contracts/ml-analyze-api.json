@@ -1,0 +1,704 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ML-Analyze Semantic ETL API",
+    "description": "API for intelligent product data extraction using LLM-based semantic parsing",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Marketbel Development Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://ml-analyze:8001",
+      "description": "Internal Docker network"
+    },
+    {
+      "url": "http://localhost:8001",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/analyze/file": {
+      "post": {
+        "summary": "Trigger semantic extraction for a file",
+        "description": "Initiates LLM-based extraction of product data from Excel/CSV file in shared volume. Uses smart sheet selection, markdown conversion, sliding window extraction, and category matching.",
+        "operationId": "analyzeFile",
+        "tags": ["Extraction"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MLAnalyzeRequest"
+              },
+              "examples": {
+                "excel_file": {
+                  "summary": "Analyze Excel file",
+                  "value": {
+                    "file_path": "/shared/uploads/supplier_123_20251204_products.xlsx",
+                    "supplier_id": 123,
+                    "job_id": "job_abc123def456"
+                  }
+                },
+                "csv_file": {
+                  "summary": "Analyze CSV file",
+                  "value": {
+                    "file_path": "/shared/uploads/supplier_456_20251204_catalog.csv",
+                    "supplier_id": 456,
+                    "job_id": "job_xyz789ghi012"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "File analysis queued successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MLAnalyzeResponse"
+                },
+                "examples": {
+                  "queued": {
+                    "summary": "Job queued",
+                    "value": {
+                      "job_id": "job_abc123def456",
+                      "status": "queued",
+                      "progress_percent": 0,
+                      "message": "File analysis queued for processing",
+                      "current_phase": "sheet_selection"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (invalid file path, missing fields)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "invalid_file": {
+                    "summary": "File not found",
+                    "value": {
+                      "error": "FileNotFoundError",
+                      "message": "File not found: /shared/uploads/missing.xlsx",
+                      "details": {
+                        "file_path": "/shared/uploads/missing.xlsx"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze/status/{job_id}": {
+      "get": {
+        "summary": "Get extraction job status",
+        "description": "Polls the status of a file extraction job. Returns progress, extraction results, and error details if applicable.",
+        "operationId": "getJobStatus",
+        "tags": ["Extraction"],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "description": "Unique job identifier",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "example": "job_abc123def456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MLAnalyzeResponse"
+                },
+                "examples": {
+                  "processing": {
+                    "summary": "Job in progress",
+                    "value": {
+                      "job_id": "job_abc123def456",
+                      "status": "processing",
+                      "progress_percent": 45,
+                      "total_rows": 500,
+                      "successful_extractions": 225,
+                      "failed_extractions": 0,
+                      "duplicates_removed": 5,
+                      "message": "Extracting products from chunk 3/5",
+                      "current_phase": "llm_extraction"
+                    }
+                  },
+                  "complete": {
+                    "summary": "Job completed",
+                    "value": {
+                      "job_id": "job_abc123def456",
+                      "status": "complete",
+                      "progress_percent": 100,
+                      "total_rows": 500,
+                      "successful_extractions": 485,
+                      "failed_extractions": 15,
+                      "duplicates_removed": 10,
+                      "message": "Extraction completed successfully",
+                      "current_phase": "category_matching"
+                    }
+                  },
+                  "failed": {
+                    "summary": "Job failed",
+                    "value": {
+                      "job_id": "job_abc123def456",
+                      "status": "failed",
+                      "progress_percent": 30,
+                      "total_rows": 500,
+                      "successful_extractions": 150,
+                      "failed_extractions": 350,
+                      "duplicates_removed": 0,
+                      "message": "LLM service unavailable after 3 retries",
+                      "current_phase": "llm_extraction"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "not_found": {
+                    "summary": "Job ID not found",
+                    "value": {
+                      "error": "NotFoundError",
+                      "message": "Job not found: job_invalid123",
+                      "details": {
+                        "job_id": "job_invalid123"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/categories/review": {
+      "get": {
+        "summary": "Get categories pending review",
+        "description": "Returns a list of categories with needs_review=true for admin approval workflow.",
+        "operationId": "getCategoriesForReview",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "name": "supplier_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by supplier ID",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of results",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Pagination offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CategoryReviewItem"
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total count of categories needing review"
+                    }
+                  }
+                },
+                "examples": {
+                  "review_list": {
+                    "summary": "Categories pending review",
+                    "value": {
+                      "categories": [
+                        {
+                          "id": 42,
+                          "name": "Gaming Laptops",
+                          "parent_id": 5,
+                          "parent_name": "Laptops",
+                          "needs_review": true,
+                          "is_active": true,
+                          "supplier_id": 123,
+                          "supplier_name": "TechSupplier Inc",
+                          "product_count": 15,
+                          "created_at": "2025-12-04T10:30:00Z",
+                          "updated_at": "2025-12-04T10:30:00Z"
+                        }
+                      ],
+                      "total": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/categories/approve": {
+      "post": {
+        "summary": "Approve or merge a category",
+        "description": "Admin action to approve a new category or merge it with an existing one.",
+        "operationId": "approveCategory",
+        "tags": ["Categories"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryApprovalRequest"
+              },
+              "examples": {
+                "approve": {
+                  "summary": "Approve new category",
+                  "value": {
+                    "category_id": 42,
+                    "action": "approve"
+                  }
+                },
+                "merge": {
+                  "summary": "Merge with existing category",
+                  "value": {
+                    "category_id": 42,
+                    "action": "merge",
+                    "merge_with_id": 5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category approved or merged successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryApprovalResponse"
+                },
+                "examples": {
+                  "approved": {
+                    "summary": "Category approved",
+                    "value": {
+                      "success": true,
+                      "message": "Category 'Gaming Laptops' approved successfully",
+                      "affected_products": 15
+                    }
+                  },
+                  "merged": {
+                    "summary": "Category merged",
+                    "value": {
+                      "success": true,
+                      "message": "Category 'Gaming Laptops' merged into 'Laptops'",
+                      "affected_products": 15
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (invalid action, missing merge_with_id)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Category not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns health status of ml-analyze service and dependencies (PostgreSQL, Ollama, Redis).",
+        "operationId": "healthCheck",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["healthy", "degraded", "unhealthy"]
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "2.0.0"
+                    },
+                    "dependencies": {
+                      "type": "object",
+                      "properties": {
+                        "postgresql": {
+                          "type": "string",
+                          "enum": ["connected", "disconnected"]
+                        },
+                        "ollama": {
+                          "type": "string",
+                          "enum": ["available", "unavailable"]
+                        },
+                        "redis": {
+                          "type": "string",
+                          "enum": ["connected", "disconnected"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "healthy": {
+                    "summary": "All systems operational",
+                    "value": {
+                      "status": "healthy",
+                      "version": "2.0.0",
+                      "dependencies": {
+                        "postgresql": "connected",
+                        "ollama": "available",
+                        "redis": "connected"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["unhealthy"]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MLAnalyzeRequest": {
+        "type": "object",
+        "required": ["file_path", "supplier_id", "job_id"],
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Absolute path to file in shared volume",
+            "example": "/shared/uploads/supplier_123_20251204_products.xlsx"
+          },
+          "supplier_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Supplier ID from database",
+            "example": 123
+          },
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique job identifier for tracking",
+            "example": "job_abc123def456"
+          }
+        }
+      },
+      "MLAnalyzeResponse": {
+        "type": "object",
+        "required": ["job_id", "status", "progress_percent"],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "description": "Job identifier",
+            "example": "job_abc123def456"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "processing", "complete", "failed"],
+            "description": "Current job status"
+          },
+          "progress_percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Progress percentage (0-100)",
+            "example": 75
+          },
+          "total_rows": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Total rows processed",
+            "example": 500
+          },
+          "successful_extractions": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Number of successfully extracted products",
+            "example": 485
+          },
+          "failed_extractions": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Number of failed extractions",
+            "example": 15
+          },
+          "duplicates_removed": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Number of duplicate products removed",
+            "example": 10
+          },
+          "message": {
+            "type": "string",
+            "nullable": true,
+            "description": "Status message or error description",
+            "example": "Extraction completed successfully"
+          },
+          "current_phase": {
+            "type": "string",
+            "enum": ["sheet_selection", "markdown_conversion", "llm_extraction", "category_matching"],
+            "nullable": true,
+            "description": "Current processing phase"
+          }
+        }
+      },
+      "CategoryReviewItem": {
+        "type": "object",
+        "required": ["id", "name", "needs_review", "is_active", "product_count", "created_at", "updated_at"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Category ID",
+            "example": 42
+          },
+          "name": {
+            "type": "string",
+            "description": "Category name",
+            "example": "Gaming Laptops"
+          },
+          "parent_id": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Parent category ID (null for root)",
+            "example": 5
+          },
+          "parent_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Parent category name",
+            "example": "Laptops"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "description": "Flag indicating if category needs admin review",
+            "example": true
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Active status (soft delete flag)",
+            "example": true
+          },
+          "supplier_id": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Supplier that introduced this category",
+            "example": 123
+          },
+          "supplier_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Supplier name",
+            "example": "TechSupplier Inc"
+          },
+          "product_count": {
+            "type": "integer",
+            "description": "Number of products in this category",
+            "example": 15
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp (ISO 8601)",
+            "example": "2025-12-04T10:30:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp (ISO 8601)",
+            "example": "2025-12-04T10:30:00Z"
+          }
+        }
+      },
+      "CategoryApprovalRequest": {
+        "type": "object",
+        "required": ["category_id", "action"],
+        "properties": {
+          "category_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Category ID to approve or merge",
+            "example": 42
+          },
+          "action": {
+            "type": "string",
+            "enum": ["approve", "merge"],
+            "description": "Action to perform"
+          },
+          "merge_with_id": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true,
+            "description": "Target category ID for merge (required if action='merge')",
+            "example": 5
+          }
+        }
+      },
+      "CategoryApprovalResponse": {
+        "type": "object",
+        "required": ["success", "message"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message",
+            "example": "Category approved successfully"
+          },
+          "affected_products": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Number of products updated by this action",
+            "example": 15
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type",
+            "example": "ValidationError"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message",
+            "example": "File not found at specified path"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true,
+            "description": "Additional error details",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Extraction",
+      "description": "LLM-based product extraction endpoints"
+    },
+    {
+      "name": "Categories",
+      "description": "Category management and review workflow"
+    },
+    {
+      "name": "System",
+      "description": "Service health and monitoring"
+    }
+  ]
+}
