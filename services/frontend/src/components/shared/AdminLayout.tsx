@@ -43,6 +43,11 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
     </svg>
   ),
+  categories: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+  ),
   chevronRight: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -90,6 +95,12 @@ const navItemsConfig: NavItemConfig[] = [
     nameKey: 'admin.ingestion',
     href: '/admin/ingestion',
     icon: icons.ingestion,
+    roles: ['admin'],
+  },
+  {
+    nameKey: 'admin.categoriesReview',
+    href: '/admin/categories/review',
+    icon: icons.categories,
     roles: ['admin'],
   },
 ]

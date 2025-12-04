@@ -94,9 +94,11 @@ bun run type-check
 
 **Job Phases:** `downloading` → `analyzing` → `matching` → `complete`/`failed`
 
-## Phase 9: Semantic ETL (PLANNED)
+## Phase 9: Semantic ETL (COMPLETE)
 
 **Purpose:** LLM-based extraction replacing fragile pandas/regex parsing
+
+**Status:** ✅ Implementation complete. See `/docs/adr/009-semantic-etl.md` for architecture details.
 
 **Key Changes:**
 - Excel → Markdown grid representation (preserves layout)
@@ -104,6 +106,7 @@ bun run type-check
 - Category fuzzy matching (85% threshold, RapidFuzz)
 - Within-file deduplication (hash-based, 1% price tolerance)
 - Partial success handling (80-99% = "completed_with_errors")
+- Category review admin UI (`/admin/categories/review`)
 
 **Environment Variables:**
 | Variable | Default | Description |
@@ -120,8 +123,12 @@ bun run type-check
 - `services/ml-analyze/src/services/smart_parser/service.py` - Orchestration
 - `services/ml-analyze/src/services/smart_parser/markdown_converter.py` - Excel → Markdown
 - `services/ml-analyze/src/services/smart_parser/langchain_extractor.py` - LLM extraction
-- `services/ml-analyze/src/services/category_normalizer.py` - Fuzzy matching
-- `services/ml-analyze/src/services/deduplication_service.py` - Deduplication
+- `services/ml-analyze/src/services/smart_parser/prompts.py` - LLM prompt templates
+- `services/ml-analyze/src/services/smart_parser/sheet_selector.py` - Multi-sheet logic
+- `services/ml-analyze/src/services/category_normalizer.py` - Fuzzy matching (optimized for 1K+ categories)
+- `services/ml-analyze/src/services/deduplication_service.py` - Hash-based deduplication
+- `services/bun-api/src/services/category.service.ts` - Category review backend
+- `services/frontend/src/pages/admin/CategoryReviewPage.tsx` - Admin review UI
 
 **New Dependencies:**
 - `langchain-core==0.3.21`

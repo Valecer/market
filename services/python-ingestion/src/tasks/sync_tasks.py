@@ -602,7 +602,7 @@ async def _enqueue_supplier_parse(
         original_filename = f"{supplier.name}_export{ext}"
     
     # Get sheet name for Google Sheets
-    sheet_name = meta.get("sheet_name", "Sheet1") if source_type == "google_sheets" else None
+    sheet_name = meta.get("sheet_name") if source_type == "google_sheets" else None
     
     await redis.enqueue_job(
         "download_and_trigger_ml",

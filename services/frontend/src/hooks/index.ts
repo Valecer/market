@@ -44,3 +44,17 @@ export {
   useUploadSupplierFile,
 } from './useSuppliers'
 
+// Phase 9: Category Review hooks
+export {
+  useCategoriesReview,
+  useCategoryReviewCount,
+  useCategoryMergeSuggestions,
+  categoryQueryKeys,
+} from './useCategoriesReview'
+export {
+  useCategoryApproval,
+  useBulkCategoryApproval,
+  useCategoryUpdate,
+  useCategoryDelete,
+} from './useCategoryApproval'
+

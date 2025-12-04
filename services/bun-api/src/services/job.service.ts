@@ -4,6 +4,8 @@
  * Business logic for job management including retry functionality.
  * Handles job state validation and retry task enqueueing.
  *
+ * T85: Added user-facing error recommendations for common failure scenarios.
+ *
  * @see /specs/008-ml-ingestion-integration/plan.md - User Story 3
  */
 
@@ -17,6 +19,178 @@ import { RedisUnavailableError } from './queue.service'
 
 const JOB_KEY_PREFIX = 'job:'
 const ARQ_QUEUE_NAME = process.env.ARQ_QUEUE_NAME || 'arq:queue'
+
+// =============================================================================
+// T85: User-Facing Error Recommendations
+// =============================================================================
+
+/**
+ * Error recommendation interface for user-friendly error handling.
+ */
+interface ErrorRecommendation {
+  title: string
+  description: string
+  recommendation: string
+  canRetry: boolean
+  supportLink?: string
+}
+
+/**
+ * Map of error patterns to user-friendly recommendations.
+ * T85: Provides actionable guidance for common error scenarios.
+ */
+const ERROR_RECOMMENDATIONS: Record<string, ErrorRecommendation> = {
+  // File-related errors
+  'file not found': {
+    title: 'File Not Found',
+    description: 'The uploaded file could not be located for processing.',
+    recommendation: 'Please re-upload the file and try again. Ensure the file is not corrupted.',
+    canRetry: false,
+  },
+  'no product sheets': {
+    title: 'No Product Data Found',
+    description: 'The file does not contain recognizable product sheets.',
+    recommendation: 'Ensure your Excel file has a sheet named "Upload to site", "Products", or "Catalog" with product data.',
+    canRetry: false,
+  },
+  'empty sheet': {
+    title: 'Empty Spreadsheet',
+    description: 'The selected sheet contains no data.',
+    recommendation: 'Add at least one row of product data with Name and Price columns.',
+    canRetry: false,
+  },
+  'invalid file': {
+    title: 'Invalid File Format',
+    description: 'The file format is not supported or the file is corrupted.',
+    recommendation: 'Use Excel (.xlsx) or CSV format. Try re-exporting from your source application.',
+    canRetry: false,
+  },
+
+  // Processing errors
+  'timeout': {
+    title: 'Processing Timeout',
+    description: 'The file took too long to process.',
+    recommendation: 'Try uploading a smaller file (under 500 rows). For large catalogs, split into multiple files.',
+    canRetry: true,
+  },
+  'llm error': {
+    title: 'AI Processing Issue',
+    description: 'Our AI system encountered a temporary issue.',
+    recommendation: 'This is usually temporary. Please wait a minute and retry.',
+    canRetry: true,
+  },
+  'connection': {
+    title: 'Connection Error',
+    description: 'A network connection issue occurred.',
+    recommendation: 'Check your internet connection and try again.',
+    canRetry: true,
+  },
+
+  // Validation errors
+  'validation': {
+    title: 'Data Validation Error',
+    description: 'Some products have missing or invalid fields.',
+    recommendation: 'Ensure each product has at least a Name and Price. Prices should be numeric values.',
+    canRetry: false,
+  },
+  'missing required': {
+    title: 'Missing Required Data',
+    description: 'Required product fields are missing.',
+    recommendation: 'Check that your file includes columns for product Name and Price.',
+    canRetry: false,
+  },
+
+  // System errors
+  'internal error': {
+    title: 'System Error',
+    description: 'An unexpected error occurred in our system.',
+    recommendation: 'Please try again. If the problem persists, contact support with your job ID.',
+    canRetry: true,
+    supportLink: '/support',
+  },
+  'database': {
+    title: 'Database Error',
+    description: 'A database operation failed.',
+    recommendation: 'This is usually temporary. Please retry in a few minutes.',
+    canRetry: true,
+  },
+  'rate limit': {
+    title: 'Too Many Requests',
+    description: 'Processing rate limit reached.',
+    recommendation: 'Please wait a few minutes before submitting more files.',
+    canRetry: true,
+  },
+}
+
+/**
+ * Default recommendation for unknown errors.
+ */
+const DEFAULT_RECOMMENDATION: ErrorRecommendation = {
+  title: 'Processing Error',
+  description: 'An error occurred while processing your file.',
+  recommendation: 'Please try again. If the issue persists, contact support with your job ID.',
+  canRetry: true,
+}
+
+/**
+ * Get user-friendly error recommendation based on error message.
+ *
+ * T85: Matches error message patterns to provide actionable guidance.
+ *
+ * @param errorMessage - Technical error message
+ * @returns User-friendly error recommendation
+ */
+export function getErrorRecommendation(errorMessage: string | null): ErrorRecommendation {
+  if (!errorMessage) {
+    return DEFAULT_RECOMMENDATION
+  }
+
+  const lowerError = errorMessage.toLowerCase()
+
+  // Find matching recommendation based on error message patterns
+  for (const [pattern, recommendation] of Object.entries(ERROR_RECOMMENDATIONS)) {
+    if (lowerError.includes(pattern)) {
+      return recommendation
+    }
+  }
+
+  // Special handling for specific error codes
+  if (lowerError.includes('etimedout') || lowerError.includes('timed out')) {
+    return ERROR_RECOMMENDATIONS['timeout']
+  }
+  if (lowerError.includes('econnrefused') || lowerError.includes('econnreset')) {
+    return ERROR_RECOMMENDATIONS['connection']
+  }
+  if (lowerError.includes('500') || lowerError.includes('internal server')) {
+    return ERROR_RECOMMENDATIONS['internal error']
+  }
+
+  return DEFAULT_RECOMMENDATION
+}
+
+/**
+ * Format error with user-friendly recommendation.
+ *
+ * T85: Combines technical error with user guidance.
+ *
+ * @param errorMessage - Technical error message
+ * @returns Formatted error object with recommendation
+ */
+export function formatErrorWithRecommendation(
+  errorMessage: string | null
+): {
+  error: string | null
+  recommendation: ErrorRecommendation
+  formatted_message: string
+} {
+  const recommendation = getErrorRecommendation(errorMessage)
+
+  return {
+    error: errorMessage,
+    recommendation,
+    formatted_message: `${recommendation.title}: ${recommendation.description} ${recommendation.recommendation}`,
+  }
+}
 
 // =============================================================================
 // Types
@@ -93,6 +267,8 @@ export class JobService {
 
   /**
    * Parse raw Redis hash data into IngestionJob
+   *
+   * T85: Now includes user-friendly error recommendations.
    */
   private parseJobData(data: Record<string, string>): IngestionJob {
     // Parse error details
@@ -136,6 +312,26 @@ export class JobService {
           }
         : null
 
+    // T85: Get user-friendly error recommendation
+    const errorMessage = data.error || null
+    const errorInfo = formatErrorWithRecommendation(errorMessage)
+
+    // T85: Build retry summary
+    const retryCount = parseInt(data.retry_count || '0', 10)
+    const maxRetries = parseInt(data.max_retries || '3', 10)
+    let retrySummary: string | null = null
+    if (retryCount > 0) {
+      if (data.phase === 'failed' && retryCount >= maxRetries) {
+        retrySummary = `Failed after ${retryCount}/${maxRetries} retry attempts`
+      } else if (data.phase === 'failed') {
+        retrySummary = `Failed (retried ${retryCount}/${maxRetries} times, can retry again)`
+      } else if (['processing', 'pending', 'downloading', 'analyzing', 'extracting', 'normalizing'].includes(data.phase)) {
+        retrySummary = `Retry attempt ${retryCount}/${maxRetries} in progress`
+      } else {
+        retrySummary = `Completed after ${retryCount} retry attempt(s)`
+      }
+    }
+
     return {
       job_id: data.job_id || '',
       supplier_id: data.supplier_id || '',
@@ -145,11 +341,15 @@ export class JobService {
       download_progress: downloadProgress,
       analysis_progress: analysisProgress,
       file_type: (data.file_type || 'excel') as any,
-      error: data.error || null,
+      error: errorMessage,
       error_details: errorDetails,
-      can_retry: data.can_retry === 'true',
-      retry_count: parseInt(data.retry_count || '0', 10),
-      max_retries: parseInt(data.max_retries || '3', 10),
+      // T85: Include error recommendation
+      error_recommendation: errorInfo.recommendation,
+      error_formatted: errorMessage ? errorInfo.formatted_message : null,
+      can_retry: data.can_retry === 'true' || errorInfo.recommendation.canRetry,
+      retry_count: retryCount,
+      max_retries: maxRetries,
+      retry_summary: retrySummary,
       created_at: data.created_at || new Date().toISOString(),
       started_at: data.started_at || null,
       completed_at: data.completed_at || null,

@@ -1,4 +1,4 @@
-import { pgTable, varchar, index, foreignKey, unique, uuid, timestamp, check, jsonb, numeric, text, integer, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, varchar, index, foreignKey, unique, uuid, timestamp, check, jsonb, numeric, text, integer, pgEnum, boolean } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const productStatus = pgEnum("product_status", ['draft', 'active', 'archived'])
@@ -14,6 +14,11 @@ export const categories = pgTable("categories", {
 	name: varchar({ length: 255 }).notNull(),
 	parentId: uuid("parent_id"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	// Phase 9: Semantic ETL - Category Governance
+	needsReview: boolean("needs_review").notNull().default(false),
+	isActive: boolean("is_active").notNull().default(true),
+	supplierId: uuid("supplier_id"),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("idx_categories_parent").using("btree", table.parentId.asc().nullsLast().op("uuid_ops")),
 	foreignKey({
@@ -22,6 +27,7 @@ export const categories = pgTable("categories", {
 			name: "categories_parent_id_fkey"
 		}).onDelete("cascade"),
 	unique("uq_category_name_parent").on(table.name, table.parentId),
+	check("chk_no_self_reference", sql`id <> parent_id`),
 ]);
 
 export const products = pgTable("products", {

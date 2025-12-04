@@ -30,6 +30,7 @@ import { SalesCatalogPage } from '@/pages/admin/SalesCatalogPage'
 import { InternalProductDetailPage } from '@/pages/admin/InternalProductDetailPage'
 import { ProcurementMatchingPage } from '@/pages/admin/ProcurementMatchingPage'
 import { IngestionPage } from '@/pages/admin/IngestionPage'
+import { CategoryReviewPage } from '@/pages/admin/CategoryReviewPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
@@ -214,6 +215,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
             <IngestionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'categories/review',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <CategoryReviewPage />
           </ProtectedRoute>
         ),
       },

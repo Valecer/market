@@ -28,7 +28,13 @@
     "edit": "Edit",
     "delete": "Delete",
     "configure": "Configure",
-    "activating": "Activating..."
+    "activating": "Activating...",
+    "refresh": "Refresh",
+    "clearSelection": "Clear",
+    "selectAll": "Select all",
+    "pagination": {
+      "showing": "Showing {{from}} to {{to}} of {{total}}"
+    }
   },
 
   "header": {
@@ -228,6 +234,7 @@
     },
 
     "ingestion": "Ingestion",
+    "categoriesReview": "Categories",
     
     "status": {
       "draft": "Draft",
@@ -333,6 +340,171 @@
       "fetchError": "Failed to load settings",
       "saveSuccess": "Master sheet configuration saved successfully"
     }
+  },
+
+  "categories": {
+    "title": "Category Review",
+    "subtitle": "Review and approve auto-created categories from supplier data",
+    "pendingReview": "Pending Review",
+    "allCategories": "All Categories",
+    "searchPlaceholder": "Search categories...",
+    "filterBySupplier": "Filter by supplier",
+    "allSuppliers": "All Suppliers",
+    "review": {
+      "title": "Category Review",
+      "description": "Review and manage categories that need approval",
+      "searchPlaceholder": "Search categories by name...",
+      "selectedCount": "{{count}} selected"
+    },
+    "filter": {
+      "pending": "Pending Review",
+      "approved": "Approved",
+      "all": "All Categories"
+    },
+    "sort": {
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first",
+      "nameAZ": "Name A-Z",
+      "nameZA": "Name Z-A",
+      "mostProducts": "Most products",
+      "leastProducts": "Least products"
+    },
+    "sortBy": {
+      "label": "Sort by",
+      "created_at": "Date Created",
+      "name": "Name",
+      "product_count": "Product Count"
+    },
+    "stats": {
+      "total": "Total Categories",
+      "selected": "Selected",
+      "currentPage": "Page",
+      "perPage": "Per Page"
+    },
+    "columns": {
+      "name": "Category Name",
+      "parent": "Parent Category",
+      "supplier": "Source Supplier",
+      "products": "Products",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "needsReview": "Needs Review",
+      "approved": "Approved",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "approve": "Approve",
+      "merge": "Merge",
+      "approving": "Approving...",
+      "merging": "Merging...",
+      "approveSelected": "Approve Selected"
+    },
+    "dialog": {
+      "title": "Review Category",
+      "tabApprove": "Approve",
+      "tabMerge": "Merge",
+      "approveTitle": "Approve as New Category",
+      "approveDescription": "This category will be marked as approved and become available for product classification.",
+      "categoryName": "Name",
+      "productCount": "Products",
+      "parentCategory": "Parent",
+      "supplier": "Supplier",
+      "mergeWarningTitle": "Merge with Existing Category",
+      "mergeWarningDescription": "{{count}} products will be transferred to the target category. This action cannot be undone.",
+      "searchPlaceholder": "Search for target category...",
+      "noSearchResults": "No categories match your search",
+      "noSuggestions": "No suggested categories available",
+      "productsCount": "{{count}} products",
+      "match": "match"
+    },
+    "approveDialog": {
+      "title": "Approve Category",
+      "description": "Are you sure you want to approve \"{{name}}\"? This will make it available for product categorization.",
+      "confirm": "Approve Category"
+    },
+    "mergeDialog": {
+      "title": "Merge Category",
+      "description": "Merge \"{{name}}\" with an existing category. All products will be transferred to the target category.",
+      "selectTarget": "Select target category",
+      "searchTarget": "Search categories to merge with...",
+      "noSuggestions": "No matching categories found",
+      "confirm": "Merge Categories",
+      "warning": "This action cannot be undone. {{count}} products will be transferred."
+    },
+    "bulkActions": {
+      "selected": "{{count}} selected",
+      "approveAll": "Approve All",
+      "clearSelection": "Clear Selection"
+    },
+    "success": {
+      "approved": "Category \"{{name}}\" approved successfully",
+      "merged": "Category merged successfully. {{count}} products transferred.",
+      "bulkApproved": "{{count}} categories approved successfully"
+    },
+    "help": {
+      "title": "How does category review work?",
+      "whatIsThis": {
+        "title": "What is this page?",
+        "content": "This page shows categories that were automatically created during supplier file processing using AI-based extraction. These categories need your review before they become part of the official catalog."
+      },
+      "approve": {
+        "title": "Approve",
+        "content": "Marks the category as reviewed and activates it. The category will be available for future fuzzy matching with a higher confidence score."
+      },
+      "merge": {
+        "title": "Merge",
+        "content": "Combines this category with an existing one. All products will be transferred to the target category, and this category will be deleted. Use this to consolidate duplicates or similar categories."
+      },
+      "bulk": {
+        "title": "Bulk Approve",
+        "content": "Select multiple categories using the checkboxes and approve them all at once. This is useful after reviewing categories from a specific supplier upload."
+      },
+      "tips": {
+        "title": "💡 Tips",
+        "similar": "Look for similar category names that might be duplicates (e.g., \"Electronics\" vs \"Электроника\")",
+        "parent": "Check parent categories - child categories should belong to logical parents",
+        "supplier": "Filter by supplier to review categories from a single upload batch"
+      }
+    },
+    "error": {
+      "loadFailed": "Failed to load categories",
+      "approveFailed": "Failed to approve category",
+      "mergeFailed": "Failed to merge category"
+    },
+    "empty": {
+      "noReview": "No categories need review",
+      "noReviewHint": "All categories have been approved. Categories will appear here after supplier data is processed.",
+      "noResults": "No categories match your filters",
+      "noResultsHint": "Try adjusting your search or filters."
+    },
+    "badge": {
+      "review": "{{count}} for review"
+    },
+    "edit": {
+      "title": "Edit Category",
+      "tabEdit": "Rename",
+      "tabDelete": "Delete",
+      "nameLabel": "Category Name",
+      "namePlaceholder": "Enter category name",
+      "productCount": "Products",
+      "parentCategory": "Parent",
+      "supplier": "Supplier",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "delete": "Delete Category",
+      "deleting": "Deleting...",
+      "deleteWarningTitle": "Delete Category",
+      "deleteWarningDescription": "This will permanently delete this category. {{count}} products will be reassigned to the parent category or left uncategorized.",
+      "deleteConfirmLabel": "Confirm Deletion",
+      "deleteConfirmHint": "Type \"{{name}}\" to confirm"
+    },
+    "editSuccess": "Category renamed successfully",
+    "deleteSuccess": "Category deleted successfully. {{count}} products reassigned.",
+    "editError": "Failed to rename category",
+    "deleteError": "Failed to delete category"
   },
 
   "suppliers": {

@@ -1,0 +1,473 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Marketbel Admin API",
+    "description": "REST API for Marketbel admin operations including product management, supplier sync, and category review workflows.",
+    "version": "1.9.0",
+    "contact": {
+      "name": "Development Team"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "http://bun-api:3000",
+      "description": "Docker internal"
+    }
+  ],
+  "tags": [
+    {
+      "name": "categories",
+      "description": "Category review and management (Phase 9 - Semantic ETL)"
+    },
+    {
+      "name": "products",
+      "description": "Product CRUD and status management"
+    },
+    {
+      "name": "suppliers",
+      "description": "Supplier management and file uploads"
+    },
+    {
+      "name": "ingestion",
+      "description": "Ingestion pipeline control"
+    },
+    {
+      "name": "jobs",
+      "description": "Job management and retry"
+    },
+    {
+      "name": "settings",
+      "description": "System settings"
+    }
+  ],
+  "paths": {
+    "/api/v1/admin/categories/review": {
+      "get": {
+        "tags": ["categories"],
+        "summary": "List categories needing review",
+        "description": "Returns a paginated list of categories with needs_review=true. Supports filtering by supplier, search by name, and sorting. Created as part of Phase 9 Semantic ETL for admin review of LLM-extracted categories.",
+        "operationId": "getCategoriesForReview",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "supplier_id",
+            "in": "query",
+            "description": "Filter by supplier UUID",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "needs_review",
+            "in": "query",
+            "description": "Filter by needs_review flag (default: true)",
+            "schema": { "type": "boolean", "default": true }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search category names (case-insensitive partial match)",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Items per page",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Sort field",
+            "schema": { "type": "string", "enum": ["created_at", "name", "product_count"], "default": "created_at" }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Sort direction",
+            "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of categories for review",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryReviewResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/admin/categories/review/count": {
+      "get": {
+        "tags": ["categories"],
+        "summary": "Get category review count",
+        "description": "Returns the count of categories needing review. Use for navigation badge display.",
+        "operationId": "getCategoryReviewCount",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Review count",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryReviewCountResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/admin/categories/approve": {
+      "post": {
+        "tags": ["categories"],
+        "summary": "Approve or merge a category",
+        "description": "Approve a category (sets needs_review=false) or merge it with another category. Merge operation transfers all products to target category and deletes the source.",
+        "operationId": "approveCategory",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CategoryApprovalRequest" },
+              "examples": {
+                "approve": {
+                  "summary": "Approve category",
+                  "value": { "category_id": "550e8400-e29b-41d4-a716-446655440000", "action": "approve" }
+                },
+                "merge": {
+                  "summary": "Merge with existing",
+                  "value": { "category_id": "550e8400-e29b-41d4-a716-446655440000", "action": "merge", "merge_with_id": "550e8400-e29b-41d4-a716-446655440001" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category approved or merged",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryApprovalResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/admin/categories/approve/bulk": {
+      "post": {
+        "tags": ["categories"],
+        "summary": "Bulk approve categories",
+        "description": "Approve multiple categories at once. Sets needs_review=false for all specified categories.",
+        "operationId": "bulkApproveCategories",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BulkCategoryApprovalRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Categories approved",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BulkCategoryApprovalResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/v1/admin/categories/{id}": {
+      "patch": {
+        "tags": ["categories"],
+        "summary": "Update category name",
+        "description": "Rename an existing category. Validates for duplicate names at the same hierarchy level.",
+        "operationId": "updateCategory",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Category UUID",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CategoryUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryUpdateResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      },
+      "delete": {
+        "tags": ["categories"],
+        "summary": "Delete category",
+        "description": "Delete a category. Products and child categories are reassigned to the parent category.",
+        "operationId": "deleteCategory",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Category UUID",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryDeleteResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token from /api/v1/auth/login"
+      }
+    },
+    "schemas": {
+      "CategoryReviewItem": {
+        "type": "object",
+        "required": ["id", "name", "needs_review", "is_active", "created_at", "product_count"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "parent_id": { "type": "string", "format": "uuid", "nullable": true },
+          "parent_name": { "type": "string", "nullable": true },
+          "needs_review": { "type": "boolean" },
+          "is_active": { "type": "boolean" },
+          "supplier_id": { "type": "string", "format": "uuid", "nullable": true },
+          "supplier_name": { "type": "string", "nullable": true },
+          "product_count": { "type": "integer", "minimum": 0 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "CategoryReviewResponse": {
+        "type": "object",
+        "required": ["data", "total_count", "page", "limit"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CategoryReviewItem" }
+          },
+          "total_count": { "type": "integer", "minimum": 0 },
+          "page": { "type": "integer", "minimum": 1 },
+          "limit": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "CategoryReviewCountResponse": {
+        "type": "object",
+        "required": ["count"],
+        "properties": {
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "CategoryApprovalRequest": {
+        "type": "object",
+        "required": ["category_id", "action"],
+        "properties": {
+          "category_id": { "type": "string", "format": "uuid", "description": "UUID of category to process" },
+          "action": { "type": "string", "enum": ["approve", "merge"], "description": "approve: sets needs_review=false; merge: transfers products to target" },
+          "merge_with_id": { "type": "string", "format": "uuid", "description": "Required when action=merge. Target category UUID." }
+        }
+      },
+      "CategoryApprovalResponse": {
+        "type": "object",
+        "required": ["success", "action", "category_id"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "action": { "type": "string", "enum": ["approved", "merged"] },
+          "category_id": { "type": "string", "format": "uuid" },
+          "merged_into_id": { "type": "string", "format": "uuid", "nullable": true },
+          "products_transferred": { "type": "integer", "minimum": 0, "nullable": true }
+        }
+      },
+      "BulkCategoryApprovalRequest": {
+        "type": "object",
+        "required": ["category_ids"],
+        "properties": {
+          "category_ids": {
+            "type": "array",
+            "items": { "type": "string", "format": "uuid" },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Array of category UUIDs to approve"
+          }
+        }
+      },
+      "BulkCategoryApprovalResponse": {
+        "type": "object",
+        "required": ["success", "approved_count"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "approved_count": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "CategoryUpdateRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 }
+        }
+      },
+      "CategoryUpdateResponse": {
+        "type": "object",
+        "required": ["success", "category"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "category": { "$ref": "#/components/schemas/CategoryReviewItem" }
+        }
+      },
+      "CategoryDeleteResponse": {
+        "type": "object",
+        "required": ["success", "deleted_id"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "deleted_id": { "type": "string", "format": "uuid" },
+          "reassigned_products": { "type": "integer", "minimum": 0 },
+          "reassigned_children": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "details": { "type": "object", "additionalProperties": true }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ValidationError": {
+        "description": "Validation error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": { "code": "VALIDATION_ERROR", "message": "Invalid UUID format" } }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": { "code": "FORBIDDEN", "message": "Admin role required" } }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": { "code": "NOT_FOUND", "message": "Category not found" } }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict (duplicate name, etc.)",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": { "code": "CONFLICT", "message": "Category name already exists" } }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": { "code": "INTERNAL_ERROR", "message": "Internal server error" } }
+          }
+        }
+      }
+    }
+  }
+}

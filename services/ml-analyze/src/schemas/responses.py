@@ -66,6 +66,9 @@ class JobStatusResponse(BaseModel):
         failed_extractions: Failed extractions (semantic ETL)
         duplicates_removed: Duplicates removed (semantic ETL)
         errors: List of error messages encountered
+        retry_count: Number of retry attempts made (T84)
+        max_retries: Maximum allowed retries (T84)
+        retry_summary: Human-readable retry status (T84)
         created_at: Job creation timestamp
         started_at: Processing start timestamp (null if pending)
         completed_at: Completion timestamp (null if not done)
@@ -84,6 +87,9 @@ class JobStatusResponse(BaseModel):
                 "failed_extractions": 3,
                 "duplicates_removed": 0,
                 "errors": [],
+                "retry_count": 0,
+                "max_retries": 3,
+                "retry_summary": None,
                 "created_at": "2024-01-15T10:30:00Z",
                 "started_at": "2024-01-15T10:30:05Z",
                 "completed_at": None,
@@ -133,6 +139,19 @@ class JobStatusResponse(BaseModel):
     errors: Annotated[
         list[str],
         Field(default_factory=list, description="Error messages encountered"),
+    ]
+    # T84: Retry summary fields
+    retry_count: Annotated[
+        int,
+        Field(default=0, ge=0, description="Number of retry attempts made"),
+    ]
+    max_retries: Annotated[
+        int,
+        Field(default=3, ge=0, description="Maximum allowed retry attempts"),
+    ]
+    retry_summary: Annotated[
+        str | None,
+        Field(default=None, description="Human-readable retry status (e.g., 'Retried 2/3 times')"),
     ]
     created_at: Annotated[
         datetime,

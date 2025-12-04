@@ -3,6 +3,7 @@ import { adminService } from '../../services/admin.service'
 import { ingestionService } from '../../services/ingestion.service'
 import { settingsService } from '../../services/settings.service'
 import { supplierService } from '../../services/supplier.service'
+import { categoryService } from '../../services/category.service'
 import {
   AdminProductsResponseSchema,
   MatchRequestSchema,
@@ -38,6 +39,17 @@ import {
   SuppliersListResponseSchema,
   UploadSupplierFileResponseSchema,
 } from '../../types/supplier.types'
+import {
+  CategoryReviewResponseSchema,
+  CategoryReviewCountResponseSchema,
+  CategoryApprovalRequestSchema,
+  CategoryApprovalResponseSchema,
+  BulkCategoryApprovalRequestSchema,
+  BulkCategoryApprovalResponseSchema,
+  CategoryUpdateRequestSchema,
+  CategoryUpdateResponseSchema,
+  CategoryDeleteResponseSchema,
+} from '../../types/category.types'
 import { createErrorResponse } from '../../types/errors'
 import { authMiddleware } from '../../middleware/auth'
 import { rateLimiter } from '../../middleware/rate-limiter'
@@ -1049,6 +1061,327 @@ export const adminController = (app: Elysia) =>
             tags: ['admin', 'suppliers'],
             summary: 'Upload price list file',
             description: 'Uploads a CSV or Excel file for a supplier and queues it for parsing. Auto-detects format from file extension. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // =============================================================================
+      // Category Review Endpoints (Phase 9 - Semantic ETL)
+      // =============================================================================
+      // GET /categories/review - List categories needing review
+      .get(
+        '/categories/review',
+        async ({ query, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for category review')
+          }
+
+          const reviewQuery = {
+            supplier_id: typeof query.supplier_id === 'string' ? query.supplier_id : undefined,
+            needs_review: query.needs_review === 'true' ? true : query.needs_review === 'false' ? false : undefined,
+            search: typeof query.search === 'string' ? query.search : undefined,
+            page: parseNum(query.page) || 1,
+            limit: parseNum(query.limit) || 50,
+            sort_by: ['created_at', 'name', 'product_count'].includes(query.sort_by as string)
+              ? (query.sort_by as 'created_at' | 'name' | 'product_count')
+              : 'created_at',
+            sort_order: query.sort_order === 'asc' ? 'asc' as const : 'desc' as const,
+          }
+
+          // Validations
+          if (reviewQuery.supplier_id && !isValidUUID(reviewQuery.supplier_id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'supplier_id must be a valid UUID')
+          }
+          if (reviewQuery.page < 1) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'page must be >= 1')
+          }
+          if (reviewQuery.limit < 1 || reviewQuery.limit > 200) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'limit must be between 1 and 200')
+          }
+
+          return categoryService.getCategoriesForReview(reviewQuery)
+        },
+        {
+          query: t.Object({
+            supplier_id: t.Optional(t.Any()),
+            needs_review: t.Optional(t.Any()),
+            search: t.Optional(t.Any()),
+            page: t.Optional(t.Any()),
+            limit: t.Optional(t.Any()),
+            sort_by: t.Optional(t.Any()),
+            sort_order: t.Optional(t.Any()),
+          }),
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'Invalid query parameters')
+            }
+            set.status = 500
+            const message = error instanceof Error ? error.message : String(error)
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: CategoryReviewResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'List categories needing review',
+            description: 'Returns paginated list of categories with needs_review=true. Supports filtering by supplier, search by name, and sorting. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // GET /categories/review/count - Get count of categories needing review (for badge)
+      .get(
+        '/categories/review/count',
+        async ({ set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required')
+          }
+
+          return categoryService.getReviewCount()
+        },
+        {
+          error({ set, error }) {
+            set.status = 500
+            const message = error instanceof Error ? error.message : String(error)
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: CategoryReviewCountResponseSchema,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'Get category review count',
+            description: 'Returns count of categories needing review (for navigation badge). Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // POST /categories/approve - Approve or merge a category
+      .post(
+        '/categories/approve',
+        async ({ body, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for category approval')
+          }
+
+          // Validate category_id is a valid UUID
+          if (!isValidUUID(body.category_id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'category_id must be a valid UUID')
+          }
+
+          // Validate merge_with_id if action is merge
+          if (body.action === 'merge') {
+            if (!body.merge_with_id) {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'merge_with_id is required for merge action')
+            }
+            if (!isValidUUID(body.merge_with_id)) {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'merge_with_id must be a valid UUID')
+            }
+          }
+
+          return categoryService.processApproval(body)
+        },
+        {
+          body: CategoryApprovalRequestSchema,
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'NOT_FOUND') {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            if (customCode === 'VALIDATION_ERROR') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', message)
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: CategoryApprovalResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'Approve or merge a category',
+            description: "Approve a category (sets needs_review=false) or merge it with another category (transfers products, then deletes source). Requires admin role.",
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // POST /categories/approve/bulk - Bulk approve multiple categories
+      .post(
+        '/categories/approve/bulk',
+        async ({ body, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for category approval')
+          }
+
+          // Validate all category_ids are valid UUIDs
+          for (const id of body.category_ids) {
+            if (!isValidUUID(id)) {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', `Invalid UUID format: ${id}`)
+            }
+          }
+
+          return categoryService.bulkApprove(body)
+        },
+        {
+          body: BulkCategoryApprovalRequestSchema,
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
+            }
+            set.status = 500
+            const message = error instanceof Error ? error.message : String(error)
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: BulkCategoryApprovalResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'Bulk approve categories',
+            description: 'Approve multiple categories at once. Sets needs_review=false for all specified categories. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // PATCH /categories/:id - Update category name
+      .patch(
+        '/categories/:id',
+        async ({ params, body, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required to update categories')
+          }
+
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Category ID must be a valid UUID')
+          }
+
+          return categoryService.updateCategory(params.id, body)
+        },
+        {
+          body: CategoryUpdateRequestSchema,
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'NOT_FOUND') {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            if (customCode === 'DUPLICATE') {
+              set.status = 409
+              return createErrorResponse('CONFLICT', message)
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: CategoryUpdateResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            409: ErrorSchemas.conflict,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'Update category name',
+            description: 'Update the name of an existing category. Validates for duplicate names at the same hierarchy level. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // DELETE /categories/:id - Delete category
+      .delete(
+        '/categories/:id',
+        async ({ params, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required to delete categories')
+          }
+
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Category ID must be a valid UUID')
+          }
+
+          return categoryService.deleteCategory(params.id)
+        },
+        {
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid category ID')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'NOT_FOUND') {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: CategoryDeleteResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'Delete category',
+            description: 'Delete a category. Products and child categories are reassigned to the parent category. Requires admin role.',
             security: [{ bearerAuth: [] }],
           },
         }

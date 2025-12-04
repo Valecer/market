@@ -106,6 +106,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/products/bulk-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk update product statuses
+         * @description Update the status of multiple products at once. Useful for activating all draft products after review. Requires sales, procurement or admin role.
+         */
+        post: operations["postApiV1AdminProductsBulk-status"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/products/{id}/match": {
         parameters: {
             query?: never;
@@ -124,6 +144,26 @@ export interface paths {
          * @description Manually link a supplier item to a product (creating a product-supplier relationship) or unlink it (removing the relationship). Requires procurement or admin role. Operations are atomic and use database transactions.
          */
         patch: operations["patchApiV1AdminProductsByIdMatch"];
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update product status
+         * @description Update the status of a single product (draft, active, archived). Requires sales, procurement or admin role.
+         */
+        patch: operations["patchApiV1AdminProductsByIdStatus"];
         trace?: never;
     };
     "/api/v1/admin/ingestion/status": {
@@ -166,6 +206,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/jobs/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry a failed ingestion job
+         * @description Enqueues a failed ingestion job for reprocessing. The job must be in a "failed" state and not have exceeded its maximum retry attempts. Requires admin role.
+         */
+        post: operations["postApiV1AdminJobsByIdRetry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/sync": {
         parameters: {
             query?: never;
@@ -180,6 +240,182 @@ export interface paths {
          * @description Enqueues a background task to synchronize data from a supplier source (Google Sheets, CSV, etc.). Returns immediately with a task_id for tracking. Rate limited to 10 requests per minute per user. Requires admin role.
          */
         post: operations["postApiV1AdminSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settings/master-sheet-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get master sheet URL configuration
+         * @description Returns the current master Google Sheet URL used for supplier sync. Requires admin role.
+         */
+        get: operations["getApiV1AdminSettingsMaster-sheet-url"];
+        /**
+         * Update master sheet URL
+         * @description Sets the master Google Sheet URL for supplier sync. Requires admin role.
+         */
+        put: operations["putApiV1AdminSettingsMaster-sheet-url"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all suppliers
+         * @description Returns all suppliers with their item counts and status. Requires admin role.
+         */
+        get: operations["getApiV1AdminSuppliers"];
+        put?: never;
+        /**
+         * Create a new supplier
+         * @description Creates a new supplier with optional source URL. Allows adding suppliers without master sheet. Requires admin role.
+         */
+        post: operations["postApiV1AdminSuppliers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/suppliers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get supplier by ID
+         * @description Returns a single supplier with full details. Requires admin role.
+         */
+        get: operations["getApiV1AdminSuppliersById"];
+        /**
+         * Update supplier
+         * @description Updates an existing supplier. Requires admin role.
+         */
+        put: operations["putApiV1AdminSuppliersById"];
+        post?: never;
+        /**
+         * Delete supplier
+         * @description Deletes a supplier and all associated items (cascade). Requires admin role.
+         */
+        delete: operations["deleteApiV1AdminSuppliersById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/suppliers/{id}/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload price list file
+         * @description Uploads a CSV or Excel file for a supplier and queues it for parsing. Auto-detects format from file extension. Requires admin role.
+         */
+        post: operations["postApiV1AdminSuppliersByIdUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List categories needing review
+         * @description Returns paginated list of categories with needs_review=true. Supports filtering by supplier, search by name, and sorting. Requires admin role.
+         */
+        get: operations["getApiV1AdminCategoriesReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/review/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get category review count
+         * @description Returns count of categories needing review (for navigation badge). Requires admin role.
+         */
+        get: operations["getApiV1AdminCategoriesReviewCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or merge a category
+         * @description Approve a category (sets needs_review=false) or merge it with another category (transfers products, then deletes source). Requires admin role.
+         */
+        post: operations["postApiV1AdminCategoriesApprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/approve/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk approve categories
+         * @description Approve multiple categories at once. Sets needs_review=false for all specified categories. Requires admin role.
+         */
+        post: operations["postApiV1AdminCategoriesApproveBulk"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1426,6 +1662,185 @@ export interface operations {
             };
         };
     };
+    "postApiV1AdminProductsBulk-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Array of product UUIDs to update */
+                    product_ids: string[];
+                    status: "draft" | "active" | "archived";
+                };
+                "multipart/form-data": {
+                    /** @description Array of product UUIDs to update */
+                    product_ids: string[];
+                    status: "draft" | "active" | "archived";
+                };
+                "text/plain": {
+                    /** @description Array of product UUIDs to update */
+                    product_ids: string[];
+                    status: "draft" | "active" | "archived";
+                };
+            };
+        };
+        responses: {
+            /**
+             * @example {
+             *       "updated_count": 2,
+             *       "status": "active",
+             *       "message": "2 products updated to active status"
+             *     }
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Number of products updated */
+                        updated_count: number;
+                        status: "draft" | "active" | "archived";
+                        /** @description Success message */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Number of products updated */
+                        updated_count: number;
+                        status: "draft" | "active" | "archived";
+                        /** @description Success message */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @description Number of products updated */
+                        updated_count: number;
+                        status: "draft" | "active" | "archived";
+                        /** @description Success message */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
     patchApiV1AdminProductsByIdMatch: {
         parameters: {
             query?: never;
@@ -1858,6 +2273,248 @@ export interface operations {
             };
         };
     };
+    patchApiV1AdminProductsByIdStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    status: "draft" | "active" | "archived";
+                };
+                "multipart/form-data": {
+                    status: "draft" | "active" | "archived";
+                };
+                "text/plain": {
+                    status: "draft" | "active" | "archived";
+                };
+            };
+        };
+        responses: {
+            /**
+             * @example {
+             *       "id": "550e8400-e29b-41d4-a716-446655440000",
+             *       "internal_sku": "PROD-001",
+             *       "name": "USB-C Cable 2m",
+             *       "status": "active",
+             *       "updated_at": "2025-12-01T20:00:00Z",
+             *       "message": "Product status updated to active"
+             *     }
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Product UUID
+                         */
+                        id: string;
+                        /** @description Internal SKU */
+                        internal_sku: string;
+                        /** @description Product name */
+                        name: string;
+                        status: "draft" | "active" | "archived";
+                        /**
+                         * Format: date-time
+                         * @description Update timestamp
+                         */
+                        updated_at: string;
+                        /** @description Success message */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /**
+                         * Format: uuid
+                         * @description Product UUID
+                         */
+                        id: string;
+                        /** @description Internal SKU */
+                        internal_sku: string;
+                        /** @description Product name */
+                        name: string;
+                        status: "draft" | "active" | "archived";
+                        /**
+                         * Format: date-time
+                         * @description Update timestamp
+                         */
+                        updated_at: string;
+                        /** @description Success message */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /**
+                         * Format: uuid
+                         * @description Product UUID
+                         */
+                        id: string;
+                        /** @description Internal SKU */
+                        internal_sku: string;
+                        /** @description Product name */
+                        name: string;
+                        status: "draft" | "active" | "archived";
+                        /**
+                         * Format: date-time
+                         * @description Update timestamp
+                         */
+                        updated_at: string;
+                        /** @description Success message */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
     getApiV1AdminIngestionStatus: {
         parameters: {
             query?: {
@@ -1876,6 +2533,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         sync_state: "idle" | "syncing_master" | "processing_suppliers";
+                        /** @description Current phase of active job (null if idle) */
+                        current_phase: ("downloading" | "analyzing" | "matching" | "complete" | "failed") | null;
                         /** @description Progress when processing_suppliers, null otherwise */
                         progress: {
                             /** @description Number of suppliers processed */
@@ -1887,6 +2546,64 @@ export interface operations {
                         last_sync_at: string | null;
                         /** @description Timestamp of next scheduled automatic sync (ISO 8601) */
                         next_scheduled_at: string;
+                        /** @description Active and recent ingestion jobs */
+                        jobs: {
+                            /**
+                             * Format: uuid
+                             * @description Job UUID
+                             */
+                            job_id: string;
+                            /**
+                             * Format: uuid
+                             * @description Associated supplier UUID
+                             */
+                            supplier_id: string;
+                            /** @description Supplier name for display */
+                            supplier_name: string;
+                            phase: "downloading" | "analyzing" | "matching" | "complete" | "failed";
+                            status: "pending" | "processing" | "completed" | "failed";
+                            /** @description Download progress (null if not in download phase) */
+                            download_progress: {
+                                /** @description Bytes downloaded so far */
+                                bytes_downloaded: number;
+                                /** @description Total bytes to download (null if unknown) */
+                                bytes_total: number | null;
+                                /** @description Download percentage */
+                                percentage: number;
+                            } | null;
+                            /** @description Analysis progress (null if not in analysis phase) */
+                            analysis_progress: {
+                                /** @description Items processed so far */
+                                items_processed: number;
+                                /** @description Total items to process */
+                                items_total: number;
+                                /** @description Successful product matches */
+                                matches_found: number;
+                                /** @description Items in review queue */
+                                review_queue: number;
+                                /** @description Processing errors */
+                                errors: number;
+                                /** @description Analysis percentage */
+                                percentage: number;
+                            } | null;
+                            file_type: "excel" | "csv" | "pdf";
+                            /** @description Primary error message if failed */
+                            error: string | null;
+                            /** @description Detailed error messages */
+                            error_details: string[];
+                            /** @description Whether the job can be retried */
+                            can_retry: boolean;
+                            /** @description Number of retry attempts */
+                            retry_count: number;
+                            /** @description Maximum retry attempts allowed */
+                            max_retries: number;
+                            /** @description Job creation timestamp (ISO 8601) */
+                            created_at: string;
+                            /** @description Processing start timestamp (ISO 8601) */
+                            started_at: string | null;
+                            /** @description Processing completion timestamp (ISO 8601) */
+                            completed_at: string | null;
+                        }[];
                         /** @description List of all suppliers with sync status */
                         suppliers: {
                             /**
@@ -1903,6 +2620,11 @@ export interface operations {
                             status: "success" | "error" | "pending" | "inactive";
                             /** @description Number of supplier items in database */
                             items_count: number;
+                            /**
+                             * @description Whether ML processing is enabled for this supplier
+                             * @default true
+                             */
+                            use_ml_processing: boolean;
                         }[];
                         /** @description Recent parsing log entries */
                         recent_logs: {
@@ -1929,6 +2651,8 @@ export interface operations {
                     };
                     "multipart/form-data": {
                         sync_state: "idle" | "syncing_master" | "processing_suppliers";
+                        /** @description Current phase of active job (null if idle) */
+                        current_phase: ("downloading" | "analyzing" | "matching" | "complete" | "failed") | null;
                         /** @description Progress when processing_suppliers, null otherwise */
                         progress: {
                             /** @description Number of suppliers processed */
@@ -1940,6 +2664,64 @@ export interface operations {
                         last_sync_at: string | null;
                         /** @description Timestamp of next scheduled automatic sync (ISO 8601) */
                         next_scheduled_at: string;
+                        /** @description Active and recent ingestion jobs */
+                        jobs: {
+                            /**
+                             * Format: uuid
+                             * @description Job UUID
+                             */
+                            job_id: string;
+                            /**
+                             * Format: uuid
+                             * @description Associated supplier UUID
+                             */
+                            supplier_id: string;
+                            /** @description Supplier name for display */
+                            supplier_name: string;
+                            phase: "downloading" | "analyzing" | "matching" | "complete" | "failed";
+                            status: "pending" | "processing" | "completed" | "failed";
+                            /** @description Download progress (null if not in download phase) */
+                            download_progress: {
+                                /** @description Bytes downloaded so far */
+                                bytes_downloaded: number;
+                                /** @description Total bytes to download (null if unknown) */
+                                bytes_total: number | null;
+                                /** @description Download percentage */
+                                percentage: number;
+                            } | null;
+                            /** @description Analysis progress (null if not in analysis phase) */
+                            analysis_progress: {
+                                /** @description Items processed so far */
+                                items_processed: number;
+                                /** @description Total items to process */
+                                items_total: number;
+                                /** @description Successful product matches */
+                                matches_found: number;
+                                /** @description Items in review queue */
+                                review_queue: number;
+                                /** @description Processing errors */
+                                errors: number;
+                                /** @description Analysis percentage */
+                                percentage: number;
+                            } | null;
+                            file_type: "excel" | "csv" | "pdf";
+                            /** @description Primary error message if failed */
+                            error: string | null;
+                            /** @description Detailed error messages */
+                            error_details: string[];
+                            /** @description Whether the job can be retried */
+                            can_retry: boolean;
+                            /** @description Number of retry attempts */
+                            retry_count: number;
+                            /** @description Maximum retry attempts allowed */
+                            max_retries: number;
+                            /** @description Job creation timestamp (ISO 8601) */
+                            created_at: string;
+                            /** @description Processing start timestamp (ISO 8601) */
+                            started_at: string | null;
+                            /** @description Processing completion timestamp (ISO 8601) */
+                            completed_at: string | null;
+                        }[];
                         /** @description List of all suppliers with sync status */
                         suppliers: {
                             /**
@@ -1956,6 +2738,11 @@ export interface operations {
                             status: "success" | "error" | "pending" | "inactive";
                             /** @description Number of supplier items in database */
                             items_count: number;
+                            /**
+                             * @description Whether ML processing is enabled for this supplier
+                             * @default true
+                             */
+                            use_ml_processing: boolean;
                         }[];
                         /** @description Recent parsing log entries */
                         recent_logs: {
@@ -1982,6 +2769,8 @@ export interface operations {
                     };
                     "text/plain": {
                         sync_state: "idle" | "syncing_master" | "processing_suppliers";
+                        /** @description Current phase of active job (null if idle) */
+                        current_phase: ("downloading" | "analyzing" | "matching" | "complete" | "failed") | null;
                         /** @description Progress when processing_suppliers, null otherwise */
                         progress: {
                             /** @description Number of suppliers processed */
@@ -1993,6 +2782,64 @@ export interface operations {
                         last_sync_at: string | null;
                         /** @description Timestamp of next scheduled automatic sync (ISO 8601) */
                         next_scheduled_at: string;
+                        /** @description Active and recent ingestion jobs */
+                        jobs: {
+                            /**
+                             * Format: uuid
+                             * @description Job UUID
+                             */
+                            job_id: string;
+                            /**
+                             * Format: uuid
+                             * @description Associated supplier UUID
+                             */
+                            supplier_id: string;
+                            /** @description Supplier name for display */
+                            supplier_name: string;
+                            phase: "downloading" | "analyzing" | "matching" | "complete" | "failed";
+                            status: "pending" | "processing" | "completed" | "failed";
+                            /** @description Download progress (null if not in download phase) */
+                            download_progress: {
+                                /** @description Bytes downloaded so far */
+                                bytes_downloaded: number;
+                                /** @description Total bytes to download (null if unknown) */
+                                bytes_total: number | null;
+                                /** @description Download percentage */
+                                percentage: number;
+                            } | null;
+                            /** @description Analysis progress (null if not in analysis phase) */
+                            analysis_progress: {
+                                /** @description Items processed so far */
+                                items_processed: number;
+                                /** @description Total items to process */
+                                items_total: number;
+                                /** @description Successful product matches */
+                                matches_found: number;
+                                /** @description Items in review queue */
+                                review_queue: number;
+                                /** @description Processing errors */
+                                errors: number;
+                                /** @description Analysis percentage */
+                                percentage: number;
+                            } | null;
+                            file_type: "excel" | "csv" | "pdf";
+                            /** @description Primary error message if failed */
+                            error: string | null;
+                            /** @description Detailed error messages */
+                            error_details: string[];
+                            /** @description Whether the job can be retried */
+                            can_retry: boolean;
+                            /** @description Number of retry attempts */
+                            retry_count: number;
+                            /** @description Maximum retry attempts allowed */
+                            max_retries: number;
+                            /** @description Job creation timestamp (ISO 8601) */
+                            created_at: string;
+                            /** @description Processing start timestamp (ISO 8601) */
+                            started_at: string | null;
+                            /** @description Processing completion timestamp (ISO 8601) */
+                            completed_at: string | null;
+                        }[];
                         /** @description List of all suppliers with sync status */
                         suppliers: {
                             /**
@@ -2009,6 +2856,11 @@ export interface operations {
                             status: "success" | "error" | "pending" | "inactive";
                             /** @description Number of supplier items in database */
                             items_count: number;
+                            /**
+                             * @description Whether ML processing is enabled for this supplier
+                             * @default true
+                             */
+                            use_ml_processing: boolean;
                         }[];
                         /** @description Recent parsing log entries */
                         recent_logs: {
@@ -2442,6 +3294,273 @@ export interface operations {
             };
         };
     };
+    postApiV1AdminJobsByIdRetry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Job UUID
+                         */
+                        job_id: string;
+                        /**
+                         * @description Job is being retried
+                         * @constant
+                         */
+                        status: "retrying";
+                        /** @description Human-readable confirmation */
+                        message: string;
+                        /** @description Current retry count */
+                        retry_count: number;
+                    };
+                    "multipart/form-data": {
+                        /**
+                         * Format: uuid
+                         * @description Job UUID
+                         */
+                        job_id: string;
+                        /**
+                         * @description Job is being retried
+                         * @constant
+                         */
+                        status: "retrying";
+                        /** @description Human-readable confirmation */
+                        message: string;
+                        /** @description Current retry count */
+                        retry_count: number;
+                    };
+                    "text/plain": {
+                        /**
+                         * Format: uuid
+                         * @description Job UUID
+                         */
+                        job_id: string;
+                        /**
+                         * @description Job is being retried
+                         * @constant
+                         */
+                        status: "retrying";
+                        /** @description Human-readable confirmation */
+                        message: string;
+                        /** @description Current retry count */
+                        retry_count: number;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
     postApiV1AdminSync: {
         parameters: {
             query?: never;
@@ -2753,6 +3872,2570 @@ export interface operations {
                         error: {
                             /** @constant */
                             code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    "getApiV1AdminSettingsMaster-sheet-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Current master sheet URL or null if not configured */
+                        url: string | null;
+                        /**
+                         * @description Name of the worksheet tab to parse
+                         * @default Suppliers
+                         */
+                        sheet_name: string;
+                        /** @description Whether a master sheet URL is configured */
+                        configured: boolean;
+                        /** @description ISO timestamp of last URL update */
+                        last_updated_at: string | null;
+                    };
+                    "multipart/form-data": {
+                        /** @description Current master sheet URL or null if not configured */
+                        url: string | null;
+                        /**
+                         * @description Name of the worksheet tab to parse
+                         * @default Suppliers
+                         */
+                        sheet_name: string;
+                        /** @description Whether a master sheet URL is configured */
+                        configured: boolean;
+                        /** @description ISO timestamp of last URL update */
+                        last_updated_at: string | null;
+                    };
+                    "text/plain": {
+                        /** @description Current master sheet URL or null if not configured */
+                        url: string | null;
+                        /**
+                         * @description Name of the worksheet tab to parse
+                         * @default Suppliers
+                         */
+                        sheet_name: string;
+                        /** @description Whether a master sheet URL is configured */
+                        configured: boolean;
+                        /** @description ISO timestamp of last URL update */
+                        last_updated_at: string | null;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    "putApiV1AdminSettingsMaster-sheet-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uri
+                     * @description Google Sheets URL for the master supplier configuration sheet
+                     * @example https://docs.google.com/spreadsheets/d/1abc123/edit
+                     */
+                    url: string;
+                    /**
+                     * @description Name of the worksheet tab to parse (default: "Suppliers")
+                     * @example Suppliers
+                     * @example Sheet1
+                     */
+                    sheet_name?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: uri
+                     * @description Google Sheets URL for the master supplier configuration sheet
+                     * @example https://docs.google.com/spreadsheets/d/1abc123/edit
+                     */
+                    url: string;
+                    /**
+                     * @description Name of the worksheet tab to parse (default: "Suppliers")
+                     * @example Suppliers
+                     * @example Sheet1
+                     */
+                    sheet_name?: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: uri
+                     * @description Google Sheets URL for the master supplier configuration sheet
+                     * @example https://docs.google.com/spreadsheets/d/1abc123/edit
+                     */
+                    url: string;
+                    /**
+                     * @description Name of the worksheet tab to parse (default: "Suppliers")
+                     * @example Suppliers
+                     * @example Sheet1
+                     */
+                    sheet_name?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Updated master sheet URL */
+                        url: string;
+                        /** @description Updated worksheet tab name */
+                        sheet_name: string;
+                        /** @description Confirmation message */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Updated master sheet URL */
+                        url: string;
+                        /** @description Updated worksheet tab name */
+                        sheet_name: string;
+                        /** @description Confirmation message */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @description Updated master sheet URL */
+                        url: string;
+                        /** @description Updated worksheet tab name */
+                        sheet_name: string;
+                        /** @description Confirmation message */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminSuppliers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        suppliers: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            source_type: "google_sheets" | "csv" | "excel";
+                            source_url: string | null;
+                            contact_email: string | null;
+                            is_active: boolean;
+                            /** @description Whether ML processing is enabled */
+                            use_ml_processing: boolean;
+                            notes: string | null;
+                            items_count: number;
+                            created_at: string;
+                            updated_at: string;
+                        }[];
+                        total: number;
+                    };
+                    "multipart/form-data": {
+                        suppliers: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            source_type: "google_sheets" | "csv" | "excel";
+                            source_url: string | null;
+                            contact_email: string | null;
+                            is_active: boolean;
+                            /** @description Whether ML processing is enabled */
+                            use_ml_processing: boolean;
+                            notes: string | null;
+                            items_count: number;
+                            created_at: string;
+                            updated_at: string;
+                        }[];
+                        total: number;
+                    };
+                    "text/plain": {
+                        suppliers: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            source_type: "google_sheets" | "csv" | "excel";
+                            source_url: string | null;
+                            contact_email: string | null;
+                            is_active: boolean;
+                            /** @description Whether ML processing is enabled */
+                            use_ml_processing: boolean;
+                            notes: string | null;
+                            items_count: number;
+                            created_at: string;
+                            updated_at: string;
+                        }[];
+                        total: number;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminSuppliers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Supplier display name */
+                    name: string;
+                    source_type: "google_sheets" | "csv" | "excel";
+                    /**
+                     * Format: uri
+                     * @description URL to supplier price list (Google Sheets, CSV, etc.)
+                     */
+                    source_url?: string;
+                    /**
+                     * Format: email
+                     * @description Supplier contact email
+                     */
+                    contact_email?: string;
+                    /**
+                     * @description Whether supplier is active for sync
+                     * @default true
+                     */
+                    is_active?: boolean;
+                    /**
+                     * @description Whether to use ML pipeline for processing (Phase 8)
+                     * @default true
+                     */
+                    use_ml_processing?: boolean;
+                    /** @description Additional notes about the supplier */
+                    notes?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Supplier display name */
+                    name: string;
+                    source_type: "google_sheets" | "csv" | "excel";
+                    /**
+                     * Format: uri
+                     * @description URL to supplier price list (Google Sheets, CSV, etc.)
+                     */
+                    source_url?: string;
+                    /**
+                     * Format: email
+                     * @description Supplier contact email
+                     */
+                    contact_email?: string;
+                    /**
+                     * @description Whether supplier is active for sync
+                     * @default true
+                     */
+                    is_active?: boolean;
+                    /**
+                     * @description Whether to use ML pipeline for processing (Phase 8)
+                     * @default true
+                     */
+                    use_ml_processing?: boolean;
+                    /** @description Additional notes about the supplier */
+                    notes?: string;
+                };
+                "text/plain": {
+                    /** @description Supplier display name */
+                    name: string;
+                    source_type: "google_sheets" | "csv" | "excel";
+                    /**
+                     * Format: uri
+                     * @description URL to supplier price list (Google Sheets, CSV, etc.)
+                     */
+                    source_url?: string;
+                    /**
+                     * Format: email
+                     * @description Supplier contact email
+                     */
+                    contact_email?: string;
+                    /**
+                     * @description Whether supplier is active for sync
+                     * @default true
+                     */
+                    is_active?: boolean;
+                    /**
+                     * @description Whether to use ML pipeline for processing (Phase 8)
+                     * @default true
+                     */
+                    use_ml_processing?: boolean;
+                    /** @description Additional notes about the supplier */
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        supplier: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            source_type: "google_sheets" | "csv" | "excel";
+                            source_url: string | null;
+                            contact_email: string | null;
+                            is_active: boolean;
+                            /** @description Whether ML processing is enabled */
+                            use_ml_processing: boolean;
+                            notes: string | null;
+                            items_count: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        supplier: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            source_type: "google_sheets" | "csv" | "excel";
+                            source_url: string | null;
+                            contact_email: string | null;
+                            is_active: boolean;
+                            /** @description Whether ML processing is enabled */
+                            use_ml_processing: boolean;
+                            notes: string | null;
+                            items_count: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                        message: string;
+                    };
+                    "text/plain": {
+                        supplier: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            source_type: "google_sheets" | "csv" | "excel";
+                            source_url: string | null;
+                            contact_email: string | null;
+                            is_active: boolean;
+                            /** @description Whether ML processing is enabled */
+                            use_ml_processing: boolean;
+                            notes: string | null;
+                            items_count: number;
+                            created_at: string;
+                            updated_at: string;
+                        };
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminSuppliersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        source_type: "google_sheets" | "csv" | "excel";
+                        source_url: string | null;
+                        contact_email: string | null;
+                        is_active: boolean;
+                        /** @description Whether ML processing is enabled */
+                        use_ml_processing: boolean;
+                        notes: string | null;
+                        items_count: number;
+                        created_at: string;
+                        updated_at: string;
+                    };
+                    "multipart/form-data": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        source_type: "google_sheets" | "csv" | "excel";
+                        source_url: string | null;
+                        contact_email: string | null;
+                        is_active: boolean;
+                        /** @description Whether ML processing is enabled */
+                        use_ml_processing: boolean;
+                        notes: string | null;
+                        items_count: number;
+                        created_at: string;
+                        updated_at: string;
+                    };
+                    "text/plain": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        source_type: "google_sheets" | "csv" | "excel";
+                        source_url: string | null;
+                        contact_email: string | null;
+                        is_active: boolean;
+                        /** @description Whether ML processing is enabled */
+                        use_ml_processing: boolean;
+                        notes: string | null;
+                        items_count: number;
+                        created_at: string;
+                        updated_at: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    putApiV1AdminSuppliersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Supplier display name */
+                    name?: string;
+                    source_type?: "google_sheets" | "csv" | "excel";
+                    /**
+                     * Format: uri
+                     * @description URL to supplier price list (Google Sheets, CSV, etc.)
+                     */
+                    source_url?: string;
+                    /**
+                     * Format: email
+                     * @description Supplier contact email
+                     */
+                    contact_email?: string;
+                    /**
+                     * @description Whether supplier is active for sync
+                     * @default true
+                     */
+                    is_active?: boolean;
+                    /**
+                     * @description Whether to use ML pipeline for processing (Phase 8)
+                     * @default true
+                     */
+                    use_ml_processing?: boolean;
+                    /** @description Additional notes about the supplier */
+                    notes?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Supplier display name */
+                    name?: string;
+                    source_type?: "google_sheets" | "csv" | "excel";
+                    /**
+                     * Format: uri
+                     * @description URL to supplier price list (Google Sheets, CSV, etc.)
+                     */
+                    source_url?: string;
+                    /**
+                     * Format: email
+                     * @description Supplier contact email
+                     */
+                    contact_email?: string;
+                    /**
+                     * @description Whether supplier is active for sync
+                     * @default true
+                     */
+                    is_active?: boolean;
+                    /**
+                     * @description Whether to use ML pipeline for processing (Phase 8)
+                     * @default true
+                     */
+                    use_ml_processing?: boolean;
+                    /** @description Additional notes about the supplier */
+                    notes?: string;
+                };
+                "text/plain": {
+                    /** @description Supplier display name */
+                    name?: string;
+                    source_type?: "google_sheets" | "csv" | "excel";
+                    /**
+                     * Format: uri
+                     * @description URL to supplier price list (Google Sheets, CSV, etc.)
+                     */
+                    source_url?: string;
+                    /**
+                     * Format: email
+                     * @description Supplier contact email
+                     */
+                    contact_email?: string;
+                    /**
+                     * @description Whether supplier is active for sync
+                     * @default true
+                     */
+                    is_active?: boolean;
+                    /**
+                     * @description Whether to use ML pipeline for processing (Phase 8)
+                     * @default true
+                     */
+                    use_ml_processing?: boolean;
+                    /** @description Additional notes about the supplier */
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        source_type: "google_sheets" | "csv" | "excel";
+                        source_url: string | null;
+                        contact_email: string | null;
+                        is_active: boolean;
+                        /** @description Whether ML processing is enabled */
+                        use_ml_processing: boolean;
+                        notes: string | null;
+                        items_count: number;
+                        created_at: string;
+                        updated_at: string;
+                    };
+                    "multipart/form-data": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        source_type: "google_sheets" | "csv" | "excel";
+                        source_url: string | null;
+                        contact_email: string | null;
+                        is_active: boolean;
+                        /** @description Whether ML processing is enabled */
+                        use_ml_processing: boolean;
+                        notes: string | null;
+                        items_count: number;
+                        created_at: string;
+                        updated_at: string;
+                    };
+                    "text/plain": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        source_type: "google_sheets" | "csv" | "excel";
+                        source_url: string | null;
+                        contact_email: string | null;
+                        is_active: boolean;
+                        /** @description Whether ML processing is enabled */
+                        use_ml_processing: boolean;
+                        notes: string | null;
+                        items_count: number;
+                        created_at: string;
+                        updated_at: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "CONFLICT";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1AdminSuppliersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** Format: uuid */
+                        id: string;
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** Format: uuid */
+                        id: string;
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminSuppliersByIdUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    sheet_name?: string;
+                    header_row?: number;
+                    data_start_row?: number;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    sheet_name?: string;
+                    header_row?: number;
+                    data_start_row?: number;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    sheet_name?: string;
+                    header_row?: number;
+                    data_start_row?: number;
+                };
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Background task ID for tracking parse progress */
+                        task_id: string;
+                        /** @description Original uploaded file name */
+                        file_name: string;
+                        detected_format: "google_sheets" | "csv" | "excel";
+                        /** @constant */
+                        status: "queued";
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Background task ID for tracking parse progress */
+                        task_id: string;
+                        /** @description Original uploaded file name */
+                        file_name: string;
+                        detected_format: "google_sheets" | "csv" | "excel";
+                        /** @constant */
+                        status: "queued";
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @description Background task ID for tracking parse progress */
+                        task_id: string;
+                        /** @description Original uploaded file name */
+                        file_name: string;
+                        detected_format: "google_sheets" | "csv" | "excel";
+                        /** @constant */
+                        status: "queued";
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "REDIS_UNAVAILABLE";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminCategoriesReview: {
+        parameters: {
+            query?: {
+                supplier_id?: unknown;
+                needs_review?: unknown;
+                search?: unknown;
+                page?: unknown;
+                limit?: unknown;
+                sort_by?: unknown;
+                sort_order?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Total number of categories matching filters */
+                        total_count: number;
+                        /** @description Current page number */
+                        page: number;
+                        /** @description Items per page */
+                        limit: number;
+                        /** @description Array of category review items */
+                        data: {
+                            /** @description Category UUID */
+                            id: string;
+                            /** @description Category name */
+                            name: string;
+                            /** @description Parent category UUID (null for root) */
+                            parent_id: string | null;
+                            /** @description Parent category name (joined from categories table) */
+                            parent_name: string | null;
+                            /** @description Admin review flag */
+                            needs_review: boolean;
+                            /** @description Active status */
+                            is_active: boolean;
+                            /** @description Original supplier UUID (for tracking) */
+                            supplier_id: string | null;
+                            /** @description Supplier name (joined from suppliers table) */
+                            supplier_name: string | null;
+                            /** @description Number of products in this category */
+                            product_count: number;
+                            /** @description Creation timestamp (ISO 8601) */
+                            created_at: string;
+                            /** @description Last update timestamp (ISO 8601) */
+                            updated_at: string;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @description Total number of categories matching filters */
+                        total_count: number;
+                        /** @description Current page number */
+                        page: number;
+                        /** @description Items per page */
+                        limit: number;
+                        /** @description Array of category review items */
+                        data: {
+                            /** @description Category UUID */
+                            id: string;
+                            /** @description Category name */
+                            name: string;
+                            /** @description Parent category UUID (null for root) */
+                            parent_id: string | null;
+                            /** @description Parent category name (joined from categories table) */
+                            parent_name: string | null;
+                            /** @description Admin review flag */
+                            needs_review: boolean;
+                            /** @description Active status */
+                            is_active: boolean;
+                            /** @description Original supplier UUID (for tracking) */
+                            supplier_id: string | null;
+                            /** @description Supplier name (joined from suppliers table) */
+                            supplier_name: string | null;
+                            /** @description Number of products in this category */
+                            product_count: number;
+                            /** @description Creation timestamp (ISO 8601) */
+                            created_at: string;
+                            /** @description Last update timestamp (ISO 8601) */
+                            updated_at: string;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @description Total number of categories matching filters */
+                        total_count: number;
+                        /** @description Current page number */
+                        page: number;
+                        /** @description Items per page */
+                        limit: number;
+                        /** @description Array of category review items */
+                        data: {
+                            /** @description Category UUID */
+                            id: string;
+                            /** @description Category name */
+                            name: string;
+                            /** @description Parent category UUID (null for root) */
+                            parent_id: string | null;
+                            /** @description Parent category name (joined from categories table) */
+                            parent_name: string | null;
+                            /** @description Admin review flag */
+                            needs_review: boolean;
+                            /** @description Active status */
+                            is_active: boolean;
+                            /** @description Original supplier UUID (for tracking) */
+                            supplier_id: string | null;
+                            /** @description Supplier name (joined from suppliers table) */
+                            supplier_name: string | null;
+                            /** @description Number of products in this category */
+                            product_count: number;
+                            /** @description Creation timestamp (ISO 8601) */
+                            created_at: string;
+                            /** @description Last update timestamp (ISO 8601) */
+                            updated_at: string;
+                        }[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    getApiV1AdminCategoriesReviewCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Number of categories needing review */
+                        count: number;
+                    };
+                    "multipart/form-data": {
+                        /** @description Number of categories needing review */
+                        count: number;
+                    };
+                    "text/plain": {
+                        /** @description Number of categories needing review */
+                        count: number;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminCategoriesApprove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Category UUID to approve or merge */
+                    category_id: string;
+                    /** @description Action to perform: 'approve' or 'merge' */
+                    action: "approve" | "merge";
+                    /** @description Target category UUID for merge (required if action=merge) */
+                    merge_with_id?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Category UUID to approve or merge */
+                    category_id: string;
+                    /** @description Action to perform: 'approve' or 'merge' */
+                    action: "approve" | "merge";
+                    /** @description Target category UUID for merge (required if action=merge) */
+                    merge_with_id?: string;
+                };
+                "text/plain": {
+                    /** @description Category UUID to approve or merge */
+                    category_id: string;
+                    /** @description Action to perform: 'approve' or 'merge' */
+                    action: "approve" | "merge";
+                    /** @description Target category UUID for merge (required if action=merge) */
+                    merge_with_id?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Operation success status */
+                        success: boolean;
+                        /** @description Human-readable result message */
+                        message: string;
+                        /** @description Affected category UUID */
+                        category_id: string;
+                        /** @description Action performed */
+                        action: "approve" | "merge";
+                        /** @description Number of products updated (for merge) */
+                        affected_products: number;
+                    };
+                    "multipart/form-data": {
+                        /** @description Operation success status */
+                        success: boolean;
+                        /** @description Human-readable result message */
+                        message: string;
+                        /** @description Affected category UUID */
+                        category_id: string;
+                        /** @description Action performed */
+                        action: "approve" | "merge";
+                        /** @description Number of products updated (for merge) */
+                        affected_products: number;
+                    };
+                    "text/plain": {
+                        /** @description Operation success status */
+                        success: boolean;
+                        /** @description Human-readable result message */
+                        message: string;
+                        /** @description Affected category UUID */
+                        category_id: string;
+                        /** @description Action performed */
+                        action: "approve" | "merge";
+                        /** @description Number of products updated (for merge) */
+                        affected_products: number;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "NOT_FOUND";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    postApiV1AdminCategoriesApproveBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Array of category UUIDs to approve */
+                    category_ids: string[];
+                };
+                "multipart/form-data": {
+                    /** @description Array of category UUIDs to approve */
+                    category_ids: string[];
+                };
+                "text/plain": {
+                    /** @description Array of category UUIDs to approve */
+                    category_ids: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Operation success status */
+                        success: boolean;
+                        /** @description Number of categories approved */
+                        approved_count: number;
+                        /** @description Human-readable result message */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @description Operation success status */
+                        success: boolean;
+                        /** @description Number of categories approved */
+                        approved_count: number;
+                        /** @description Human-readable result message */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @description Operation success status */
+                        success: boolean;
+                        /** @description Number of categories approved */
+                        approved_count: number;
+                        /** @description Human-readable result message */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "VALIDATION_ERROR";
+                            message: string;
+                            details?: Record<string, never>;
+                        };
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "UNAUTHORIZED";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "FORBIDDEN";
+                            message: string;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "multipart/form-data": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
+                            message: string;
+                        };
+                    };
+                    "text/plain": {
+                        error: {
+                            /** @constant */
+                            code: "INTERNAL_ERROR";
                             message: string;
                         };
                     };

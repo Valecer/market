@@ -8,7 +8,6 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '@/lib/api'
 
 // =============================================================================
 // Types
@@ -56,8 +55,21 @@ export function useRetryJob() {
 
   return useMutation<RetryJobResponse, RetryJobError, string, RetryJobContext>({
     mutationFn: async (jobId: string) => {
-      const response = await api.post<RetryJobResponse>(`/admin/jobs/${jobId}/retry`)
-      return response.data
+      const token = localStorage.getItem('jwt_token')
+      const response = await fetch(`/api/v1/admin/jobs/${jobId}/retry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: { message: 'Retry failed' } }))
+        throw error as RetryJobError
+      }
+
+      return response.json() as Promise<RetryJobResponse>
     },
 
     onMutate: async (jobId) => {

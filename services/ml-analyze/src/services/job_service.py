@@ -87,6 +87,8 @@ class JobData(BaseModel):
         failed_extractions: Failed extractions (semantic ETL)
         duplicates_removed: Duplicates removed (semantic ETL)
         errors: List of error messages
+        retry_count: Number of retry attempts (T84)
+        max_retries: Maximum allowed retries (T84)
         file_url: Source file URL (for file analysis jobs)
         supplier_id: Supplier ID
         created_at: Job creation time
@@ -107,6 +109,9 @@ class JobData(BaseModel):
     failed_extractions: int = Field(default=0, ge=0)
     duplicates_removed: int = Field(default=0, ge=0)
     errors: list[str] = Field(default_factory=list)
+    # T84: Retry tracking
+    retry_count: int = Field(default=0, ge=0)
+    max_retries: int = Field(default=3, ge=0)
     file_url: str | None = None
     file_type: str | None = None
     supplier_id: UUID | None = None

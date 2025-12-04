@@ -24,13 +24,40 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
+def _build_retry_summary(retry_count: int, max_retries: int, status: str) -> str | None:
+    """
+    Build human-readable retry summary.
+    
+    T84: Generate user-friendly retry status message.
+    
+    Args:
+        retry_count: Number of retries attempted
+        max_retries: Maximum allowed retries
+        status: Current job status
+    
+    Returns:
+        Retry summary string or None if no retries
+    """
+    if retry_count == 0:
+        return None
+    
+    if status == "failed" and retry_count >= max_retries:
+        return f"Failed after {retry_count}/{max_retries} retry attempts"
+    elif status == "failed":
+        return f"Failed (retried {retry_count}/{max_retries} times, can retry again)"
+    elif status in ("processing", "pending"):
+        return f"Retry attempt {retry_count}/{max_retries} in progress"
+    else:
+        return f"Completed after {retry_count} retry attempt(s)"
+
+
 @router.get(
     "/{job_id}",
     response_model=JobStatusResponse,
     summary="Get job status",
     description=(
         "Retrieve the current status and progress of an analysis job. "
-        "Returns progress percentage, items processed, and any errors encountered."
+        "Returns progress percentage, items processed, retry status, and any errors encountered."
     ),
     responses={
         200: {"description": "Job status retrieved successfully"},
@@ -46,14 +73,16 @@ async def get_job_status(
     Get job status by ID.
 
     Retrieves job data from Redis and returns current state,
-    progress, and any errors.
+    progress, retry summary, and any errors.
+
+    T84: Now includes retry_count, max_retries, and retry_summary fields.
 
     Args:
         job_id: UUID of the job to check
         job_service: Job service dependency
 
     Returns:
-        JobStatusResponse with full job details
+        JobStatusResponse with full job details including retry info
 
     Raises:
         HTTPException: 404 if job not found, 500 on server error
@@ -70,6 +99,13 @@ async def get_job_status(
                 detail=f"Job {job_id} not found. It may have expired or never existed.",
             )
 
+        # T84: Build retry summary
+        retry_summary = _build_retry_summary(
+            retry_count=job.retry_count,
+            max_retries=job.max_retries,
+            status=job.status.value,
+        )
+
         return JobStatusResponse(
             job_id=job.job_id,
             status=job.status.value,
@@ -81,6 +117,9 @@ async def get_job_status(
             failed_extractions=job.failed_extractions,
             duplicates_removed=job.duplicates_removed,
             errors=job.errors,
+            retry_count=job.retry_count,
+            max_retries=job.max_retries,
+            retry_summary=retry_summary,
             created_at=job.created_at,
             started_at=job.started_at,
             completed_at=job.completed_at,

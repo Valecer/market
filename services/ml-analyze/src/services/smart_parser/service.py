@@ -15,10 +15,12 @@ Orchestrates the semantic ETL pipeline:
 Phase 9: Semantic ETL Pipeline Refactoring
 - US1: Standard file upload (complete)
 - US2: Multi-sheet files (T053-T063)
+
+Phase 9 T80: Enhanced structured logging for observability.
 """
 
-import logging
 import time
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -35,8 +37,259 @@ from src.services.job_service import JobService
 from src.services.smart_parser.langchain_extractor import LangChainExtractor
 from src.services.smart_parser.markdown_converter import MarkdownConverter
 from src.services.smart_parser.sheet_selector import SheetSelector, SheetSelectionResult
+from src.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+
+# =============================================================================
+# T83: User-Friendly Error Messages
+# =============================================================================
+
+# Error type to user-friendly message mapping
+ERROR_MESSAGES: dict[str, dict[str, str]] = {
+    "file_not_found": {
+        "title": "File Not Found",
+        "description": "The specified file could not be located.",
+        "recommendation": "Please verify the file path and ensure the file has been uploaded successfully.",
+    },
+    "no_sheets_found": {
+        "title": "No Product Sheets Found",
+        "description": "No sheets containing product data were identified in the file.",
+        "recommendation": "Ensure your Excel file has a sheet named 'Upload to site', 'Products', or 'Catalog'. The sheet should contain product data with Name and Price columns.",
+    },
+    "empty_sheet": {
+        "title": "Empty Sheet",
+        "description": "The selected sheet contains no data rows.",
+        "recommendation": "Add product data to your spreadsheet with at least a header row and one data row.",
+    },
+    "llm_timeout": {
+        "title": "Processing Timeout",
+        "description": "The AI model took too long to process the data.",
+        "recommendation": "Try uploading a smaller file (under 500 rows) or contact support if the issue persists.",
+    },
+    "llm_error": {
+        "title": "AI Processing Error",
+        "description": "The AI model encountered an error while extracting products.",
+        "recommendation": "This may be a temporary issue. Please try again in a few minutes.",
+    },
+    "validation_error": {
+        "title": "Data Validation Error",
+        "description": "Some products could not be validated due to missing or invalid fields.",
+        "recommendation": "Ensure each product row has at least a Name and Price. Check that prices are numeric values.",
+    },
+    "parsing_error": {
+        "title": "File Parsing Error",
+        "description": "The file could not be parsed correctly.",
+        "recommendation": "Verify the file is a valid Excel (.xlsx) or CSV file. Try re-exporting from your source application.",
+    },
+    "category_error": {
+        "title": "Category Processing Error",
+        "description": "An error occurred while matching or creating categories.",
+        "recommendation": "Check that category names in your file are not excessively long (max 200 characters).",
+    },
+    "orchestration_error": {
+        "title": "Processing Pipeline Error",
+        "description": "An unexpected error occurred during file processing.",
+        "recommendation": "Please try again. If the issue persists, contact support with the job ID.",
+    },
+}
+
+
+def get_user_friendly_error(
+    error_type: str,
+    context: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    """
+    Get user-friendly error message for a given error type.
+    
+    T83: Provides clear, actionable error messages for end users.
+    
+    Args:
+        error_type: Type of error (e.g., 'file_not_found', 'llm_timeout')
+        context: Additional context to include in the message
+    
+    Returns:
+        Dictionary with title, description, and recommendation
+    """
+    base_error = ERROR_MESSAGES.get(error_type, ERROR_MESSAGES["orchestration_error"])
+    result = {**base_error}
+    
+    # Add context-specific details if provided
+    if context:
+        if "file_path" in context:
+            result["description"] += f" (File: {Path(context['file_path']).name})"
+        if "sheet_name" in context:
+            result["description"] += f" (Sheet: {context['sheet_name']})"
+        if "row_count" in context:
+            result["description"] += f" (Rows: {context['row_count']})"
+    
+    return result
+
+
+def format_error_for_user(
+    error_type: str,
+    technical_message: str,
+    context: dict[str, Any] | None = None,
+) -> str:
+    """
+    Format an error message for user display.
+    
+    T83: Combines user-friendly description with technical details.
+    
+    Args:
+        error_type: Type of error
+        technical_message: Technical error message for debugging
+        context: Additional context
+    
+    Returns:
+        Formatted error message string
+    """
+    user_error = get_user_friendly_error(error_type, context)
+    
+    return (
+        f"{user_error['title']}: {user_error['description']} "
+        f"Recommendation: {user_error['recommendation']} "
+        f"(Technical: {technical_message})"
+    )
+
+
+@dataclass
+class PhaseMetrics:
+    """
+    Metrics for a single processing phase.
+    
+    T80: Structured logging enhancement for semantic ETL phases.
+    """
+    
+    phase_name: str
+    start_time: float = field(default_factory=time.time)
+    end_time: float | None = None
+    items_processed: int = 0
+    items_failed: int = 0
+    context: dict[str, Any] = field(default_factory=dict)
+    
+    @property
+    def duration_seconds(self) -> float:
+        """Get phase duration in seconds."""
+        if self.end_time is None:
+            return time.time() - self.start_time
+        return self.end_time - self.start_time
+    
+    @property
+    def success_rate(self) -> float:
+        """Get success rate as percentage (0-100)."""
+        total = self.items_processed + self.items_failed
+        if total == 0:
+            return 100.0
+        return (self.items_processed / total) * 100.0
+    
+    def complete(self, items_processed: int = 0, items_failed: int = 0) -> None:
+        """Mark phase as complete with final counts."""
+        self.end_time = time.time()
+        self.items_processed = items_processed
+        self.items_failed = items_failed
+    
+    def to_log_dict(self) -> dict[str, Any]:
+        """Convert to structured log dictionary."""
+        return {
+            "phase": self.phase_name,
+            "duration_seconds": round(self.duration_seconds, 3),
+            "items_processed": self.items_processed,
+            "items_failed": self.items_failed,
+            "success_rate": round(self.success_rate, 1),
+            **self.context,
+        }
+
+
+@dataclass
+class ETLMetrics:
+    """
+    Aggregate metrics for entire ETL pipeline run.
+    
+    T80: Comprehensive metrics tracking for semantic ETL.
+    """
+    
+    job_id: str
+    supplier_id: int
+    file_path: str
+    start_time: float = field(default_factory=time.time)
+    end_time: float | None = None
+    phases: list[PhaseMetrics] = field(default_factory=list)
+    
+    # Final metrics
+    total_rows: int = 0
+    successful_extractions: int = 0
+    failed_extractions: int = 0
+    duplicates_removed: int = 0
+    categories_matched: int = 0
+    categories_created: int = 0
+    final_status: str = "pending"
+    error_message: str | None = None
+    
+    @property
+    def duration_seconds(self) -> float:
+        """Get total ETL duration in seconds."""
+        if self.end_time is None:
+            return time.time() - self.start_time
+        return self.end_time - self.start_time
+    
+    @property
+    def extraction_success_rate(self) -> float:
+        """Get extraction success rate as percentage."""
+        total = self.successful_extractions + self.failed_extractions
+        if total == 0:
+            return 100.0
+        return (self.successful_extractions / total) * 100.0
+    
+    @property
+    def category_match_rate(self) -> float:
+        """Get category match rate as percentage."""
+        total = self.categories_matched + self.categories_created
+        if total == 0:
+            return 100.0
+        return (self.categories_matched / total) * 100.0
+    
+    def start_phase(self, phase_name: str, **context: Any) -> PhaseMetrics:
+        """Start a new processing phase."""
+        phase = PhaseMetrics(phase_name=phase_name, context=context)
+        self.phases.append(phase)
+        return phase
+    
+    def complete(
+        self,
+        status: str,
+        successful: int = 0,
+        failed: int = 0,
+        duplicates: int = 0,
+        error: str | None = None,
+    ) -> None:
+        """Mark ETL run as complete."""
+        self.end_time = time.time()
+        self.final_status = status
+        self.successful_extractions = successful
+        self.failed_extractions = failed
+        self.duplicates_removed = duplicates
+        self.error_message = error
+    
+    def to_log_dict(self) -> dict[str, Any]:
+        """Convert to structured log dictionary for final summary."""
+        return {
+            "job_id": self.job_id,
+            "supplier_id": self.supplier_id,
+            "file_path": self.file_path,
+            "status": self.final_status,
+            "duration_seconds": round(self.duration_seconds, 3),
+            "total_rows": self.total_rows,
+            "successful_extractions": self.successful_extractions,
+            "failed_extractions": self.failed_extractions,
+            "duplicates_removed": self.duplicates_removed,
+            "extraction_success_rate": round(self.extraction_success_rate, 1),
+            "category_match_rate": round(self.category_match_rate, 1),
+            "phase_count": len(self.phases),
+            "phases": [p.to_log_dict() for p in self.phases],
+            "error": self.error_message,
+        }
 
 
 class SmartParserError(Exception):
@@ -150,15 +403,30 @@ class SmartParserService:
         Raises:
             SmartParserError: If parsing fails critically
         """
-        start_time = time.time()
         path = Path(file_path)
         
+        # T80: Initialize ETL metrics for structured logging
+        etl_metrics = ETLMetrics(
+            job_id=job_id,
+            supplier_id=supplier_id,
+            file_path=str(path),
+        )
+        
         if not path.exists():
+            etl_metrics.complete(status="failed", error=f"File not found: {file_path}")
+            logger.error(
+                "semantic_etl.file_not_found",
+                **etl_metrics.to_log_dict(),
+            )
             raise SmartParserError(f"File not found: {file_path}")
         
+        # T80: Log ETL start with structured context
         logger.info(
-            f"Starting smart parse: file={path.name}, "
-            f"supplier_id={supplier_id}, job_id={job_id}"
+            "semantic_etl.started",
+            job_id=job_id,
+            supplier_id=supplier_id,
+            file_name=path.name,
+            file_size_bytes=path.stat().st_size,
         )
         
         # Update job phase: analyzing
@@ -166,29 +434,55 @@ class SmartParserService:
         
         try:
             # Phase 1: Sheet selection (T053-T056)
+            phase_analyzing = etl_metrics.start_phase("analyzing")
             sheets, selection_result = await self._select_sheets(path)
             
             if not sheets:
-                raise SmartParserError(
+                error_msg = (
                     f"No product sheets found in file. "
                     f"Skipped: {selection_result.skipped_sheets}"
                 )
+                phase_analyzing.complete(items_processed=0, items_failed=1)
+                phase_analyzing.context["skipped_sheets"] = selection_result.skipped_sheets
+                etl_metrics.complete(status="failed", error=error_msg)
+                
+                logger.error(
+                    "semantic_etl.no_sheets_found",
+                    skipped_sheets=selection_result.skipped_sheets,
+                    **etl_metrics.to_log_dict(),
+                )
+                raise SmartParserError(error_msg)
             
+            phase_analyzing.complete(items_processed=len(sheets), items_failed=0)
+            phase_analyzing.context.update({
+                "selected_sheets": sheets,
+                "skipped_sheets": selection_result.skipped_sheets,
+            })
+            
+            # T80: Log sheet selection with structured data
             logger.info(
-                f"Selected {len(sheets)} sheet(s) for processing: {sheets}. "
-                f"Skipped: {selection_result.skipped_sheets}"
+                "semantic_etl.sheets_selected",
+                job_id=job_id,
+                selected_count=len(sheets),
+                selected_sheets=sheets,
+                skipped_sheets=selection_result.skipped_sheets,
+                **phase_analyzing.to_log_dict(),
             )
             
             # Update progress
             await self._update_job_phase(job_id, "extracting", 10)
             
             # Phase 2: Extract products from each sheet
+            phase_extracting = etl_metrics.start_phase("extracting", sheets_to_process=sheets)
             all_results: list[ExtractionResult] = []
+            total_extracted = 0
+            total_errors = 0
             
             for i, sheet_name in enumerate(sheets):
                 progress = 10 + int((i / len(sheets)) * 60)  # 10-70%
                 await self._update_job_phase(job_id, "extracting", progress)
                 
+                sheet_start_time = time.time()
                 result = await self._process_sheet(
                     file_path=path,
                     sheet_name=sheet_name,
@@ -196,10 +490,22 @@ class SmartParserService:
                 )
                 all_results.append(result)
                 
+                total_extracted += result.successful_extractions
+                total_errors += result.failed_extractions
+                
+                # T80: Log per-sheet extraction metrics
                 logger.info(
-                    f"Sheet '{sheet_name}': {result.successful_extractions} products, "
-                    f"{result.failed_extractions} errors"
+                    "semantic_etl.sheet_extracted",
+                    job_id=job_id,
+                    sheet_name=sheet_name,
+                    products_extracted=result.successful_extractions,
+                    extraction_errors=result.failed_extractions,
+                    duration_seconds=round(time.time() - sheet_start_time, 3),
+                    sheet_index=i + 1,
+                    total_sheets=len(sheets),
                 )
+            
+            phase_extracting.complete(items_processed=total_extracted, items_failed=total_errors)
             
             # Aggregate results (T059-T060)
             # Cross-sheet dedup is performed here for multi-sheet files
@@ -208,6 +514,7 @@ class SmartParserService:
                 all_results,
                 apply_cross_sheet_dedup=is_multi_sheet,
             )
+            etl_metrics.total_rows = aggregated.total_rows
             
             # T039: Log extraction errors to parsing_logs
             if aggregated.extraction_errors:
@@ -221,7 +528,18 @@ class SmartParserService:
             await self._update_job_phase(job_id, "normalizing", 70)
             
             # Phase 3: Category normalization
+            phase_normalizing = etl_metrics.start_phase("normalizing")
             await self._normalize_categories(aggregated.products, supplier_id)
+            
+            # Get category stats
+            cat_stats = self.category_normalizer.get_stats()
+            etl_metrics.categories_matched = cat_stats.matched_count
+            etl_metrics.categories_created = cat_stats.created_count
+            phase_normalizing.context.update({
+                "categories_matched": cat_stats.matched_count,
+                "categories_created": cat_stats.created_count,
+                "average_similarity": round(cat_stats.average_similarity, 1),
+            })
             
             # Phase 4: Within-file deduplication (skip for multi-sheet as already done)
             await self._update_job_phase(job_id, "normalizing", 85)
@@ -236,12 +554,24 @@ class SmartParserService:
                 aggregated.products = unique_products
                 aggregated.duplicates_removed = dedup_stats.duplicates_removed
             
+            phase_normalizing.complete(
+                items_processed=len(aggregated.products),
+                items_failed=aggregated.duplicates_removed,
+            )
+            
             # Update successful extractions after dedup
             aggregated.successful_extractions = len(aggregated.products)
             
             # Determine final status
-            elapsed = time.time() - start_time
             final_status = aggregated.status
+            
+            # T80: Complete metrics and log structured summary
+            etl_metrics.complete(
+                status=final_status,
+                successful=aggregated.successful_extractions,
+                failed=aggregated.failed_extractions,
+                duplicates=aggregated.duplicates_removed,
+            )
             
             await self._update_job_phase(
                 job_id,
@@ -253,18 +583,31 @@ class SmartParserService:
                 duplicates_removed=aggregated.duplicates_removed,
             )
             
+            # T80: Log comprehensive ETL completion summary
             logger.info(
-                f"Smart parse completed in {elapsed:.2f}s: "
-                f"status={final_status}, "
-                f"products={aggregated.successful_extractions}, "
-                f"errors={aggregated.failed_extractions}, "
-                f"dedup={aggregated.duplicates_removed}"
+                "semantic_etl.completed",
+                **etl_metrics.to_log_dict(),
             )
             
             return aggregated
             
+        except SmartParserError:
+            # Already logged, re-raise
+            raise
         except Exception as e:
-            logger.error(f"Smart parse failed: {e}", exc_info=True)
+            # T80: Log failure with full context
+            etl_metrics.complete(
+                status="failed",
+                error=str(e),
+            )
+            
+            logger.error(
+                "semantic_etl.failed",
+                exception_type=type(e).__name__,
+                exception_message=str(e),
+                **etl_metrics.to_log_dict(),
+                exc_info=True,
+            )
             
             # T039: Log critical error to parsing_logs
             await self._log_extraction_error(

@@ -181,7 +181,19 @@ export const AnalysisProgressSchema = Type.Object({
 })
 
 /**
+ * T85: Error recommendation schema for user-friendly error handling
+ */
+export const ErrorRecommendationSchema = Type.Object({
+  title: Type.String({ description: 'User-friendly error title' }),
+  description: Type.String({ description: 'Error description' }),
+  recommendation: Type.String({ description: 'Actionable recommendation for the user' }),
+  canRetry: Type.Boolean({ description: 'Whether the error is retryable' }),
+  supportLink: Type.Optional(Type.String({ description: 'Link to support page if available' })),
+})
+
+/**
  * Ingestion job with multi-phase status tracking
+ * T85: Extended with error_recommendation, error_formatted, and retry_summary
  */
 export const IngestionJobSchema = Type.Object({
   job_id: Type.String({ format: 'uuid', description: 'Job UUID' }),
@@ -202,6 +214,11 @@ export const IngestionJobSchema = Type.Object({
   error_details: Type.Array(Type.String(), {
     description: 'Detailed error messages',
   }),
+  // T85: User-facing error recommendations
+  error_recommendation: Type.Optional(ErrorRecommendationSchema),
+  error_formatted: Type.Union([Type.String(), Type.Null()], {
+    description: 'User-friendly formatted error message with recommendation',
+  }),
   can_retry: Type.Boolean({
     description: 'Whether the job can be retried',
   }),
@@ -212,6 +229,10 @@ export const IngestionJobSchema = Type.Object({
   max_retries: Type.Number({
     minimum: 0,
     description: 'Maximum retry attempts allowed',
+  }),
+  // T84/T85: Retry summary
+  retry_summary: Type.Union([Type.String(), Type.Null()], {
+    description: "Human-readable retry status (e.g., 'Retried 2/3 times')",
   }),
   created_at: Type.String({ description: 'Job creation timestamp (ISO 8601)' }),
   started_at: Type.Union([Type.String(), Type.Null()], {
@@ -295,6 +316,7 @@ export type ParsingLogEntry = Static<typeof ParsingLogEntrySchema>
 export type TriggerSyncResponse = Static<typeof TriggerSyncResponseSchema>
 export type DownloadProgress = Static<typeof DownloadProgressSchema>
 export type AnalysisProgress = Static<typeof AnalysisProgressSchema>
+export type ErrorRecommendation = Static<typeof ErrorRecommendationSchema>
 export type IngestionJob = Static<typeof IngestionJobSchema>
 export type RetryJobParams = Static<typeof RetryJobParamsSchema>
 export type RetryJobResponse = Static<typeof RetryJobResponseSchema>
