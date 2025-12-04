@@ -1,12 +1,13 @@
 import gspread
 from pathlib import Path
+from typing import List, Optional
 from src.config import settings
 
 
 async def create_test_sheet(
     title: str,
     row_count: int,
-    invalid_rows: List[int] = None
+    invalid_rows: Optional[List[int]] = None,
 ) -> str:
     """Create a test Google Sheet with sample data.
     

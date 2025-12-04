@@ -73,9 +73,13 @@ async def get_job_status(
         return JobStatusResponse(
             job_id=job.job_id,
             status=job.status.value,
+            phase=job.phase.value if job.phase else None,
             progress_percentage=job.progress_percentage,
             items_processed=job.items_processed,
             items_total=job.items_total,
+            successful_extractions=job.successful_extractions,
+            failed_extractions=job.failed_extractions,
+            duplicates_removed=job.duplicates_removed,
             errors=job.errors,
             created_at=job.created_at,
             started_at=job.started_at,

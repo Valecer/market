@@ -2,8 +2,8 @@
 
 # Python Worker Service
 
-**Role:** Data courier (downloads files) + legacy parsing
-**Phases:** 1, 4, 6, 8 (ML Integration)
+**Role:** Data courier (Phase 9) - downloads files, triggers ML processing
+**Phases:** 4 (matching), 6 (sync), 8/9 (ML Integration)
 
 ## Stack
 
@@ -28,7 +28,10 @@ alembic revision --autogenerate -m "x"  # New migration
 - Use `patch.object()` for mocking (never direct assignment)
 - Error isolation: per-row try/catch + log to `parsing_logs`
 
-## Courier Pattern (Phase 8)
+## Courier Pattern (Phase 8/9)
+
+**All parsing/extraction is handled by ml-analyze service.**
+Python-ingestion only downloads files and triggers ML processing.
 
 ```
 [API] → [download_and_trigger_ml] → 1. Download to /shared/uploads/
@@ -66,44 +69,28 @@ await update_job(redis, job_id, phase="analyzing", ml_job_id="...")
 job = await get_job(redis, job_id)
 ```
 
-**Job Phases:** `downloading` → `analyzing` → `matching` → `complete`/`failed`
+**Job Phases:** `downloading` → `analyzing` → `extracting` → `normalizing` → `complete`/`failed`
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ML_ANALYZE_URL` | `http://ml-analyze:8001` | ML service URL |
-| `USE_ML_PROCESSING` | `true` | Global ML toggle |
 | `ML_POLL_INTERVAL_SECONDS` | `5` | Polling interval |
 | `MAX_FILE_SIZE_MB` | `50` | Upload limit |
 | `FILE_CLEANUP_TTL_HOURS` | `24` | File retention |
-
-### Feature Flags
-
-```python
-from src.config import settings
-
-# Global toggle
-if settings.use_ml_processing:
-    await redis.enqueue_job('download_and_trigger_ml', ...)
-else:
-    await redis.enqueue_job('parse_task', ...)
-
-# Per-supplier toggle
-supplier_uses_ml = supplier.meta.get("use_ml_processing", True)
-```
 
 ## Tasks (arq)
 
 | Task | Description | Phase |
 |------|-------------|-------|
-| `parse_task` | Legacy parsing | 1 |
+| `download_and_trigger_ml` | Download + trigger ML analysis | 8/9 |
+| `poll_ml_job_status_task` | Poll ML status (10s cron) | 8/9 |
+| `cleanup_shared_files_task` | Cleanup old files (6h cron) | 8/9 |
+| `retry_job_task` | Retry failed jobs | 8/9 |
 | `match_items_task` | RapidFuzz matching | 4 |
-| `master_sync_task` | Sync Master Sheet | 6 |
-| **`download_and_trigger_ml`** | **Download + trigger ML** | **8** |
-| **`poll_ml_job_status_task`** | **Poll ML status (10s cron)** | **8** |
-| **`cleanup_shared_files_task`** | **Cleanup (6h cron)** | **8** |
-| **`retry_job_task`** | **Retry failed jobs** | **8** |
+| `trigger_master_sync_task` | Sync Master Sheet | 6 |
+| `scheduled_sync_task` | Scheduled sync cron | 6 |
 
 ## Common Issues
 

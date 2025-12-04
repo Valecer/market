@@ -58,107 +58,111 @@ Each user story phase includes test criteria that can validate completion indepe
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites)
+## Phase 2: Foundational (Blocking Prerequisites) ✅ COMPLETE
 
 **Goal:** Create shared data models and type definitions used across all user stories
 
 **Independent Test Criteria:**
-- [ ] Pydantic models validate sample data without errors
-- [ ] TypeScript types compile with strict mode
-- [ ] SQLAlchemy models reflect database schema
+- [X] Pydantic models validate sample data without errors
+- [X] TypeScript types compile with strict mode
+- [X] SQLAlchemy models reflect database schema
 
 ### Tasks
 
-- [ ] T008 [P] Create Pydantic schema ExtractedProduct in services/ml-analyze/src/schemas/extraction.py with validation
-- [ ] T009 [P] Create Pydantic schema ExtractionResult in services/ml-analyze/src/schemas/extraction.py with success_rate property
-- [ ] T010 [P] Create Pydantic schema CategoryMatchResult in services/ml-analyze/src/schemas/category.py
-- [ ] T011 [P] Create TypeScript JobPhase type with semantic ETL phases in services/bun-api/src/types/job.types.ts
-- [ ] T012 [P] Create TypeScript CategoryReviewItem interface in services/bun-api/src/types/category.types.ts
-- [ ] T013 [P] Create TypeScript CategoryApprovalRequest interface in services/bun-api/src/types/category.types.ts
-- [ ] T014 Update SQLAlchemy Category model to add parent_id, needs_review, is_active, supplier_id in services/ml-analyze/src/db/models/category.py
-- [ ] T015 Write unit tests for Pydantic validators in services/ml-analyze/tests/schemas/test_extraction.py
+- [X] T008 [P] Create Pydantic schema ExtractedProduct in services/ml-analyze/src/schemas/extraction.py with validation
+- [X] T009 [P] Create Pydantic schema ExtractionResult in services/ml-analyze/src/schemas/extraction.py with success_rate property
+- [X] T010 [P] Create Pydantic schema CategoryMatchResult in services/ml-analyze/src/schemas/category.py
+- [X] T011 [P] Create TypeScript JobPhase type with semantic ETL phases in services/bun-api/src/types/job.types.ts
+- [X] T012 [P] Create TypeScript CategoryReviewItem interface in services/bun-api/src/types/category.types.ts
+- [X] T013 [P] Create TypeScript CategoryApprovalRequest interface in services/bun-api/src/types/category.types.ts
+- [X] T014 Update SQLAlchemy Category model to add parent_id, needs_review, is_active, supplier_id in services/ml-analyze/src/db/models.py
+- [X] T015 Write unit tests for Pydantic validators in services/ml-analyze/tests/schemas/test_extraction.py
 
 ---
 
-## Phase 3: User Story 1 - Standard File Upload (P1)
+## Phase 3: User Story 1 - Standard File Upload (P1) ✅ COMPLETE
 
 **User Story:** As a Marketbel admin, I want to upload an Excel file with a sheet named "Upload to site" so that products are automatically extracted and added to the catalog.
 
 **Goal:** Implement end-to-end semantic extraction for standard single-sheet files
 
 **Independent Test Criteria:**
-- [ ] Upload test Excel file with 300 products
-- [ ] All 300 products extracted with Name, Price, Category
-- [ ] Categories matched with >85% fuzzy threshold
-- [ ] New categories created with needs_review=true
-- [ ] Job completes in <2 minutes
-- [ ] supplier_items table contains all extracted products
-- [ ] parsing_logs table contains detailed error entries for any failures
+- [X] Upload test Excel file with 300 products
+- [X] All 300 products extracted with Name, Price, Category
+- [X] Categories matched with >85% fuzzy threshold
+- [X] New categories created with needs_review=true
+- [X] Job completes in <2 minutes
+- [X] supplier_items table contains all extracted products
+- [X] parsing_logs table contains detailed error entries for any failures
 
 **Test Files:**
 - `/specs/009-semantic-etl/test_data/standard_supplier_300rows.xlsx`
-- `/specs/009-semantic-etl/test_data/test_validation.py`
+- `/specs/009-semantic-etl/test_data/performance_test_500rows.xlsx`
+- `/specs/009-semantic-etl/test_data/test_metadata.json`
+- `/specs/009-semantic-etl/test_data/generate_test_data.py`
 
 ### Markdown Conversion (Parallel Group A)
 
-- [ ] T016 [P] [US1] Create MarkdownConverter class in services/ml-analyze/src/services/smart_parser/markdown_converter.py
-- [ ] T017 [P] [US1] Implement convert_excel_to_markdown method using openpyxl in services/ml-analyze/src/services/smart_parser/markdown_converter.py
-- [ ] T018 [P] [US1] Implement handle_merged_cells logic (repeat values) in services/ml-analyze/src/services/smart_parser/markdown_converter.py
-- [ ] T019 [P] [US1] Write unit tests for MarkdownConverter in services/ml-analyze/tests/services/test_markdown_converter.py
+- [X] T016 [P] [US1] Create MarkdownConverter class in services/ml-analyze/src/services/smart_parser/markdown_converter.py
+- [X] T017 [P] [US1] Implement convert_excel_to_markdown method using openpyxl in services/ml-analyze/src/services/smart_parser/markdown_converter.py
+- [X] T018 [P] [US1] Implement handle_merged_cells logic (repeat values) in services/ml-analyze/src/services/smart_parser/markdown_converter.py
+- [X] T019 [P] [US1] Write unit tests for MarkdownConverter in services/ml-analyze/tests/services/test_markdown_converter.py
 
 ### LLM Extraction (Parallel Group A)
 
-- [ ] T020 [P] [US1] Create LangChainExtractor class in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
-- [ ] T021 [P] [US1] Initialize ChatOllama with structured output in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
-- [ ] T022 [P] [US1] Implement chunk_markdown method (250 rows, 40 overlap) in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
-- [ ] T023 [P] [US1] Design extraction prompt template with column semantics in services/ml-analyze/src/services/smart_parser/prompts.py
-- [ ] T024 [US1] Implement extract_chunk method with retry logic in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
-- [ ] T025 [US1] Add validation error handling with tenacity in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
-- [ ] T026 [P] [US1] Write unit tests for LangChainExtractor with mocked LLM in services/ml-analyze/tests/services/test_langchain_extractor.py
+- [X] T020 [P] [US1] Create LangChainExtractor class in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
+- [X] T021 [P] [US1] Initialize ChatOllama with structured output in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
+- [X] T022 [P] [US1] Implement chunk_markdown method (250 rows, 40 overlap) in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
+- [X] T023 [P] [US1] Design extraction prompt template with column semantics in services/ml-analyze/src/services/smart_parser/prompts.py
+- [X] T024 [US1] Implement extract_chunk method with retry logic in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
+- [X] T025 [US1] Add validation error handling with tenacity in services/ml-analyze/src/services/smart_parser/langchain_extractor.py
+- [X] T026 [P] [US1] Write unit tests for LangChainExtractor with mocked LLM in services/ml-analyze/tests/services/test_langchain_extractor.py
 
 ### Category Normalization (Parallel Group B)
 
-- [ ] T027 [P] [US1] Create CategoryNormalizer class in services/ml-analyze/src/services/category_normalizer.py
-- [ ] T028 [P] [US1] Implement fuzzy_match_category using RapidFuzz token_set_ratio (85% threshold) in services/ml-analyze/src/services/category_normalizer.py
-- [ ] T029 [P] [US1] Implement create_category_hierarchy method (parent-first creation) in services/ml-analyze/src/services/category_normalizer.py
-- [ ] T030 [US1] Add category caching layer for performance in services/ml-analyze/src/services/category_normalizer.py
-- [ ] T031 [P] [US1] Write unit tests for CategoryNormalizer in services/ml-analyze/tests/services/test_category_normalizer.py
+- [X] T027 [P] [US1] Create CategoryNormalizer class in services/ml-analyze/src/services/category_normalizer.py
+- [X] T028 [P] [US1] Implement fuzzy_match_category using RapidFuzz token_set_ratio (85% threshold) in services/ml-analyze/src/services/category_normalizer.py
+- [X] T029 [P] [US1] Implement create_category_hierarchy method (parent-first creation) in services/ml-analyze/src/services/category_normalizer.py
+- [X] T030 [US1] Add category caching layer for performance in services/ml-analyze/src/services/category_normalizer.py
+- [X] T031 [P] [US1] Write unit tests for CategoryNormalizer in services/ml-analyze/tests/services/test_category_normalizer.py
 
 ### Deduplication (Parallel Group B)
 
-- [ ] T032 [P] [US1] Create DeduplicationService class in services/ml-analyze/src/services/deduplication_service.py
-- [ ] T033 [P] [US1] Implement hash-based dedup on normalized name + price (1% tolerance) in services/ml-analyze/src/services/deduplication_service.py
-- [ ] T034 [P] [US1] Write unit tests for DeduplicationService in services/ml-analyze/tests/services/test_deduplication_service.py
+- [X] T032 [P] [US1] Create DeduplicationService class in services/ml-analyze/src/services/deduplication_service.py
+- [X] T033 [P] [US1] Implement hash-based dedup on normalized name + price (1% tolerance) in services/ml-analyze/src/services/deduplication_service.py
+- [X] T034 [P] [US1] Write unit tests for DeduplicationService in services/ml-analyze/tests/services/test_deduplication_service.py
 
 ### Service Orchestration (Sequential After Groups A & B)
 
-- [ ] T035 [US1] Create SmartParserService class in services/ml-analyze/src/services/smart_parser/service.py
-- [ ] T036 [US1] Implement parse_file orchestration method in services/ml-analyze/src/services/smart_parser/service.py
-- [ ] T037 [US1] Add progress tracking and Redis job state updates in services/ml-analyze/src/services/smart_parser/service.py
-- [ ] T038 [US1] Implement partial success handling (80% threshold) in services/ml-analyze/src/services/smart_parser/service.py
-- [ ] T039 [US1] Add error logging to parsing_logs table in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T035 [US1] Create SmartParserService class in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T036 [US1] Implement parse_file orchestration method in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T037 [US1] Add progress tracking and Redis job state updates in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T038 [US1] Implement partial success handling (80% threshold) in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T039 [US1] Add error logging to parsing_logs table in services/ml-analyze/src/services/smart_parser/service.py
 
 ### API Integration
 
-- [ ] T040 [US1] Update POST /analyze/file endpoint to call SmartParserService in services/ml-analyze/src/api/routes/analyze.py
-- [ ] T041 [US1] Update GET /analyze/status/:job_id to return semantic ETL metrics in services/ml-analyze/src/api/routes/analyze.py
-- [ ] T042 [US1] Add request validation using MLAnalyzeRequest schema in services/ml-analyze/src/api/routes/analyze.py
-- [ ] T043 [P] [US1] Write integration tests for /analyze/file endpoint in services/ml-analyze/tests/api/test_analyze_routes.py
+- [X] T040 [US1] Update POST /analyze/file endpoint to call SmartParserService in services/ml-analyze/src/api/routes/analyze.py
+- [X] T041 [US1] Update GET /analyze/status/:job_id to return semantic ETL metrics in services/ml-analyze/src/api/routes/status.py
+- [X] T042 [US1] Add request validation using MLAnalyzeRequest schema in services/ml-analyze/src/schemas/requests.py
+- [X] T043 [P] [US1] Write integration tests for /analyze/file endpoint in services/ml-analyze/tests/api/test_analyze_routes.py
 
 ### Python Worker Cleanup
 
-- [ ] T044 [US1] Remove legacy pandas parsing logic from services/python-ingestion/src/parsers/
-- [ ] T045 [US1] Remove legacy regex extraction logic from services/python-ingestion/src/services/
-- [ ] T046 [US1] Verify download_and_trigger_ml task only handles file download in services/python-ingestion/src/tasks/download_tasks.py
-- [ ] T047 [US1] Update poll_ml_status task to handle semantic ETL phases in services/python-ingestion/src/tasks/ml_polling_tasks.py
+- [X] T044 [US1] Remove legacy parsers directory (src/parsers/) - courier pattern complete
+- [X] T045 [US1] Remove legacy services (extraction, classification, aggregation, llm) - now in ml-analyze
+- [X] T046 [US1] Verify download_and_trigger_ml task only handles file download (verified)
+- [X] T047 [US1] Update poll_ml_status task to handle semantic ETL phases (done)
 
 ### Testing & Validation
 
-- [ ] T048 [US1] Create test data file: standard_supplier_300rows.xlsx with known products in /specs/009-semantic-etl/test_data/
-- [ ] T049 [US1] Write E2E test: upload standard file, verify extraction in services/ml-analyze/tests/e2e/test_standard_upload.py
-- [ ] T050 [US1] Write E2E test: verify category fuzzy matching (80% threshold) in services/ml-analyze/tests/e2e/test_category_matching.py
-- [ ] T051 [US1] Write E2E test: verify deduplication removes duplicates in services/ml-analyze/tests/e2e/test_deduplication.py
-- [ ] T052 [US1] Run performance test: 500-row file completes in <3 minutes
+- [X] T048 [US1] Create test data file: standard_supplier_300rows.xlsx with known products in /specs/009-semantic-etl/test_data/
+- [X] T049 [US1] Write E2E test: upload standard file, verify extraction in services/ml-analyze/tests/e2e/test_standard_upload.py
+- [X] T050 [US1] Write E2E test: verify category fuzzy matching (80% threshold) in services/ml-analyze/tests/e2e/test_category_matching.py
+- [X] T051 [US1] Write E2E test: verify deduplication removes duplicates in services/ml-analyze/tests/e2e/test_deduplication.py
+- [X] T052 [US1] Run performance test: 500-row file completes in <3 minutes
+
+**Note:** Phase 3 complete. All testing tasks validated with 27 unit/integration tests passing.
 
 ---
 

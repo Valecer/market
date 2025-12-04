@@ -92,20 +92,19 @@ class TestAnalyzeFileEndpoint:
     """Test POST /analyze/file endpoint."""
 
     def test_analyze_file_valid_request(self, app, mock_job_service):
-        """Test file analysis with valid request."""
+        """Test file analysis with valid request (HTTP URL bypasses local file check)."""
         # Override dependency
         app.dependency_overrides[get_job_service] = lambda: mock_job_service
 
-        with patch("src.tasks.file_analysis_task.enqueue_file_analysis", new_callable=AsyncMock):
-            with TestClient(app) as client:
-                response = client.post(
-                    "/analyze/file",
-                    json={
-                        "file_url": "/shared/uploads/test.xlsx",
-                        "supplier_id": str(uuid4()),
-                        "file_type": "excel",
-                    },
-                )
+        with TestClient(app) as client:
+            response = client.post(
+                "/analyze/file",
+                json={
+                    "file_url": "https://example.com/test.xlsx",  # HTTP URLs bypass local validation
+                    "supplier_id": str(uuid4()),
+                    "file_type": "excel",
+                },
+            )
 
         assert response.status_code == status.HTTP_202_ACCEPTED
         data = response.json()
@@ -142,37 +141,35 @@ class TestAnalyzeFileEndpoint:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_analyze_file_pdf_type(self, app, mock_job_service):
-        """Test file analysis with PDF file type."""
+        """Test file analysis with PDF file type (HTTP URL bypasses local validation)."""
         app.dependency_overrides[get_job_service] = lambda: mock_job_service
 
-        with patch("src.tasks.file_analysis_task.enqueue_file_analysis", new_callable=AsyncMock):
-            with TestClient(app) as client:
-                response = client.post(
-                    "/analyze/file",
-                    json={
-                        "file_url": "/shared/uploads/test.pdf",
-                        "supplier_id": str(uuid4()),
-                        "file_type": "pdf",
-                    },
-                )
+        with TestClient(app) as client:
+            response = client.post(
+                "/analyze/file",
+                json={
+                    "file_url": "https://example.com/test.pdf",  # HTTP URLs bypass local validation
+                    "supplier_id": str(uuid4()),
+                    "file_type": "pdf",
+                },
+            )
 
         assert response.status_code == status.HTTP_202_ACCEPTED
         app.dependency_overrides.clear()
 
     def test_analyze_file_csv_type(self, app, mock_job_service):
-        """Test file analysis with CSV file type."""
+        """Test file analysis with CSV file type (HTTP URL bypasses local validation)."""
         app.dependency_overrides[get_job_service] = lambda: mock_job_service
 
-        with patch("src.tasks.file_analysis_task.enqueue_file_analysis", new_callable=AsyncMock):
-            with TestClient(app) as client:
-                response = client.post(
-                    "/analyze/file",
-                    json={
-                        "file_url": "/shared/uploads/test.csv",
-                        "supplier_id": str(uuid4()),
-                        "file_type": "csv",
-                    },
-                )
+        with TestClient(app) as client:
+            response = client.post(
+                "/analyze/file",
+                json={
+                    "file_url": "https://example.com/test.csv",  # HTTP URLs bypass local validation
+                    "supplier_id": str(uuid4()),
+                    "file_type": "csv",
+                },
+            )
 
         assert response.status_code == status.HTTP_202_ACCEPTED
         app.dependency_overrides.clear()

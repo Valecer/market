@@ -5,19 +5,24 @@ Analyze Routes
 API endpoints for file analysis and batch matching.
 
 Endpoints:
-- POST /analyze/file - Trigger file analysis job
+- POST /analyze/file - Trigger file analysis job (semantic ETL)
 - POST /analyze/merge - Trigger batch matching job
 - POST /analyze/vision - Vision analysis stub (501)
 
 All endpoints return job IDs for async status tracking.
+
+Phase 9: Updated to use SmartParserService for semantic ETL.
 """
 
+import asyncio
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
+from src.db.connection import get_session
 from src.schemas.requests import (
     BatchMatchRequest,
     FileAnalysisRequest,
@@ -33,11 +38,69 @@ from src.services.job_service import (
     JobType,
     get_job_service,
 )
+from src.services.smart_parser.service import SmartParserService, SmartParserError
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+async def _run_smart_parser(
+    file_path: str,
+    supplier_id: UUID,
+    job_id: UUID,
+    job_service: JobService,
+) -> None:
+    """
+    Background task to run SmartParserService.
+    
+    Phase 9: Semantic ETL processing in background.
+    
+    Args:
+        file_path: Path to file in shared volume
+        supplier_id: Supplier UUID
+        job_id: Job UUID for status tracking
+        job_service: Job service for updates
+    """
+    try:
+        async with get_session() as session:
+            service = SmartParserService(
+                session=session,
+                job_service=job_service,
+            )
+            
+            # Convert UUID to int for supplier_id (SmartParserService expects int)
+            # Use hash of UUID for stable int conversion
+            supplier_id_int = hash(str(supplier_id)) % (2**31)
+            
+            result = await service.parse_file(
+                file_path=file_path,
+                supplier_id=supplier_id_int,
+                job_id=str(job_id),
+            )
+            
+            logger.info(
+                "Smart parser completed",
+                job_id=str(job_id),
+                status=result.status,
+                products=result.successful_extractions,
+            )
+            
+    except SmartParserError as e:
+        logger.error(f"Smart parser failed: {e}", job_id=str(job_id))
+        # Status already updated by SmartParserService
+    except Exception as e:
+        logger.exception(f"Unexpected error in smart parser: {e}", job_id=str(job_id))
+        try:
+            await job_service.update_job_status(
+                job_id=str(job_id),
+                phase="failed",
+                progress_percent=0,
+                error_message=str(e),
+            )
+        except Exception:
+            pass
 
 
 @router.post(
@@ -46,8 +109,8 @@ router = APIRouter()
     status_code=status.HTTP_202_ACCEPTED,
     summary="Trigger file analysis",
     description=(
-        "Submit a file for analysis. The file will be parsed, items extracted, "
-        "embeddings generated, and products matched asynchronously. "
+        "Submit a file for semantic ETL analysis. The file will be parsed using LLM-based "
+        "extraction, categories normalized with fuzzy matching, and products deduplicated. "
         "Returns a job_id for tracking progress via GET /analyze/status/{job_id}."
     ),
     responses={
@@ -58,16 +121,18 @@ router = APIRouter()
 )
 async def analyze_file(
     request: FileAnalysisRequest,
+    background_tasks: BackgroundTasks,
     job_service: Annotated[JobService, Depends(get_job_service)],
 ) -> FileAnalysisResponse:
     """
-    Trigger file analysis job.
+    Trigger file analysis job using SmartParserService.
 
-    Validates the request, creates a job in Redis, and enqueues
-    the file processing task for background execution.
+    Phase 9: Semantic ETL pipeline - validates the request, creates a job 
+    in Redis, and starts SmartParserService in background.
 
     Args:
         request: File analysis request with file_url, supplier_id, file_type
+        background_tasks: FastAPI background tasks
         job_service: Job service dependency
 
     Returns:
@@ -77,58 +142,59 @@ async def analyze_file(
         HTTPException: On validation or server errors
     """
     logger.info(
-        "File analysis requested",
+        "File analysis requested (semantic ETL)",
         file_url=str(request.file_url),
         supplier_id=str(request.supplier_id),
         file_type=request.file_type,
     )
+
+    # Validate file path exists (for local files)
+    file_path = str(request.file_url)
+    if file_path.startswith("/") or file_path.startswith("file://"):
+        # Local file path
+        clean_path = file_path.replace("file://", "")
+        if not Path(clean_path).exists():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File not found: {clean_path}",
+            )
+        file_path = clean_path
 
     try:
         # Create job in Redis
         job_id = await job_service.create_job(
             job_type=JobType.FILE_ANALYSIS,
             supplier_id=request.supplier_id,
-            file_url=str(request.file_url),
+            file_url=file_path,
             file_type=request.file_type,
             metadata={
                 "source": "api",
                 "file_type": request.file_type,
+                "semantic_etl": True,  # Flag for Phase 9
             },
         )
+        
+        logger.info("Job created", job_id=str(job_id))
 
-        # Enqueue background task
-        # Note: In production, this would use arq to enqueue the task
-        # For now, we import and call the enqueue function if available
-        try:
-            from src.tasks.file_analysis_task import enqueue_file_analysis
-
-            await enqueue_file_analysis(
-                job_id=job_id,
-                file_url=str(request.file_url),
-                supplier_id=request.supplier_id,
-                file_type=request.file_type,
-            )
-            logger.info("File analysis task enqueued", job_id=str(job_id))
-        except ImportError:
-            # Task module not yet implemented - job created but not processed
-            logger.warning(
-                "Task module not available, job created but not enqueued",
-                job_id=str(job_id),
-            )
-        except Exception as e:
-            logger.error(
-                "Failed to enqueue task",
-                job_id=str(job_id),
-                error=str(e),
-            )
-            # Job is created, task will need manual retry
+        # Start SmartParserService in background
+        background_tasks.add_task(
+            _run_smart_parser,
+            file_path=file_path,
+            supplier_id=request.supplier_id,
+            job_id=job_id,
+            job_service=job_service,
+        )
+        
+        logger.info("Semantic ETL task scheduled", job_id=str(job_id))
 
         return FileAnalysisResponse(
             job_id=job_id,
             status="pending",
-            message="File analysis job enqueued successfully",
+            message="File analysis job enqueued for semantic ETL processing",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to create file analysis job", error=str(e))
         raise HTTPException(

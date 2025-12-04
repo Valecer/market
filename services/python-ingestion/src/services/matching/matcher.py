@@ -8,20 +8,93 @@ Key Components:
     - RapidFuzzMatcher: Default implementation using RapidFuzz WRatio
     - MatchCandidate: Data class for match candidates
     - MatchResult: Result container for matching operations
-    - CategoryClassifier: Intelligent product classification
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List, Optional, Sequence, Protocol, Dict
 from uuid import UUID
-from decimal import Decimal
 from enum import Enum
 import structlog
 
 from rapidfuzz import fuzz, process, utils
 
 from src.config import matching_settings
-from src.services.classification import CategoryClassifier, ClassificationResult
+
+
+# ========== Simple Category Classification ==========
+# Phase 9: Simplified category classifier (advanced classification in ml-analyze)
+
+class ClassificationMethod(str, Enum):
+    """How the category was determined."""
+    KEYWORD = "keyword"
+    BRAND = "brand"
+    FALLBACK = "fallback"
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class ClassificationResult:
+    """Result of category classification."""
+    category_key: Optional[str]
+    confidence: float
+    method: ClassificationMethod
+
+
+class CategoryClassifier:
+    """Simple rule-based category classifier for matching blocking.
+    
+    Phase 9: Advanced LLM-based classification moved to ml-analyze.
+    This is a simplified version for fuzzy matching performance optimization.
+    """
+    
+    # Simple keyword mappings
+    CATEGORY_KEYWORDS = {
+        "phones": ["телефон", "смартфон", "iphone", "samsung", "xiaomi"],
+        "electrotransport": ["самокат", "велосипед", "скутер", "электро"],
+        "garden": ["газонокосилка", "триммер", "бензопила", "культиватор"],
+    }
+    
+    BRAND_CATEGORIES = {
+        "apple": "phones",
+        "samsung": "phones", 
+        "xiaomi": "phones",
+        "kugoo": "electrotransport",
+        "ninebot": "electrotransport",
+    }
+    
+    def classify(
+        self,
+        product_name: str,
+        supplier_category: Optional[str] = None,
+    ) -> ClassificationResult:
+        """Classify product into category."""
+        name_lower = product_name.lower()
+        
+        # Check keywords
+        for cat_key, keywords in self.CATEGORY_KEYWORDS.items():
+            for kw in keywords:
+                if kw in name_lower:
+                    return ClassificationResult(
+                        category_key=cat_key,
+                        confidence=0.8,
+                        method=ClassificationMethod.KEYWORD,
+                    )
+        
+        # Check brands
+        for brand, cat_key in self.BRAND_CATEGORIES.items():
+            if brand in name_lower:
+                return ClassificationResult(
+                    category_key=cat_key,
+                    confidence=0.7,
+                    method=ClassificationMethod.BRAND,
+                )
+        
+        # Fallback
+        return ClassificationResult(
+            category_key=None,
+            confidence=0.0,
+            method=ClassificationMethod.UNKNOWN,
+        )
 
 logger = structlog.get_logger(__name__)
 

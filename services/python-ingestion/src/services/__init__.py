@@ -1,10 +1,15 @@
 """Business logic services for the data ingestion pipeline.
 
+Phase 9: Courier pattern - parsing/extraction services removed.
+All parsing/extraction now handled by ml-analyze service.
+
 Available Services:
     - matching: Product matching using fuzzy string comparison
-    - aggregation: Product aggregate calculations (min_price, availability)
     - master_sheet_ingestor: Master Sheet parsing and supplier sync
     - sync_state: Redis sync state management
+    - job_state: Redis job state management
+    - ml_client: HTTP client for ml-analyze service
+    - google_sheets_client: Google Sheets export client (courier pattern)
 """
 from src.services.matching import (
     RapidFuzzMatcher,
@@ -14,11 +19,6 @@ from src.services.matching import (
     MatchStatusEnum,
     create_matcher,
     search_match_candidates,
-)
-from src.services.aggregation import (
-    calculate_product_aggregates,
-    calculate_product_aggregates_batch,
-    get_review_queue_stats,
 )
 from src.services.master_sheet_ingestor import MasterSheetIngestor
 from src.services.sync_state import (
@@ -44,10 +44,6 @@ __all__: list[str] = [
     "MatchStatusEnum",
     "create_matcher",
     "search_match_candidates",
-    # Aggregation
-    "calculate_product_aggregates",
-    "calculate_product_aggregates_batch",
-    "get_review_queue_stats",
     # Master Sheet Ingestor
     "MasterSheetIngestor",
     # Sync State
@@ -63,4 +59,3 @@ __all__: list[str] = [
     "get_last_sync_at",
     "check_sync_lock",
 ]
-

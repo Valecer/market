@@ -43,6 +43,24 @@ class JobStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    COMPLETED_WITH_ERRORS = "completed_with_errors"
+
+
+class JobPhase(str, Enum):
+    """
+    Job processing phases for semantic ETL pipeline.
+    
+    Phase 9: Extended phases for extraction workflow.
+    """
+
+    PENDING = "pending"
+    DOWNLOADING = "downloading"
+    ANALYZING = "analyzing"  # Sheet selection, structure analysis
+    EXTRACTING = "extracting"  # LLM product extraction
+    NORMALIZING = "normalizing"  # Category matching, deduplication
+    COMPLETE = "complete"
+    COMPLETED_WITH_ERRORS = "completed_with_errors"
+    FAILED = "failed"
 
 
 class JobType(str, Enum):
@@ -61,9 +79,13 @@ class JobData(BaseModel):
         job_id: Unique job identifier
         job_type: Type of job
         status: Current status
+        phase: Current processing phase (semantic ETL)
         progress_percentage: Completion percentage
         items_processed: Items processed so far
         items_total: Total items to process
+        successful_extractions: Successfully extracted products (semantic ETL)
+        failed_extractions: Failed extractions (semantic ETL)
+        duplicates_removed: Duplicates removed (semantic ETL)
         errors: List of error messages
         file_url: Source file URL (for file analysis jobs)
         supplier_id: Supplier ID
@@ -76,9 +98,14 @@ class JobData(BaseModel):
     job_id: UUID
     job_type: JobType
     status: JobStatus = JobStatus.PENDING
+    phase: JobPhase = JobPhase.PENDING
     progress_percentage: int = Field(default=0, ge=0, le=100)
     items_processed: int = Field(default=0, ge=0)
     items_total: int = Field(default=0, ge=0)
+    # Semantic ETL metrics (Phase 9)
+    successful_extractions: int = Field(default=0, ge=0)
+    failed_extractions: int = Field(default=0, ge=0)
+    duplicates_removed: int = Field(default=0, ge=0)
     errors: list[str] = Field(default_factory=list)
     file_url: str | None = None
     file_type: str | None = None
@@ -429,6 +456,117 @@ class JobService:
         key = self._job_key(job_id)
         result = await self._redis.delete(key)
         return result > 0
+
+    async def update_job_status(
+        self,
+        job_id: str,
+        phase: str,
+        progress_percent: int,
+        total_rows: int | None = None,
+        successful_extractions: int | None = None,
+        failed_extractions: int | None = None,
+        duplicates_removed: int | None = None,
+        error_message: str | None = None,
+    ) -> JobUpdateResult:
+        """
+        Update job status for semantic ETL pipeline.
+        
+        Phase 9: Extended status tracking for extraction workflow.
+        
+        Args:
+            job_id: Job identifier (string or UUID)
+            phase: Current phase name
+            progress_percent: Progress percentage (0-100)
+            total_rows: Total rows processed
+            successful_extractions: Successful product count
+            failed_extractions: Failed extraction count
+            duplicates_removed: Duplicate count removed
+            error_message: Error message if failed
+        
+        Returns:
+            JobUpdateResult
+        """
+        # Convert string job_id to UUID if needed
+        if isinstance(job_id, str):
+            try:
+                job_uuid = UUID(job_id)
+            except ValueError:
+                return JobUpdateResult(
+                    success=False,
+                    job_id=UUID("00000000-0000-0000-0000-000000000000"),
+                    error=f"Invalid job_id format: {job_id}",
+                )
+        else:
+            job_uuid = job_id
+        
+        job = await self.get_job(job_uuid)
+        if not job:
+            return JobUpdateResult(
+                success=False,
+                job_id=job_uuid,
+                error="Job not found",
+            )
+        
+        # Update phase
+        try:
+            job.phase = JobPhase(phase)
+        except ValueError:
+            logger.warning(f"Unknown phase: {phase}, using as-is in metadata")
+            job.metadata["phase"] = phase
+        
+        # Update progress
+        job.progress_percentage = min(100, max(0, progress_percent))
+        
+        # Update semantic ETL metrics
+        if total_rows is not None:
+            job.items_total = total_rows
+        if successful_extractions is not None:
+            job.successful_extractions = successful_extractions
+            job.items_processed = successful_extractions
+        if failed_extractions is not None:
+            job.failed_extractions = failed_extractions
+        if duplicates_removed is not None:
+            job.duplicates_removed = duplicates_removed
+        
+        # Update status based on phase
+        if phase in ("complete", "success"):
+            job.status = JobStatus.COMPLETED
+            job.completed_at = datetime.now(timezone.utc)
+        elif phase == "completed_with_errors":
+            job.status = JobStatus.COMPLETED_WITH_ERRORS
+            job.completed_at = datetime.now(timezone.utc)
+        elif phase == "failed":
+            job.status = JobStatus.FAILED
+            job.completed_at = datetime.now(timezone.utc)
+            if error_message:
+                job.errors.append(error_message)
+        elif phase in ("analyzing", "extracting", "normalizing", "downloading"):
+            job.status = JobStatus.PROCESSING
+            if not job.started_at:
+                job.started_at = datetime.now(timezone.utc)
+        
+        # Add error message if provided
+        if error_message and phase == "failed":
+            # Already handled above
+            pass
+        
+        # Save back to Redis
+        key = self._job_key(job_uuid)
+        await self._redis.setex(key, JOB_TTL_SECONDS, job.to_json())
+        
+        logger.debug(
+            "Job status updated (semantic ETL)",
+            job_id=str(job_uuid),
+            phase=phase,
+            progress=progress_percent,
+            successful_extractions=successful_extractions,
+        )
+        
+        return JobUpdateResult(
+            success=True,
+            job_id=job_uuid,
+            message=f"Phase: {phase}, Progress: {progress_percent}%",
+        )
 
 
 # Global Redis client (initialized in lifespan)

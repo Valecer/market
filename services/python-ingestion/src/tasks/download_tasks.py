@@ -284,14 +284,14 @@ async def _download_from_google_sheets(
     Returns:
         Tuple of (actual_dest_path, file_size_bytes, mime_type)
     """
-    from src.parsers.google_sheets_parser import GoogleSheetsParser
+    from src.services.google_sheets_client import GoogleSheetsClient
 
     # Update phase
     await update_download_progress(redis, job_id, 0, None)
 
-    # Create parser and export
-    parser = GoogleSheetsParser()
-    xlsx_bytes = await parser.export_to_xlsx(spreadsheet_url, sheet_name)
+    # Create client and export
+    client = GoogleSheetsClient()
+    xlsx_bytes = await client.export_to_xlsx(spreadsheet_url, sheet_name)
 
     # Ensure destination has .xlsx extension
     if dest_path.suffix.lower() != ".xlsx":

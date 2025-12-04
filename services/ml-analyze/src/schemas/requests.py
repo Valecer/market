@@ -16,20 +16,26 @@ class FileAnalysisRequest(BaseModel):
     """
     Request body for POST /analyze/file endpoint.
 
-    Triggers file parsing and analysis pipeline.
+    Triggers file parsing and analysis pipeline (semantic ETL).
+    
+    Phase 9: Enhanced for LLM-based extraction with category normalization.
 
     Attributes:
         file_url: URL or path to the file to analyze
         supplier_id: ID of the supplier owning the file
         file_type: Type of file (pdf, excel, csv)
+        use_semantic_etl: Whether to use LLM-based extraction (default: true)
+        priority_sheet: Optional sheet name to prioritize
     """
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "file_url": "https://storage.example.com/files/price-list.xlsx",
+                "file_url": "/shared/uploads/supplier_123_pricelist.xlsx",
                 "supplier_id": "123e4567-e89b-12d3-a456-426614174000",
                 "file_type": "excel",
+                "use_semantic_etl": True,
+                "priority_sheet": "Upload to site",
             }
         }
     )
@@ -37,7 +43,7 @@ class FileAnalysisRequest(BaseModel):
     file_url: Annotated[
         HttpUrl | str,
         Field(
-            description="HTTP URL, file:// path, or relative path to the file",
+            description="HTTP URL, file:// path, or absolute path to the file",
             examples=[
                 "https://example.com/price-list.pdf",
                 "file:///shared/uploads/supplier-data.xlsx",
@@ -57,6 +63,23 @@ class FileAnalysisRequest(BaseModel):
             description="Type of file being analyzed",
         ),
     ]
+    use_semantic_etl: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Use LLM-based semantic extraction (Phase 9). "
+            "Set to false to use legacy parsing.",
+        ),
+    ] = True
+    priority_sheet: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Optional sheet name to prioritize for processing. "
+            "If not specified, uses smart sheet selection.",
+            examples=["Upload to site", "Products", "Товары"],
+        ),
+    ] = None
 
 
 class BatchMatchRequest(BaseModel):

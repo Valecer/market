@@ -751,25 +751,42 @@ async def recalc_product_aggregates_task(
             **metrics.to_dict(),
         }
     
-    # Import here to avoid circular imports
-    from src.services.aggregation import calculate_product_aggregates_batch
+    # Phase 9: Simple aggregation - calculate min_price from supplier items
+    # Advanced aggregation moved to ml-analyze service
     
     try:
         async with async_session_maker() as session:
             async with session.begin():
-                # Calculate aggregates for all products in batch
-                results = await calculate_product_aggregates_batch(
-                    session=session,
-                    product_ids=parsed_product_ids,
-                    trigger=trigger,
-                )
-                
-                # Process results
-                for result in results:
-                    metrics.products_processed += 1
-                    if "error" not in result:
-                        metrics.products_updated += 1
-                    else:
+                # For each product, calculate min_price from linked supplier items
+                for product_id in parsed_product_ids:
+                    try:
+                        # Get min price from supplier items linked to this product
+                        min_price_query = (
+                            select(func.min(SupplierItem.price))
+                            .where(SupplierItem.product_id == product_id)
+                            .where(SupplierItem.price.isnot(None))
+                            .where(SupplierItem.price > 0)
+                        )
+                        result = await session.execute(min_price_query)
+                        min_price = result.scalar()
+                        
+                        if min_price is not None:
+                            # Update product's min_price
+                            await session.execute(
+                                update(Product)
+                                .where(Product.id == product_id)
+                                .values(min_price=min_price)
+                            )
+                            metrics.products_updated += 1
+                        
+                        metrics.products_processed += 1
+                        
+                    except Exception as e:
+                        log.error(
+                            "aggregate_calculation_failed",
+                            product_id=str(product_id),
+                            error=str(e),
+                        )
                         metrics.errors += 1
                 
                 # Commit transaction
@@ -900,80 +917,15 @@ async def enrich_item_task(
         extractors=extractors,
     )
     
-    log.info("enrich_item_task_started")
-    
-    # Import here to avoid circular imports
-    from src.services.extraction import extract_all_features
+    # Phase 9: Feature extraction moved to ml-analyze service
+    # This task is now a no-op - extraction happens during SmartParser processing
+    log.warning(
+        "enrich_item_task_deprecated",
+        message="Feature extraction now handled by ml-analyze SmartParser service",
+    )
     
     try:
-        async with async_session_maker() as session:
-            async with session.begin():
-                # Fetch the supplier item
-                query = (
-                    select(SupplierItem)
-                    .where(SupplierItem.id == item_uuid)
-                    .with_for_update()
-                )
-                result = await session.execute(query)
-                item = result.scalar_one_or_none()
-                
-                if not item:
-                    log.warning("supplier_item_not_found")
-                    return {
-                        "task_id": task_id,
-                        "status": "error",
-                        "supplier_item_id": supplier_item_id,
-                        "error": "Supplier item not found",
-                        **metrics.to_dict(),
-                    }
-                
-                # Extract features from item name
-                extracted = extract_all_features(
-                    text=item.name,
-                    extractors=extractors,
-                )
-                
-                if not extracted.has_any_features():
-                    log.info("no_features_extracted")
-                    metrics.duration_seconds = time.time() - start_time
-                    return {
-                        "task_id": task_id,
-                        "status": "success",
-                        "supplier_item_id": supplier_item_id,
-                        **metrics.to_dict(),
-                    }
-                
-                # Convert to characteristics format
-                new_characteristics = extracted.to_characteristics()
-                
-                # Merge with existing characteristics
-                current = item.characteristics or {}
-                
-                if preserve_existing:
-                    # Only add new keys, don't overwrite existing
-                    merged = {**current}
-                    for key, value in new_characteristics.items():
-                        if key not in merged or merged[key] is None:
-                            merged[key] = value
-                            metrics.features_extracted += 1
-                else:
-                    # New values overwrite existing
-                    merged = {**current, **new_characteristics}
-                    metrics.features_extracted = len(new_characteristics)
-                
-                # Update if there are changes
-                if merged != current:
-                    item.characteristics = merged
-                    session.add(item)
-                    metrics.characteristics_updated = True
-                    
-                    # Track which extractors contributed
-                    if extracted.voltage is not None or extracted.power_watts is not None:
-                        metrics.extractors_applied.append("electronics")
-                    if extracted.weight_kg is not None or extracted.dimensions_cm is not None:
-                        metrics.extractors_applied.append("dimensions")
-                
-                await session.commit()
+        # No-op - just return success
         
         metrics.duration_seconds = time.time() - start_time
         

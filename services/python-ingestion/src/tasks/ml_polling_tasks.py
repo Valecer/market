@@ -150,6 +150,40 @@ async def _sync_ml_job_status(
                 message=f"ML analysis completed for {supplier_name}: {ml_status.items_processed} items processed",
             )
             return True
+        
+        # Phase 9: Handle completed_with_errors status
+        elif ml_status.status == "completed_with_errors":
+            error_msg = "; ".join(ml_status.errors) if ml_status.errors else "Completed with some errors"
+            await update_job_phase(
+                redis=redis,
+                job_id=job_id,
+                phase="completed_with_errors",
+                status="completed_with_errors",
+                error=error_msg,
+                error_details=ml_status.errors,
+            )
+            await update_analysis_progress(
+                redis=redis,
+                job_id=job_id,
+                items_processed=ml_status.items_processed,
+                items_total=ml_status.items_total,
+                matches_found=0,
+                review_queue_count=0,
+                error_count=len(ml_status.errors),
+            )
+            log.info(
+                "job_completed_with_errors_from_ml",
+                job_id=job_id,
+                items_processed=ml_status.items_processed,
+                errors=ml_status.errors,
+            )
+            await log_parsing_event(
+                task_id=str(job_id),
+                supplier_id=supplier_id_uuid,
+                error_type="WARNING",
+                message=f"ML analysis completed with errors for {supplier_name}: {ml_status.items_processed} items, {len(ml_status.errors)} errors",
+            )
+            return True
 
         elif ml_status.status == "failed":
             error_msg = "; ".join(ml_status.errors) if ml_status.errors else "ML processing failed"
@@ -176,9 +210,14 @@ async def _sync_ml_job_status(
             return True
 
         elif ml_status.status in ("pending", "processing"):
-            # Determine phase based on progress
-            if ml_status.items_total > 0 and ml_status.items_processed > 0:
-                new_phase = "matching"  # Has started processing items
+            # Phase 9: Map semantic ETL phases from ml-analyze
+            # Possible phases: analyzing, extracting, normalizing
+            ml_phase = getattr(ml_status, 'current_phase', None) or getattr(ml_status, 'phase', None)
+            
+            if ml_phase in ("extracting", "normalizing"):
+                new_phase = ml_phase  # Use semantic ETL phases directly
+            elif ml_status.items_total > 0 and ml_status.items_processed > 0:
+                new_phase = "extracting"  # Has started processing items (semantic ETL)
             else:
                 new_phase = "analyzing"  # Still in initial analysis
 

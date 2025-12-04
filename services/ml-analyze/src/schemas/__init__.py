@@ -30,6 +30,24 @@ from src.schemas.responses import (
     VisionAnalysisResponse,
 )
 
+# Phase 9: Semantic ETL schemas
+from src.schemas.extraction import (
+    ChunkExtractionResult,
+    ExtractedProduct,
+    ExtractionError,
+    ExtractionResult,
+    LLMExtractionResponse,
+)
+from src.schemas.category import (
+    CategoryApprovalRequest,
+    CategoryApprovalResponse,
+    CategoryDTO,
+    CategoryHierarchyResult,
+    CategoryMatchResult,
+    CategoryNormalizationStats,
+    CategoryReviewItem,
+)
+
 __all__ = [
     # Domain models
     "NormalizedRow",
@@ -52,4 +70,18 @@ __all__ = [
     "BatchMatchResponse",
     "VisionAnalysisResponse",
     "ErrorResponse",
+    # Phase 9: Extraction schemas
+    "ExtractedProduct",
+    "ExtractionError",
+    "ExtractionResult",
+    "ChunkExtractionResult",
+    "LLMExtractionResponse",
+    # Phase 9: Category schemas
+    "CategoryMatchResult",
+    "CategoryHierarchyResult",
+    "CategoryDTO",
+    "CategoryReviewItem",
+    "CategoryApprovalRequest",
+    "CategoryApprovalResponse",
+    "CategoryNormalizationStats",
 ]

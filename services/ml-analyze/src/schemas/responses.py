@@ -53,14 +53,18 @@ class JobStatusResponse(BaseModel):
     """
     Response for GET /analyze/status/:job_id endpoint.
 
-    Provides detailed job progress information.
+    Provides detailed job progress information with semantic ETL metrics.
 
     Attributes:
         job_id: Job identifier
         status: Current status
+        phase: Current processing phase (semantic ETL)
         progress_percentage: Completion percentage (0-100)
         items_processed: Number of items processed so far
         items_total: Total number of items to process
+        successful_extractions: Successfully extracted products (semantic ETL)
+        failed_extractions: Failed extractions (semantic ETL)
+        duplicates_removed: Duplicates removed (semantic ETL)
         errors: List of error messages encountered
         created_at: Job creation timestamp
         started_at: Processing start timestamp (null if pending)
@@ -72,9 +76,13 @@ class JobStatusResponse(BaseModel):
             "example": {
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
                 "status": "processing",
+                "phase": "extracting",
                 "progress_percentage": 45,
                 "items_processed": 45,
                 "items_total": 100,
+                "successful_extractions": 42,
+                "failed_extractions": 3,
+                "duplicates_removed": 0,
                 "errors": [],
                 "created_at": "2024-01-15T10:30:00Z",
                 "started_at": "2024-01-15T10:30:05Z",
@@ -88,8 +96,15 @@ class JobStatusResponse(BaseModel):
         Field(description="Unique job identifier"),
     ]
     status: Annotated[
-        Literal["pending", "processing", "completed", "failed"],
+        Literal["pending", "processing", "completed", "failed", "completed_with_errors"],
         Field(description="Current job status"),
+    ]
+    phase: Annotated[
+        Literal[
+            "pending", "downloading", "analyzing", "extracting", 
+            "normalizing", "complete", "completed_with_errors", "failed"
+        ] | None,
+        Field(default=None, description="Current processing phase (semantic ETL)"),
     ]
     progress_percentage: Annotated[
         int,
@@ -102,6 +117,18 @@ class JobStatusResponse(BaseModel):
     items_total: Annotated[
         int,
         Field(ge=0, description="Total items to process"),
+    ]
+    successful_extractions: Annotated[
+        int,
+        Field(default=0, ge=0, description="Successfully extracted products (semantic ETL)"),
+    ]
+    failed_extractions: Annotated[
+        int,
+        Field(default=0, ge=0, description="Failed extractions (semantic ETL)"),
+    ]
+    duplicates_removed: Annotated[
+        int,
+        Field(default=0, ge=0, description="Duplicates removed (semantic ETL)"),
     ]
     errors: Annotated[
         list[str],

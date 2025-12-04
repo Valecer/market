@@ -107,6 +107,25 @@ class Settings(BaseSettings):
         default=100, ge=10, description="IVFFLAT index lists parameter"
     )
 
+    # -------------------------------------------------------------------------
+    # Semantic ETL Configuration (Phase 9)
+    # -------------------------------------------------------------------------
+    use_semantic_etl: bool = Field(
+        default=True, description="Enable semantic ETL pipeline"
+    )
+    fuzzy_match_threshold: int = Field(
+        default=85, ge=0, le=100, description="Category fuzzy match threshold"
+    )
+    chunk_size_rows: int = Field(
+        default=250, ge=10, le=1000, description="Rows per extraction chunk"
+    )
+    chunk_overlap_rows: int = Field(
+        default=40, ge=0, le=100, description="Overlap rows between chunks"
+    )
+    ollama_temperature: float = Field(
+        default=0.2, ge=0.0, le=2.0, description="LLM temperature for extraction"
+    )
+
     @property
     def redis_url(self) -> str:
         """Construct Redis URL from components."""

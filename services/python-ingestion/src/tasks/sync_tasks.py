@@ -553,11 +553,11 @@ async def _enqueue_supplier_parse(
     supplier: Supplier,
     parent_task_id: str,
     log: Any,
-) -> Optional[str]:
+) -> str:
     """Enqueue a parse task for a supplier.
     
-    Routes to either ML pipeline (download_and_trigger_ml) or legacy pipeline (parse_task)
-    based on the supplier's use_ml_processing flag.
+    Phase 9: Always uses ML pipeline (download_and_trigger_ml).
+    All parsing/extraction handled by ml-analyze service.
     
     Args:
         redis: ArqRedis connection
@@ -566,9 +566,10 @@ async def _enqueue_supplier_parse(
         log: Logger instance
         
     Returns:
-        Job ID if ML processing was triggered, None for legacy pipeline
+        Job ID for ML processing
     """
     from uuid import uuid4
+    from pathlib import Path
     
     meta = supplier.meta or {}
     source_url = meta.get("source_url")
@@ -580,89 +581,52 @@ async def _enqueue_supplier_parse(
     timestamp = int(datetime.now(timezone.utc).timestamp())
     task_id = f"parse-{supplier.name.lower().replace(' ', '-')}-{timestamp}"
     
-    # Determine parser type from source_type
-    parser_type = supplier.source_type
-    if parser_type not in ("google_sheets", "csv", "excel"):
+    # Determine source type from supplier
+    source_type = supplier.source_type
+    if source_type not in ("google_sheets", "csv", "excel"):
         # Default to google_sheets for unknown types
-        parser_type = "google_sheets"
+        source_type = "google_sheets"
     
-    # Check if ML processing is enabled for this supplier (default: True for new flow)
-    use_ml_processing = meta.get("use_ml_processing", settings.use_ml_processing)
+    # ML pipeline: download file and trigger ml-analyze
+    job_id = str(uuid4())
     
-    if use_ml_processing:
-        # Use ML pipeline: download file and trigger ml-analyze
-        job_id = str(uuid4())
-        
-        # Extract original filename from URL or use supplier name
-        original_filename = None
-        if source_url.startswith(("http://", "https://")):
-            from pathlib import Path
-            url_path = source_url.split("?")[0]  # Remove query params
-            original_filename = Path(url_path).name or None
-        
-        # Default filename if not extractable
-        if not original_filename:
-            ext = ".xlsx" if parser_type == "google_sheets" else f".{parser_type}"
-            original_filename = f"{supplier.name}_export{ext}"
-        
-        # Get sheet name for Google Sheets
-        sheet_name = meta.get("sheet_name", "Sheet1") if parser_type == "google_sheets" else None
-        
-        await redis.enqueue_job(
-            "download_and_trigger_ml",
-            task_id=task_id,
-            job_id=job_id,
-            supplier_id=str(supplier.id),
-            supplier_name=supplier.name,
-            source_type=parser_type,
-            source_url=source_url,
-            original_filename=original_filename,
-            sheet_name=sheet_name,
-            use_ml_processing=True,
-        )
-        
-        log.info(
-            "ml_download_task_enqueued",
-            task_id=task_id,
-            job_id=job_id,
-            supplier_name=supplier.name,
-            source_type=parser_type,
-            parent_task_id=parent_task_id,
-        )
-        
-        return job_id
-    else:
-        # Legacy pipeline: direct parse_task
-        source_config: Dict[str, Any] = {
-            "sheet_url": source_url,
-        }
-        
-        if parser_type == "google_sheets":
-            # Use default settings for Google Sheets
-            source_config.update({
-                "sheet_name": meta.get("sheet_name", "Sheet1"),
-                "header_row": 1,
-                "data_start_row": 2,
-            })
-        
-        # Enqueue parse_task
-        await redis.enqueue_job(
-            "parse_task",
-            task_id=task_id,
-            parser_type=parser_type,
-            supplier_name=supplier.name,
-            source_config=source_config,
-        )
-        
-        log.debug(
-            "parse_task_enqueued",
-            task_id=task_id,
-            supplier_name=supplier.name,
-            parser_type=parser_type,
-            parent_task_id=parent_task_id,
-        )
-        
-        return None
+    # Extract original filename from URL or use supplier name
+    original_filename = None
+    if source_url.startswith(("http://", "https://")):
+        url_path = source_url.split("?")[0]  # Remove query params
+        original_filename = Path(url_path).name or None
+    
+    # Default filename if not extractable
+    if not original_filename:
+        ext = ".xlsx" if source_type == "google_sheets" else f".{source_type}"
+        original_filename = f"{supplier.name}_export{ext}"
+    
+    # Get sheet name for Google Sheets
+    sheet_name = meta.get("sheet_name", "Sheet1") if source_type == "google_sheets" else None
+    
+    await redis.enqueue_job(
+        "download_and_trigger_ml",
+        task_id=task_id,
+        job_id=job_id,
+        supplier_id=str(supplier.id),
+        supplier_name=supplier.name,
+        source_type=source_type,
+        source_url=source_url,
+        original_filename=original_filename,
+        sheet_name=sheet_name,
+        use_ml_processing=True,
+    )
+    
+    log.info(
+        "ml_download_task_enqueued",
+        task_id=task_id,
+        job_id=job_id,
+        supplier_name=supplier.name,
+        source_type=source_type,
+        parent_task_id=parent_task_id,
+    )
+    
+    return job_id
 
 
 async def poll_parse_triggers(
@@ -670,6 +634,8 @@ async def poll_parse_triggers(
     **kwargs
 ) -> Optional[Dict[str, Any]]:
     """Poll for parse triggers from Bun API file uploads.
+    
+    Phase 9: Always uses ML pipeline (download_and_trigger_ml).
     
     This task runs every 10 seconds to check for pending parse triggers
     set by the Bun API when files are uploaded.
@@ -680,6 +646,8 @@ async def poll_parse_triggers(
     Returns:
         Dict with results if triggers were processed, else None
     """
+    from uuid import uuid4
+    
     redis: Optional[ArqRedis] = ctx.get("redis")
     if not redis:
         return None
@@ -699,29 +667,50 @@ async def poll_parse_triggers(
     
     for trigger in triggers:
         task_id = trigger.get("task_id", f"parse-trigger-{int(time.time())}")
-        parser_type = trigger.get("parser_type", "csv")
+        source_type = trigger.get("parser_type", "csv")  # Legacy field name
         supplier_name = trigger.get("supplier_name", "unknown")
+        supplier_id = trigger.get("supplier_id")
         source_config = trigger.get("source_config", {})
+        
+        # Extract source URL from config
+        source_url = source_config.get("sheet_url") or source_config.get("file_path")
         
         logger.info(
             "processing_parse_trigger",
             task_id=task_id,
-            parser_type=parser_type,
+            source_type=source_type,
             supplier_name=supplier_name,
         )
         
         try:
-            # Enqueue the parse task using arq's native method
+            # Phase 9: Use ML pipeline
+            job_id = str(uuid4())
+            
+            # Determine original filename
+            original_filename = source_config.get("original_filename")
+            if not original_filename:
+                ext = ".xlsx" if source_type == "google_sheets" else f".{source_type}"
+                original_filename = f"{supplier_name}_export{ext}"
+            
+            # Get sheet name for Google Sheets
+            sheet_name = source_config.get("sheet_name") if source_type == "google_sheets" else None
+            
             await redis.enqueue_job(
-                "parse_task",
+                "download_and_trigger_ml",
                 task_id=task_id,
-                parser_type=parser_type,
+                job_id=job_id,
+                supplier_id=supplier_id or str(uuid4()),
                 supplier_name=supplier_name,
-                source_config=source_config,
+                source_type=source_type,
+                source_url=source_url,
+                original_filename=original_filename,
+                sheet_name=sheet_name,
+                use_ml_processing=True,
             )
             
             results.append({
                 "task_id": task_id,
+                "job_id": job_id,
                 "status": "enqueued",
             })
             

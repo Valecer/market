@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Helper script for enqueuing parse tasks to Redis queue.
+"""Helper script for enqueuing download and ML processing tasks to Redis queue.
+
+Phase 9: Courier pattern - triggers ML pipeline instead of legacy parsing.
 
 Usage:
-    python scripts/enqueue_task.py --task-id task-001 --parser-type google_sheets \\
-        --supplier-name "Acme Wholesale" --sheet-url "https://docs.google.com/..."
+    python scripts/enqueue_task.py --task-id task-001 --source-type google_sheets \\
+        --supplier-name "Acme Wholesale" --source-url "https://docs.google.com/..."
 """
 import asyncio
 import argparse
@@ -12,7 +14,8 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from uuid import uuid4
 
 # Add src to path
 script_dir = Path(__file__).parent
@@ -33,197 +36,178 @@ elif not os.getenv("REDIS_PASSWORD") and not os.getenv("DATABASE_URL"):
     if not os.path.exists("/.dockerenv"):
         print("⚠️  Error: .env file not found and required environment variables not set.")
         print(f"   Expected .env file at: {env_file}")
-        print("   Please create .env file or set REDIS_PASSWORD and DATABASE_URL environment variables.")
-        print("\n   Example .env file:")
-        print("   REDIS_PASSWORD=dev_redis_password")
-        print("   DATABASE_URL=postgresql+asyncpg://marketbel_user:dev_password@localhost:5432/marketbel")
-        print("\n   Or copy from .env.example:")
-        print(f"   cp {project_root.parent / '.env.example'} {env_file}")
         sys.exit(1)
 
 from arq.connections import RedisSettings, create_pool
 from arq import ArqRedis
 from src.config import settings
-from src.models.queue_message import ParseTaskMessage
-# Import parsers to trigger registration
-import src.parsers  # noqa: F401
-from src.parsers import list_registered_parsers
 
 
-async def enqueue_task(
+async def enqueue_ml_task(
     task_id: str,
-    parser_type: str,
+    job_id: str,
+    supplier_id: str,
     supplier_name: str,
-    source_config: Dict[str, Any],
-    retry_count: int = 0,
-    max_retries: int = 3,
-    priority: str = "normal"
+    source_type: str,
+    source_url: str,
+    original_filename: Optional[str] = None,
+    sheet_name: Optional[str] = None,
 ) -> str:
-    """Enqueue a parse task to Redis queue.
+    """Enqueue a download_and_trigger_ml task.
     
     Args:
         task_id: Unique task identifier
-        parser_type: Type of parser (google_sheets, csv, excel)
-        supplier_name: Name of the supplier
-        source_config: Parser-specific configuration
-        retry_count: Current retry attempt (default: 0)
-        max_retries: Maximum retry attempts (default: 3)
-        priority: Task priority (low, normal, high)
+        job_id: Unique job identifier for tracking
+        supplier_id: Supplier UUID
+        supplier_name: Human-readable supplier name
+        source_type: Source type (google_sheets, csv, excel)
+        source_url: URL or path to source file
+        original_filename: Original filename for metadata
+        sheet_name: Sheet name for Google Sheets
     
     Returns:
-        Job ID from arq
+        Enqueued job ID
     """
-    # Validate message using Pydantic model
-    task_msg = ParseTaskMessage(
-        task_id=task_id,
-        parser_type=parser_type,
-        supplier_name=supplier_name,
-        source_config=source_config,
-        retry_count=retry_count,
-        max_retries=max_retries,
-        priority=priority,
-        enqueued_at=datetime.now(timezone.utc)
-    )
-    
-    # Create Redis connection pool
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    
+    print(f"📤 Connecting to Redis: {settings.redis_url.split('@')[-1] if '@' in settings.redis_url else settings.redis_url}")
+    
     pool: ArqRedis = await create_pool(redis_settings)
     
     try:
-        # Enqueue the task (pass message dict as first positional arg after ctx)
         job = await pool.enqueue_job(
-            "parse_task",
-            message=task_msg.model_dump(),
-            _job_id=task_id
+            "download_and_trigger_ml",
+            task_id=task_id,
+            job_id=job_id,
+            supplier_id=supplier_id,
+            supplier_name=supplier_name,
+            source_type=source_type,
+            source_url=source_url,
+            original_filename=original_filename,
+            sheet_name=sheet_name,
+            use_ml_processing=True,
         )
         
-        if job:
-            print(f"✅ Task enqueued successfully!")
-            print(f"   Task ID: {task_id}")
-            print(f"   Job ID: {job.job_id}")
-            print(f"   Parser Type: {parser_type}")
-            print(f"   Supplier: {supplier_name}")
-            return job.job_id
-        else:
-            print(f"❌ Failed to enqueue task (job with ID {task_id} may already exist)")
-            return None
+        print(f"✅ Task enqueued successfully!")
+        print(f"   Task ID:  {task_id}")
+        print(f"   Job ID:   {job_id}")
+        print(f"   Queue:    {settings.queue_name}")
+        print(f"   Supplier: {supplier_name}")
+        print(f"   Source:   {source_type}")
+        
+        return job.job_id
+        
     finally:
-        await pool.aclose()
+        await pool.close()
 
 
-async def main():
-    """Main entry point for CLI."""
+def main():
     parser = argparse.ArgumentParser(
-        description="Enqueue a parse task to Redis queue",
+        description="Enqueue ML processing task to Redis queue",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Enqueue Google Sheets task
-  python scripts/enqueue_task.py \\
-    --task-id task-001 \\
-    --parser-type google_sheets \\
-    --supplier-name "Acme Wholesale" \\
-    --sheet-url "https://docs.google.com/spreadsheets/d/abc123/edit" \\
-    --sheet-name "Price List"
+  # Google Sheets
+  python scripts/enqueue_task.py --source-type google_sheets \\
+    --supplier-name "Acme Corp" \\
+    --source-url "https://docs.google.com/spreadsheets/d/abc123/edit"
 
-  # Enqueue with custom config JSON
-  python scripts/enqueue_task.py \\
-    --task-id task-002 \\
-    --parser-type google_sheets \\
+  # Excel file (local path in shared volume)
+  python scripts/enqueue_task.py --source-type excel \\
     --supplier-name "Test Supplier" \\
-    --config-file config.json
+    --source-url "/uploads/price-list.xlsx"
+
+  # CSV file
+  python scripts/enqueue_task.py --source-type csv \\
+    --supplier-name "CSV Supplier" \\
+    --source-url "https://example.com/prices.csv"
         """
     )
     
     parser.add_argument(
         "--task-id",
-        required=True,
-        help="Unique task identifier"
+        help="Unique task ID (auto-generated if not provided)"
     )
-    # Get available parsers dynamically from registry
-    available_parsers = list_registered_parsers()
-    if not available_parsers:
-        # Fallback to known parsers if registry is empty
-        available_parsers = ["google_sheets", "csv", "excel", "stub"]
-    
     parser.add_argument(
-        "--parser-type",
-        required=True,
-        choices=available_parsers,
-        help=f"Type of parser to use (available: {', '.join(available_parsers)})"
+        "--job-id",
+        help="Unique job ID for tracking (auto-generated if not provided)"
+    )
+    parser.add_argument(
+        "--supplier-id",
+        help="Supplier UUID (auto-generated if not provided)"
     )
     parser.add_argument(
         "--supplier-name",
         required=True,
-        help="Name of the supplier"
+        help="Human-readable supplier name"
     )
-    
-    # Source config options
-    config_group = parser.add_mutually_exclusive_group(required=True)
-    config_group.add_argument(
-        "--config-file",
-        help="Path to JSON file containing source_config"
+    parser.add_argument(
+        "--source-type",
+        required=True,
+        choices=["google_sheets", "csv", "excel"],
+        help="Source type"
     )
-    config_group.add_argument(
-        "--sheet-url",
-        help="Google Sheets URL (for google_sheets parser)"
+    parser.add_argument(
+        "--source-url",
+        required=True,
+        help="URL or path to source file"
     )
-    
+    parser.add_argument(
+        "--filename",
+        help="Original filename for metadata"
+    )
     parser.add_argument(
         "--sheet-name",
         default="Sheet1",
-        help="Sheet name (for google_sheets parser, default: Sheet1)"
+        help="Sheet name for Google Sheets (default: Sheet1)"
     )
     parser.add_argument(
-        "--retry-count",
-        type=int,
-        default=0,
-        help="Current retry attempt (default: 0)"
-    )
-    parser.add_argument(
-        "--max-retries",
-        type=int,
-        default=3,
-        help="Maximum retry attempts (default: 3)"
-    )
-    parser.add_argument(
-        "--priority",
-        choices=["low", "normal", "high"],
-        default="normal",
-        help="Task priority (default: normal)"
+        "--dry-run",
+        action="store_true",
+        help="Print task details without enqueuing"
     )
     
     args = parser.parse_args()
     
-    # Build source_config
-    if args.config_file:
-        with open(args.config_file, "r") as f:
-            source_config = json.load(f)
-    elif args.sheet_url:
-        source_config = {
-            "sheet_url": args.sheet_url,
-            "sheet_name": args.sheet_name
-        }
-    else:
-        parser.error("Either --config-file or --sheet-url must be provided")
+    # Generate IDs if not provided
+    timestamp = int(datetime.now(timezone.utc).timestamp())
+    task_id = args.task_id or f"enqueue-{timestamp}-{args.supplier_name.lower().replace(' ', '-')}"
+    job_id = args.job_id or str(uuid4())
+    supplier_id = args.supplier_id or str(uuid4())
+    
+    # Determine filename
+    original_filename = args.filename
+    if not original_filename:
+        if args.source_type == "google_sheets":
+            original_filename = f"{args.supplier_name}_export.xlsx"
+        else:
+            original_filename = Path(args.source_url).name
+    
+    if args.dry_run:
+        print("🔍 DRY RUN - Task details:")
+        print(f"   Task ID:     {task_id}")
+        print(f"   Job ID:      {job_id}")
+        print(f"   Supplier ID: {supplier_id}")
+        print(f"   Supplier:    {args.supplier_name}")
+        print(f"   Source Type: {args.source_type}")
+        print(f"   Source URL:  {args.source_url}")
+        print(f"   Filename:    {original_filename}")
+        if args.source_type == "google_sheets":
+            print(f"   Sheet Name:  {args.sheet_name}")
+        return
     
     # Enqueue task
-    try:
-        job_id = await enqueue_task(
-            task_id=args.task_id,
-            parser_type=args.parser_type,
-            supplier_name=args.supplier_name,
-            source_config=source_config,
-            retry_count=args.retry_count,
-            max_retries=args.max_retries,
-            priority=args.priority
-        )
-        sys.exit(0 if job_id else 1)
-    except Exception as e:
-        print(f"❌ Error enqueuing task: {e}", file=sys.stderr)
-        sys.exit(1)
+    asyncio.run(enqueue_ml_task(
+        task_id=task_id,
+        job_id=job_id,
+        supplier_id=supplier_id,
+        supplier_name=args.supplier_name,
+        source_type=args.source_type,
+        source_url=args.source_url,
+        original_filename=original_filename,
+        sheet_name=args.sheet_name if args.source_type == "google_sheets" else None,
+    ))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    main()
