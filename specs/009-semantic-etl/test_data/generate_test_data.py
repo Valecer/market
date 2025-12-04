@@ -278,6 +278,242 @@ def create_performance_test_file(output_path: Path, num_products: int = 500, dup
     return create_standard_test_file(output_path, num_products, duplicate_count)
 
 
+def create_multi_sheet_test_file(output_path: Path) -> dict:
+    """
+    Create multi-sheet Excel file for US2 testing (T061).
+    
+    Contains 5 sheets:
+    - "Instructions" (metadata, should be skipped)
+    - "Products" (product data sheet)
+    - "Pricing" (product data sheet with different products)
+    - "Config" (metadata, should be skipped)
+    - "Upload to site" (priority sheet - should be the ONLY one processed)
+    
+    Args:
+        output_path: Path to save Excel file
+    
+    Returns:
+        Dictionary with test metadata for validation
+    """
+    wb = Workbook()
+    
+    # Style definitions
+    header_font = Font(bold=True, size=12)
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    metadata_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+    
+    metadata = {
+        "sheets": {},
+        "expected_selected": ["Upload to site"],
+        "expected_skipped": ["Instructions", "Products", "Pricing", "Config"],
+        "priority_sheet": "Upload to site",
+        "cross_sheet_duplicates": [],
+    }
+    
+    # Sheet 1: Instructions (metadata - should be skipped)
+    ws_instructions = wb.active
+    ws_instructions.title = "Instructions"
+    instructions_content = [
+        ["Supplier File Instructions"],
+        [""],
+        ["1. Fill in the 'Upload to site' sheet with products"],
+        ["2. Include: Name, Description, Price, Category"],
+        ["3. Do not modify this sheet"],
+        [""],
+        ["Contact: support@marketbel.by"],
+    ]
+    for row_idx, row_data in enumerate(instructions_content, 1):
+        for col_idx, value in enumerate(row_data, 1):
+            cell = ws_instructions.cell(row=row_idx, column=col_idx, value=value)
+            if row_idx == 1:
+                cell.font = header_font
+    
+    metadata["sheets"]["Instructions"] = {
+        "type": "metadata",
+        "row_count": len(instructions_content),
+        "should_skip": True,
+    }
+    
+    # Sheet 2: Products (product data - but should be skipped due to priority sheet)
+    ws_products = wb.create_sheet("Products")
+    products_headers = ["Name", "Description", "Price RRC", "Price OPT", "Category"]
+    for col, header in enumerate(products_headers, 1):
+        cell = ws_products.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+    
+    products_data = []
+    generated_names = set()
+    for row in range(2, 102):  # 100 products
+        category = random.choice(list(CATEGORIES.keys()))
+        subcat = random.choice(CATEGORIES[category]["subcategories"])
+        name, category_path = generate_product_name(category, subcat)
+        
+        # Ensure unique within sheet
+        attempt = 0
+        while name in generated_names and attempt < 10:
+            name, category_path = generate_product_name(category, subcat)
+            attempt += 1
+        generated_names.add(name)
+        
+        price_rrc, price_opt = generate_price()
+        description = generate_description(name, category)
+        
+        ws_products.cell(row=row, column=1, value=name)
+        ws_products.cell(row=row, column=2, value=description)
+        ws_products.cell(row=row, column=3, value=float(price_rrc))
+        ws_products.cell(row=row, column=4, value=float(price_opt))
+        ws_products.cell(row=row, column=5, value=category_path)
+        
+        products_data.append({
+            "name": name,
+            "price_rrc": float(price_rrc),
+        })
+    
+    metadata["sheets"]["Products"] = {
+        "type": "product_data",
+        "row_count": 101,  # Header + 100 data rows
+        "product_count": 100,
+        "should_skip": True,  # Skipped due to priority sheet
+    }
+    
+    # Sheet 3: Pricing (product data - but should be skipped due to priority sheet)
+    ws_pricing = wb.create_sheet("Pricing")
+    pricing_headers = ["Item Name", "RRC", "Wholesale", "Category Path"]
+    for col, header in enumerate(pricing_headers, 1):
+        cell = ws_pricing.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+    
+    pricing_data = []
+    for row in range(2, 52):  # 50 products
+        category = random.choice(list(CATEGORIES.keys()))
+        subcat = random.choice(CATEGORIES[category]["subcategories"])
+        name, category_path = generate_product_name(category, subcat)
+        
+        # Ensure unique within sheet
+        attempt = 0
+        while name in generated_names and attempt < 10:
+            name, category_path = generate_product_name(category, subcat)
+            attempt += 1
+        generated_names.add(name)
+        
+        price_rrc, price_opt = generate_price()
+        
+        ws_pricing.cell(row=row, column=1, value=name)
+        ws_pricing.cell(row=row, column=2, value=float(price_rrc))
+        ws_pricing.cell(row=row, column=3, value=float(price_opt))
+        ws_pricing.cell(row=row, column=4, value=category_path)
+        
+        pricing_data.append({
+            "name": name,
+            "price_rrc": float(price_rrc),
+        })
+    
+    # Add some cross-sheet duplicates (same products in Pricing as Products)
+    duplicate_count = 5
+    for i, dup_source in enumerate(random.sample(products_data, duplicate_count)):
+        row = 52 + i
+        ws_pricing.cell(row=row, column=1, value=dup_source["name"])
+        ws_pricing.cell(row=row, column=2, value=dup_source["price_rrc"])
+        ws_pricing.cell(row=row, column=3, value=dup_source["price_rrc"] * 0.8)
+        ws_pricing.cell(row=row, column=4, value="Electronics > Misc")
+        
+        metadata["cross_sheet_duplicates"].append({
+            "name": dup_source["name"],
+            "sheets": ["Products", "Pricing"],
+        })
+    
+    metadata["sheets"]["Pricing"] = {
+        "type": "product_data",
+        "row_count": 56,  # Header + 50 + 5 duplicates
+        "product_count": 55,
+        "should_skip": True,  # Skipped due to priority sheet
+    }
+    
+    # Sheet 4: Config (metadata - should be skipped)
+    ws_config = wb.create_sheet("Config")
+    config_content = [
+        ["Configuration Settings"],
+        [""],
+        ["Setting", "Value"],
+        ["Supplier ID", "12345"],
+        ["Currency", "BYN"],
+        ["Tax Rate", "20%"],
+        ["Active", "Yes"],
+    ]
+    for row_idx, row_data in enumerate(config_content, 1):
+        for col_idx, value in enumerate(row_data, 1):
+            cell = ws_config.cell(row=row_idx, column=col_idx, value=value)
+            if row_idx == 1:
+                cell.font = header_font
+    
+    metadata["sheets"]["Config"] = {
+        "type": "metadata",
+        "row_count": len(config_content),
+        "should_skip": True,
+    }
+    
+    # Sheet 5: Upload to site (PRIORITY SHEET - should be the ONLY one processed)
+    ws_upload = wb.create_sheet("Upload to site")
+    upload_headers = ["Название", "Описание", "Цена РРЦ", "Цена ОПТ", "Категория"]
+    for col, header in enumerate(upload_headers, 1):
+        cell = ws_upload.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+    
+    upload_data = []
+    for row in range(2, 82):  # 80 products
+        category = random.choice(list(CATEGORIES.keys()))
+        subcat = random.choice(CATEGORIES[category]["subcategories"])
+        name, category_path = generate_product_name(category, subcat)
+        
+        # Ensure unique within sheet
+        attempt = 0
+        while name in generated_names and attempt < 10:
+            name, category_path = generate_product_name(category, subcat)
+            attempt += 1
+        generated_names.add(name)
+        
+        price_rrc, price_opt = generate_price()
+        description = generate_description(name, category)
+        
+        ws_upload.cell(row=row, column=1, value=name)
+        ws_upload.cell(row=row, column=2, value=description)
+        ws_upload.cell(row=row, column=3, value=float(price_rrc))
+        ws_upload.cell(row=row, column=4, value=float(price_opt))
+        ws_upload.cell(row=row, column=5, value=category_path)
+        
+        upload_data.append({
+            "name": name,
+            "price_rrc": float(price_rrc),
+        })
+    
+    metadata["sheets"]["Upload to site"] = {
+        "type": "priority_sheet",
+        "row_count": 81,  # Header + 80 data rows
+        "product_count": 80,
+        "should_process": True,
+    }
+    
+    # Adjust column widths for all sheets
+    for ws in wb.worksheets:
+        for col in range(1, 6):
+            ws.column_dimensions[chr(64 + col)].width = 30
+    
+    metadata["total_sheets"] = 5
+    metadata["expected_product_count"] = 80  # Only from "Upload to site"
+    
+    wb.save(output_path)
+    print(f"Created multi-sheet test file: {output_path}")
+    print(f"  - Total sheets: {metadata['total_sheets']}")
+    print(f"  - Expected selected: {metadata['expected_selected']}")
+    print(f"  - Expected skipped: {metadata['expected_skipped']}")
+    print(f"  - Expected products (from priority sheet only): {metadata['expected_product_count']}")
+    
+    return metadata
+
+
 if __name__ == "__main__":
     # Create test data directory if needed
     test_data_dir = Path(__file__).parent
@@ -289,6 +525,10 @@ if __name__ == "__main__":
     # Generate performance test file (T052)
     perf_file = test_data_dir / "performance_test_500rows.xlsx"
     perf_metadata = create_performance_test_file(perf_file, 500)
+    
+    # Generate multi-sheet test file (T061 - US2)
+    multi_sheet_file = test_data_dir / "multi_sheet_supplier.xlsx"
+    multi_sheet_metadata = create_multi_sheet_test_file(multi_sheet_file)
     
     # Save metadata for validation
     import json
@@ -307,6 +547,14 @@ if __name__ == "__main__":
                 "total_products": perf_metadata["total_rows"],
                 "categories": perf_metadata["categories"],
                 "duplicate_count": perf_metadata["duplicate_count"],
+            },
+            "multi_sheet_file": {
+                "path": str(multi_sheet_file),
+                "total_sheets": multi_sheet_metadata["total_sheets"],
+                "expected_selected": multi_sheet_metadata["expected_selected"],
+                "expected_skipped": multi_sheet_metadata["expected_skipped"],
+                "expected_product_count": multi_sheet_metadata["expected_product_count"],
+                "priority_sheet": multi_sheet_metadata["priority_sheet"],
             },
         }, f, indent=2)
     

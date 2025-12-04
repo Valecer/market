@@ -166,42 +166,44 @@ Each user story phase includes test criteria that can validate completion indepe
 
 ---
 
-## Phase 4: User Story 2 - Multi-Sheet Files (P2)
+## Phase 4: User Story 2 - Multi-Sheet Files (P2) ✅ COMPLETE
 
 **User Story:** As a Marketbel admin, I want to upload an Excel file with multiple sheets so that the system intelligently identifies and processes only product data sheets.
 
 **Goal:** Add smart sheet selection to handle multi-sheet Excel files
 
 **Independent Test Criteria:**
-- [ ] Upload Excel file with 5 sheets: "Instructions", "Products", "Pricing", "Config", "Upload to site"
-- [ ] Only "Upload to site" is processed (priority sheet)
-- [ ] If no priority sheet, "Products" and "Pricing" are processed
-- [ ] "Instructions" and "Config" sheets are skipped
-- [ ] Duplicates across sheets are removed
-- [ ] Job completes successfully with multi-sheet summary
+- [X] Upload Excel file with 5 sheets: "Instructions", "Products", "Pricing", "Config", "Upload to site"
+- [X] Only "Upload to site" is processed (priority sheet)
+- [X] If no priority sheet, "Products" and "Pricing" are processed
+- [X] "Instructions" and "Config" sheets are skipped
+- [X] Duplicates across sheets are removed
+- [X] Job completes successfully with multi-sheet summary
 
 **Test Files:**
 - `/specs/009-semantic-etl/test_data/multi_sheet_supplier.xlsx`
 
 ### Smart Sheet Selection
 
-- [ ] T053 [P] [US2] Create SheetSelector class in services/ml-analyze/src/services/smart_parser/sheet_selector.py
-- [ ] T054 [P] [US2] Implement identify_priority_sheets method (LLM-based) in services/ml-analyze/src/services/smart_parser/sheet_selector.py
-- [ ] T055 [P] [US2] Add priority sheet names: "Upload to site", "Products", "Catalog", "Export", "Товары" in services/ml-analyze/src/services/smart_parser/sheet_selector.py
-- [ ] T056 [P] [US2] Implement skip_metadata_sheets logic (skip "Instructions", "Settings") in services/ml-analyze/src/services/smart_parser/sheet_selector.py
-- [ ] T057 [P] [US2] Write unit tests for SheetSelector in services/ml-analyze/tests/services/test_sheet_selector.py
+- [X] T053 [P] [US2] Create SheetSelector class in services/ml-analyze/src/services/smart_parser/sheet_selector.py
+- [X] T054 [P] [US2] Implement identify_priority_sheets method (LLM-based) in services/ml-analyze/src/services/smart_parser/sheet_selector.py
+- [X] T055 [P] [US2] Add priority sheet names: "Upload to site", "Products", "Catalog", "Export", "Товары" in services/ml-analyze/src/services/smart_parser/sheet_selector.py
+- [X] T056 [P] [US2] Implement skip_metadata_sheets logic (skip "Instructions", "Settings") in services/ml-analyze/src/services/smart_parser/sheet_selector.py
+- [X] T057 [P] [US2] Write unit tests for SheetSelector in services/ml-analyze/tests/services/test_sheet_selector.py
 
 ### Multi-Sheet Processing
 
-- [ ] T058 [US2] Update SmartParserService to handle multiple sheets in services/ml-analyze/src/services/smart_parser/service.py
-- [ ] T059 [US2] Aggregate ExtractionResult across multiple sheets in services/ml-analyze/src/services/smart_parser/service.py
-- [ ] T060 [US2] Add cross-sheet deduplication logic in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T058 [US2] Update SmartParserService to handle multiple sheets in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T059 [US2] Aggregate ExtractionResult across multiple sheets in services/ml-analyze/src/services/smart_parser/service.py
+- [X] T060 [US2] Add cross-sheet deduplication logic in services/ml-analyze/src/services/smart_parser/service.py
 
 ### Testing
 
-- [ ] T061 [US2] Create test data: multi_sheet_supplier.xlsx with 5 sheets in /specs/009-semantic-etl/test_data/
-- [ ] T062 [US2] Write E2E test: multi-sheet file processing in services/ml-analyze/tests/e2e/test_multi_sheet_upload.py
-- [ ] T063 [US2] Write E2E test: verify metadata sheets are skipped in services/ml-analyze/tests/e2e/test_sheet_selection.py
+- [X] T061 [US2] Create test data: multi_sheet_supplier.xlsx with 5 sheets in /specs/009-semantic-etl/test_data/
+- [X] T062 [US2] Write E2E test: multi-sheet file processing in services/ml-analyze/tests/e2e/test_multi_sheet_upload.py
+- [X] T063 [US2] Write E2E test: verify metadata sheets are skipped in services/ml-analyze/tests/e2e/test_sheet_selection.py
+
+**Note:** Phase 4 complete. All 55 tests passing (23 unit tests + 32 E2E tests).
 
 ---
 

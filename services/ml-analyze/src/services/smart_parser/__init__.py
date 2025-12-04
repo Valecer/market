@@ -7,6 +7,7 @@ Phase 9: LLM-based product extraction from supplier files.
 Components:
 - MarkdownConverter: Excel/CSV → Markdown table conversion
 - LangChainExtractor: LLM-based product extraction with sliding window
+- SheetSelector: Intelligent multi-sheet selection (US2)
 - SmartParserService: Orchestration layer
 
 Usage:
@@ -19,11 +20,14 @@ Usage:
 
 from src.services.smart_parser.markdown_converter import MarkdownConverter
 from src.services.smart_parser.langchain_extractor import LangChainExtractor
+from src.services.smart_parser.sheet_selector import SheetSelector, SheetSelectionResult
 from src.services.smart_parser.service import SmartParserService
 
 __all__ = [
     "MarkdownConverter",
     "LangChainExtractor",
+    "SheetSelector",
+    "SheetSelectionResult",
     "SmartParserService",
 ]
 

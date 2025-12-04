@@ -4,15 +4,17 @@ Smart Parser Service - Orchestration Layer
 
 Orchestrates the semantic ETL pipeline:
 1. Read Excel/CSV file
-2. Select sheets (priority: "Upload to site", etc.)
+2. Select sheets (priority: "Upload to site", etc.) - Phase 9 US2: Multi-sheet support
 3. Convert to Markdown
 4. Extract products via LLM
 5. Normalize categories
-6. Deduplicate products
+6. Deduplicate products (within-file + cross-sheet)
 7. Insert to database
 8. Log errors to parsing_logs
 
 Phase 9: Semantic ETL Pipeline Refactoring
+- US1: Standard file upload (complete)
+- US2: Multi-sheet files (T053-T063)
 """
 
 import logging
@@ -32,6 +34,7 @@ from src.services.deduplication_service import DeduplicationService
 from src.services.job_service import JobService
 from src.services.smart_parser.langchain_extractor import LangChainExtractor
 from src.services.smart_parser.markdown_converter import MarkdownConverter
+from src.services.smart_parser.sheet_selector import SheetSelector, SheetSelectionResult
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,8 @@ class SmartParserService:
     Orchestrates semantic ETL pipeline for supplier file processing.
     
     Features:
-    - Smart sheet selection (priority sheets, skip metadata)
+    - Smart sheet selection via SheetSelector (US2: priority sheets, skip metadata)
+    - Multi-sheet file processing with cross-sheet deduplication
     - Sliding window LLM extraction
     - Category normalization with fuzzy matching
     - Within-file deduplication
@@ -64,32 +68,6 @@ class SmartParserService:
             )
     """
     
-    # Priority sheet names (case-insensitive)
-    PRIORITY_SHEET_NAMES = [
-        "upload to site",
-        "загрузка на сайт",
-        "products",
-        "товары",
-        "catalog",
-        "каталог",
-        "export",
-        "экспорт",
-    ]
-    
-    # Sheets to skip (metadata/configuration)
-    SKIP_SHEET_NAMES = [
-        "instructions",
-        "инструкции",
-        "settings",
-        "настройки",
-        "config",
-        "конфигурация",
-        "template",
-        "шаблон",
-        "example",
-        "пример",
-    ]
-    
     # Success rate threshold for "completed_with_errors"
     SUCCESS_THRESHOLD = 0.80
     
@@ -101,6 +79,7 @@ class SmartParserService:
         chunk_overlap: int = 40,
         similarity_threshold: float = 85.0,
         price_tolerance: float = 0.01,
+        use_llm_for_sheet_selection: bool = False,
     ):
         """
         Initialize SmartParserService.
@@ -112,11 +91,13 @@ class SmartParserService:
             chunk_overlap: Overlapping rows between chunks
             similarity_threshold: Fuzzy match threshold for categories
             price_tolerance: Price tolerance for deduplication
+            use_llm_for_sheet_selection: Whether to use LLM for ambiguous sheet selection
         """
         self.session = session
         self.job_service = job_service
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.price_tolerance = price_tolerance
         
         # Initialize sub-services
         self.markdown_converter = MarkdownConverter()
@@ -130,6 +111,12 @@ class SmartParserService:
         )
         self.deduplication_service = DeduplicationService(
             price_tolerance=price_tolerance,
+        )
+        
+        # Initialize sheet selector (T053-T056)
+        self.sheet_selector = SheetSelector(
+            llm=None,  # LLM can be set later if needed
+            use_llm_for_ambiguous=use_llm_for_sheet_selection,
         )
         
         # Initialize parsing logs repository (T039)
@@ -178,13 +165,19 @@ class SmartParserService:
         await self._update_job_phase(job_id, "analyzing", 0)
         
         try:
-            # Phase 1: Sheet selection
-            sheets = await self._select_sheets(path)
+            # Phase 1: Sheet selection (T053-T056)
+            sheets, selection_result = await self._select_sheets(path)
             
             if not sheets:
-                raise SmartParserError("No product sheets found in file")
+                raise SmartParserError(
+                    f"No product sheets found in file. "
+                    f"Skipped: {selection_result.skipped_sheets}"
+                )
             
-            logger.info(f"Selected {len(sheets)} sheet(s) for processing")
+            logger.info(
+                f"Selected {len(sheets)} sheet(s) for processing: {sheets}. "
+                f"Skipped: {selection_result.skipped_sheets}"
+            )
             
             # Update progress
             await self._update_job_phase(job_id, "extracting", 10)
@@ -208,8 +201,13 @@ class SmartParserService:
                     f"{result.failed_extractions} errors"
                 )
             
-            # Aggregate results
-            aggregated = self._aggregate_results(all_results)
+            # Aggregate results (T059-T060)
+            # Cross-sheet dedup is performed here for multi-sheet files
+            is_multi_sheet = len(all_results) > 1
+            aggregated = self._aggregate_results(
+                all_results,
+                apply_cross_sheet_dedup=is_multi_sheet,
+            )
             
             # T039: Log extraction errors to parsing_logs
             if aggregated.extraction_errors:
@@ -225,17 +223,21 @@ class SmartParserService:
             # Phase 3: Category normalization
             await self._normalize_categories(aggregated.products, supplier_id)
             
-            # Phase 4: Within-file deduplication
+            # Phase 4: Within-file deduplication (skip for multi-sheet as already done)
             await self._update_job_phase(job_id, "normalizing", 85)
             
-            unique_products, dedup_stats = self.deduplication_service.deduplicate(
-                aggregated.products
-            )
+            if not is_multi_sheet:
+                # Single sheet: dedup now
+                unique_products, dedup_stats = self.deduplication_service.deduplicate(
+                    aggregated.products
+                )
+                
+                # Update result with dedup count
+                aggregated.products = unique_products
+                aggregated.duplicates_removed = dedup_stats.duplicates_removed
             
-            # Update result with dedup count
-            aggregated.products = unique_products
-            aggregated.duplicates_removed = dedup_stats.duplicates_removed
-            aggregated.successful_extractions = len(unique_products)
+            # Update successful extractions after dedup
+            aggregated.successful_extractions = len(aggregated.products)
             
             # Determine final status
             elapsed = time.time() - start_time
@@ -279,52 +281,36 @@ class SmartParserService:
             )
             raise SmartParserError(f"Parsing failed: {e}") from e
     
-    async def _select_sheets(self, file_path: Path) -> list[str]:
+    async def _select_sheets(self, file_path: Path) -> tuple[list[str], SheetSelectionResult]:
         """
-        Select which sheets to process from an Excel file.
+        Select which sheets to process from an Excel file using SheetSelector.
+        
+        US2: Multi-sheet file support with intelligent sheet selection.
         
         Priority:
         1. If a priority sheet exists, process only that
         2. Otherwise, process all non-metadata sheets
+        3. Optionally use LLM for ambiguous cases
         
         Args:
             file_path: Path to Excel file
         
         Returns:
-            List of sheet names to process
+            Tuple of (sheet_names_to_process, selection_result)
         """
         sheets_info = self.markdown_converter.get_sheet_info(file_path)
         
         if not sheets_info:
-            return []
+            return [], SheetSelectionResult(reasoning="No sheets found in file")
         
-        # Check for priority sheets first
-        for sheet in sheets_info:
-            normalized_name = sheet["name"].lower().strip()
-            if normalized_name in self.PRIORITY_SHEET_NAMES:
-                logger.info(f"Found priority sheet: '{sheet['name']}'")
-                return [sheet["name"]]
+        # Use SheetSelector for intelligent selection (T053-T056)
+        selection_result = await self.sheet_selector.select_sheets(sheets_info)
         
-        # Filter out metadata sheets and empty sheets
-        selected = []
-        for sheet in sheets_info:
-            normalized_name = sheet["name"].lower().strip()
-            
-            if normalized_name in self.SKIP_SHEET_NAMES:
-                logger.debug(f"Skipping metadata sheet: '{sheet['name']}'")
-                continue
-            
-            if sheet.get("is_empty"):
-                logger.debug(f"Skipping empty sheet: '{sheet['name']}'")
-                continue
-            
-            if sheet.get("row_count", 0) < 2:  # Need at least header + 1 data row
-                logger.debug(f"Skipping sheet with insufficient data: '{sheet['name']}'")
-                continue
-            
-            selected.append(sheet["name"])
+        # Log selection summary
+        summary = self.sheet_selector.get_selection_summary(selection_result)
+        logger.info(f"Sheet selection:\n{summary}")
         
-        return selected
+        return selection_result.selected_sheets, selection_result
     
     async def _process_sheet(
         self,
@@ -435,15 +421,19 @@ class SmartParserService:
     def _aggregate_results(
         self,
         results: list[ExtractionResult],
+        apply_cross_sheet_dedup: bool = True,
     ) -> ExtractionResult:
         """
-        Aggregate results from multiple sheets.
+        Aggregate results from multiple sheets with cross-sheet deduplication.
+        
+        US2 (T059-T060): Multi-sheet file processing.
         
         Args:
             results: List of ExtractionResult objects
+            apply_cross_sheet_dedup: Whether to deduplicate across sheets
         
         Returns:
-            Combined ExtractionResult
+            Combined ExtractionResult with cross-sheet duplicates removed
         """
         if not results:
             return ExtractionResult(
@@ -465,6 +455,7 @@ class SmartParserService:
         failed = 0
         
         sheet_names = []
+        per_sheet_counts = []
         
         for result in results:
             all_products.extend(result.products)
@@ -473,14 +464,32 @@ class SmartParserService:
             successful += result.successful_extractions
             failed += result.failed_extractions
             sheet_names.append(result.sheet_name)
+            per_sheet_counts.append(len(result.products))
+        
+        logger.info(
+            f"Aggregating {len(results)} sheets: "
+            f"{dict(zip(sheet_names, per_sheet_counts, strict=False))}"
+        )
+        
+        # T060: Cross-sheet deduplication
+        cross_sheet_dupes_removed = 0
+        if apply_cross_sheet_dedup and len(all_products) > 0:
+            original_count = len(all_products)
+            all_products, dedup_stats = self.deduplication_service.deduplicate(all_products)
+            cross_sheet_dupes_removed = dedup_stats.duplicates_removed
+            
+            logger.info(
+                f"Cross-sheet deduplication: {original_count} → {len(all_products)} "
+                f"({cross_sheet_dupes_removed} duplicates across {len(results)} sheets)"
+            )
         
         return ExtractionResult(
             products=all_products,
             sheet_name=", ".join(sheet_names),
             total_rows=total_rows,
-            successful_extractions=successful,
+            successful_extractions=successful,  # Before cross-sheet dedup
             failed_extractions=failed,
-            duplicates_removed=0,  # Will be updated after dedup
+            duplicates_removed=cross_sheet_dupes_removed,  # Updated with cross-sheet count
             extraction_errors=all_errors,
         )
     
