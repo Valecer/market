@@ -8,6 +8,8 @@ Endpoints:
 - GET /status/{job_id} - Get job status and progress
 
 Provides real-time job progress from Redis.
+
+Phase 10: Updated to include parsing quality metrics in response.
 """
 
 from typing import Annotated
@@ -80,6 +82,7 @@ async def get_job_status(
             created_at=job.created_at,
             started_at=job.started_at,
             completed_at=job.completed_at,
+            metrics=job.metrics,  # Phase 10: Include parsing quality metrics
         )
 
     except HTTPException:

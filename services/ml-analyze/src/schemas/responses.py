@@ -4,6 +4,10 @@ Pydantic Response Models
 
 API response schemas for ml-analyze service endpoints.
 Ensures consistent response structure across all endpoints.
+
+Phase 10 Updates:
+- FileAnalysisResponse extended with metrics field
+- JobStatusResponse extended with metrics field
 """
 
 from datetime import datetime
@@ -12,6 +16,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.schemas.domain import ParsingMetrics
+
 
 class FileAnalysisResponse(BaseModel):
     """
@@ -19,10 +25,13 @@ class FileAnalysisResponse(BaseModel):
 
     Returns job ID for tracking analysis progress.
 
+    Phase 10: Added metrics field for parsing quality metrics.
+
     Attributes:
         job_id: Unique identifier for tracking the job
         status: Initial status (always 'pending')
         message: Human-readable status message
+        metrics: Parsing quality metrics (populated when job completes)
     """
 
     model_config = ConfigDict(
@@ -31,6 +40,7 @@ class FileAnalysisResponse(BaseModel):
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
                 "status": "pending",
                 "message": "File analysis job enqueued successfully",
+                "metrics": None,
             }
         }
     )
@@ -47,6 +57,10 @@ class FileAnalysisResponse(BaseModel):
         str,
         Field(description="Human-readable status message"),
     ]
+    metrics: Annotated[
+        ParsingMetrics | None,
+        Field(default=None, description="Parsing quality metrics (populated when complete)"),
+    ] = None
 
 
 class JobStatusResponse(BaseModel):
@@ -54,6 +68,8 @@ class JobStatusResponse(BaseModel):
     Response for GET /analyze/status/:job_id endpoint.
 
     Provides detailed job progress information.
+
+    Phase 10: Added metrics field for parsing quality metrics.
 
     Attributes:
         job_id: Job identifier
@@ -65,6 +81,7 @@ class JobStatusResponse(BaseModel):
         created_at: Job creation timestamp
         started_at: Processing start timestamp (null if pending)
         completed_at: Completion timestamp (null if not done)
+        metrics: Parsing quality metrics (populated when job completes)
     """
 
     model_config = ConfigDict(
@@ -79,6 +96,7 @@ class JobStatusResponse(BaseModel):
                 "created_at": "2024-01-15T10:30:00Z",
                 "started_at": "2024-01-15T10:30:05Z",
                 "completed_at": None,
+                "metrics": None,
             }
         }
     )
@@ -119,6 +137,10 @@ class JobStatusResponse(BaseModel):
         datetime | None,
         Field(default=None, description="Job completion timestamp"),
     ]
+    metrics: Annotated[
+        ParsingMetrics | None,
+        Field(default=None, description="Parsing quality metrics (populated when complete)"),
+    ] = None
 
 
 class HealthCheckResponse(BaseModel):

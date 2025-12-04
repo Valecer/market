@@ -58,3 +58,26 @@ class ValidationError(MLAnalyzeError):
 
     pass
 
+
+class SecurityError(MLAnalyzeError):
+    """
+    Raised when a security violation is detected.
+
+    Used for path traversal prevention, unauthorized access attempts,
+    and other security-related issues.
+    """
+
+    pass
+
+
+class FileNotFoundError(MLAnalyzeError):
+    """Raised when a requested file cannot be found."""
+
+    pass
+
+
+class FileSizeError(MLAnalyzeError):
+    """Raised when a file exceeds the maximum allowed size."""
+
+    pass
+

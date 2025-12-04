@@ -6,10 +6,10 @@ API request schemas for ml-analyze service endpoints.
 All incoming data validated via these models.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class FileAnalysisRequest(BaseModel):
@@ -18,33 +18,57 @@ class FileAnalysisRequest(BaseModel):
 
     Triggers file parsing and analysis pipeline.
 
+    Extended in Phase 10 with:
+    - file_path: Direct path to file in shared volume (preferred)
+    - file_url: HTTP URL or file:// path (deprecated, for backward compatibility)
+    - default_currency: Fallback ISO 4217 currency code
+    - composite_delimiter: Delimiter for composite name parsing
+
     Attributes:
-        file_url: URL or path to the file to analyze
+        file_path: Path to file in shared volume (e.g., /shared/uploads/file.xlsx)
+        file_url: HTTP URL or file:// path (deprecated, use file_path)
         supplier_id: ID of the supplier owning the file
         file_type: Type of file (pdf, excel, csv)
+        default_currency: Default ISO 4217 currency if not detected
+        composite_delimiter: Delimiter for composite product names
     """
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "file_url": "https://storage.example.com/files/price-list.xlsx",
+                "file_path": "/shared/uploads/supplier_123_20251203_price-list.xlsx",
                 "supplier_id": "123e4567-e89b-12d3-a456-426614174000",
                 "file_type": "excel",
+                "default_currency": "RUB",
+                "composite_delimiter": "|",
             }
         }
     )
 
-    file_url: Annotated[
-        HttpUrl | str,
+    # NEW: Direct file path (preferred for Phase 8 courier integration)
+    file_path: Annotated[
+        str | None,
         Field(
-            description="HTTP URL, file:// path, or relative path to the file",
+            default=None,
+            description="Path to file in shared volume (e.g., /shared/uploads/file.xlsx)",
+            examples=["/shared/uploads/supplier-data.xlsx"],
+        ),
+    ] = None
+
+    # Existing: URL-based (deprecated but supported for backward compatibility)
+    file_url: Annotated[
+        HttpUrl | str | None,
+        Field(
+            default=None,
+            description="HTTP URL or file:// path (deprecated, use file_path)",
             examples=[
                 "https://example.com/price-list.pdf",
                 "file:///shared/uploads/supplier-data.xlsx",
-                "/shared/uploads/supplier-data.xlsx",
             ],
+            deprecated=True,
         ),
-    ]
+    ] = None
+
     supplier_id: Annotated[
         UUID,
         Field(
@@ -57,6 +81,54 @@ class FileAnalysisRequest(BaseModel):
             description="Type of file being analyzed",
         ),
     ]
+
+    # NEW: Parsing options (Phase 10)
+    default_currency: Annotated[
+        str | None,
+        Field(
+            default=None,
+            min_length=3,
+            max_length=3,
+            pattern=r"^[A-Z]{3}$",
+            description="Default ISO 4217 currency code if not detected in document",
+            examples=["RUB", "USD", "EUR"],
+        ),
+    ] = None
+
+    composite_delimiter: Annotated[
+        str,
+        Field(
+            default="|",
+            min_length=1,
+            max_length=5,
+            description="Delimiter for parsing composite product name strings",
+            examples=["|", " | ", "->"],
+        ),
+    ] = "|"
+
+    @model_validator(mode="after")
+    def require_file_source(self) -> Self:
+        """
+        Ensure at least one file source is provided.
+
+        Either file_path or file_url must be specified.
+        file_path takes precedence if both are provided.
+        """
+        if not self.file_path and not self.file_url:
+            raise ValueError("Either file_path or file_url must be provided")
+        return self
+
+    @property
+    def effective_file_source(self) -> str:
+        """
+        Get the effective file source, preferring file_path over file_url.
+
+        Returns:
+            str: The file path or URL to use for analysis
+        """
+        if self.file_path:
+            return self.file_path
+        return str(self.file_url)
 
 
 class BatchMatchRequest(BaseModel):

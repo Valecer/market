@@ -9,6 +9,7 @@ Provides:
 - Progress updates with percentage and item counts
 - Error logging and status persistence
 - Job status retrieval for API endpoints
+- Parsing metrics storage and retrieval (Phase 10)
 
 Follows:
 - Single Responsibility: Only handles job status management
@@ -27,6 +28,7 @@ import redis.asyncio as aioredis
 from pydantic import BaseModel, Field
 
 from src.config.settings import Settings, get_settings
+from src.schemas.domain import ParsingMetrics
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -57,6 +59,8 @@ class JobData(BaseModel):
     """
     Job data model stored in Redis.
 
+    Phase 10: Added metrics field for parsing quality metrics.
+
     Attributes:
         job_id: Unique job identifier
         job_type: Type of job
@@ -71,6 +75,7 @@ class JobData(BaseModel):
         started_at: Processing start time
         completed_at: Completion time
         metadata: Additional job-specific data
+        metrics: Parsing quality metrics (populated when job completes)
     """
 
     job_id: UUID
@@ -87,6 +92,7 @@ class JobData(BaseModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    metrics: ParsingMetrics | None = Field(default=None, description="Parsing quality metrics")
 
     def to_json(self) -> str:
         """Serialize to JSON string for Redis storage."""
@@ -357,13 +363,17 @@ class JobService:
         self,
         job_id: UUID,
         items_processed: int | None = None,
+        metrics: ParsingMetrics | None = None,
     ) -> JobUpdateResult:
         """
         Mark job as completed.
 
+        Phase 10: Added metrics parameter for parsing quality metrics.
+
         Args:
             job_id: Job UUID
             items_processed: Final processed count
+            metrics: Parsing quality metrics (Phase 10)
 
         Returns:
             JobUpdateResult
@@ -379,6 +389,9 @@ class JobService:
         if items_processed is not None:
             job.items_processed = items_processed
 
+        if metrics is not None:
+            job.metrics = metrics
+
         job.status = JobStatus.COMPLETED
         job.completed_at = datetime.now(timezone.utc)
         job.progress_percentage = 100
@@ -391,12 +404,57 @@ class JobService:
             job_id=str(job_id),
             items_processed=job.items_processed,
             items_total=job.items_total,
+            has_metrics=metrics is not None,
         )
 
         return JobUpdateResult(
             success=True,
             job_id=job_id,
             message="Job completed successfully",
+        )
+
+    async def update_metrics(
+        self,
+        job_id: UUID,
+        metrics: ParsingMetrics,
+    ) -> JobUpdateResult:
+        """
+        Update job with parsing metrics.
+
+        Phase 10: New method for updating parsing quality metrics.
+
+        Args:
+            job_id: Job UUID
+            metrics: Parsing quality metrics
+
+        Returns:
+            JobUpdateResult
+        """
+        job = await self.get_job(job_id)
+        if not job:
+            return JobUpdateResult(
+                success=False,
+                job_id=job_id,
+                error="Job not found",
+            )
+
+        job.metrics = metrics
+
+        key = self._job_key(job_id)
+        await self._redis.setex(key, JOB_TTL_SECONDS, job.to_json())
+
+        logger.info(
+            "Job metrics updated",
+            job_id=str(job_id),
+            total_rows=metrics.total_rows,
+            parsed_rows=metrics.parsed_rows,
+            success_rate=f"{metrics.success_rate:.2%}",
+        )
+
+        return JobUpdateResult(
+            success=True,
+            job_id=job_id,
+            message="Metrics updated successfully",
         )
 
     async def mark_failed(

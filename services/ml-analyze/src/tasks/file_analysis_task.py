@@ -45,12 +45,15 @@ async def process_file_analysis(
     file_url: str,
     supplier_id: UUID,
     file_type: str,
+    use_ml_parsing: bool = True,
+    default_currency: str | None = None,
+    composite_delimiter: str = "|",
 ) -> dict[str, Any]:
     """
     Process a file analysis job.
 
     Full pipeline:
-    1. Parse file to extract items
+    1. Parse file to extract items (traditional or ML-based)
     2. Generate embeddings for each item
     3. Match items to existing products
     4. Update job status and return results
@@ -61,6 +64,9 @@ async def process_file_analysis(
         file_url: URL or path to file
         supplier_id: Supplier UUID
         file_type: File type (pdf, excel, csv)
+        use_ml_parsing: Enable ML-based parsing with TwoStageParsingService
+        default_currency: Default ISO 4217 currency code for ML parsing
+        composite_delimiter: Delimiter for composite names in ML parsing
 
     Returns:
         Dict with processing results
@@ -79,13 +85,15 @@ async def process_file_analysis(
     settings = get_settings()
 
     # Initialize result tracking
-    result = {
+    result: dict[str, Any] = {
         "job_id": str(job_id),
         "success": False,
         "items_parsed": 0,
         "items_embedded": 0,
         "items_matched": 0,
         "errors": [],
+        "parsing_mode": "ml" if use_ml_parsing else "traditional",
+        "metrics": None,
     }
 
     try:
@@ -102,7 +110,11 @@ async def process_file_analysis(
         # ===================================================================
         # Phase 1: Parse file
         # ===================================================================
-        logger.info("Phase 1: Parsing file", job_id=str(job_id))
+        logger.info(
+            "Phase 1: Parsing file",
+            job_id=str(job_id),
+            use_ml_parsing=use_ml_parsing,
+        )
 
         ingestion_service = IngestionService()
         ingestion_result = await ingestion_service.ingest_file(
@@ -110,6 +122,9 @@ async def process_file_analysis(
             supplier_id=supplier_id,
             job_id=job_id,
             file_type=file_type,
+            use_ml_parsing=use_ml_parsing,
+            default_currency=default_currency,
+            composite_delimiter=composite_delimiter,
         )
 
         if not ingestion_result.success:
@@ -119,7 +134,12 @@ async def process_file_analysis(
             )
 
         result["items_parsed"] = ingestion_result.processed_rows
+        result["parsing_mode"] = ingestion_result.parsing_mode
         items_total = len(ingestion_result.chunks)
+
+        # Include parsing metrics if available (ML parsing)
+        if ingestion_result.metrics:
+            result["metrics"] = ingestion_result.metrics.model_dump()
 
         # Update job with total items
         await job_service.update_progress(
@@ -133,6 +153,8 @@ async def process_file_analysis(
             job_id=str(job_id),
             rows_parsed=ingestion_result.processed_rows,
             chunks=items_total,
+            parsing_mode=ingestion_result.parsing_mode,
+            has_metrics=ingestion_result.metrics is not None,
         )
 
         # ===================================================================
@@ -398,6 +420,9 @@ async def enqueue_file_analysis(
     file_url: str,
     supplier_id: UUID,
     file_type: str,
+    use_ml_parsing: bool = True,
+    default_currency: str | None = None,
+    composite_delimiter: str = "|",
 ) -> None:
     """
     Enqueue a file analysis task.
@@ -407,6 +432,9 @@ async def enqueue_file_analysis(
         file_url: File URL or path
         supplier_id: Supplier UUID
         file_type: File type
+        use_ml_parsing: Enable ML-based parsing (default True)
+        default_currency: Default ISO 4217 currency code
+        composite_delimiter: Delimiter for composite names
     """
     redis = await get_redis_client()
 
@@ -421,6 +449,9 @@ async def enqueue_file_analysis(
             file_url=file_url,
             supplier_id=supplier_id,
             file_type=file_type,
+            use_ml_parsing=use_ml_parsing,
+            default_currency=default_currency,
+            composite_delimiter=composite_delimiter,
         )
     )
 

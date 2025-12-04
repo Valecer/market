@@ -107,6 +107,22 @@ class Settings(BaseSettings):
         default=100, ge=10, description="IVFFLAT index lists parameter"
     )
 
+    # -------------------------------------------------------------------------
+    # Phase 10: Two-Stage Parsing Configuration
+    # -------------------------------------------------------------------------
+    structure_confidence_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence for Stage A structure analysis. Falls back to full-document parsing if below threshold.",
+    )
+    structure_sample_rows: int = Field(
+        default=20,
+        ge=5,
+        le=100,
+        description="Number of sample rows to send to LLM for structure analysis in Stage A.",
+    )
+
     @property
     def redis_url(self) -> str:
         """Construct Redis URL from components."""

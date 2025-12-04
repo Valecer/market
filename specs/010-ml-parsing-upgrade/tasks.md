@@ -31,10 +31,10 @@ Project initialization and configuration updates.
 
 ### Tasks
 
-- [ ] T001 Add new environment variables to `services/ml-analyze/.env.example`
-- [ ] T002 [P] Update settings in `services/ml-analyze/src/config/settings.py` with STRUCTURE_CONFIDENCE_THRESHOLD, STRUCTURE_SAMPLE_ROWS
-- [ ] T003 [P] Add SecurityError exception class to `services/ml-analyze/src/utils/errors.py`
-- [ ] T004 Verify shared volume mount at `/shared/uploads` in `docker-compose.yml`
+- [X] T001 Add new environment variables to `services/ml-analyze/.env.example`
+- [X] T002 [P] Update settings in `services/ml-analyze/src/config/settings.py` with STRUCTURE_CONFIDENCE_THRESHOLD, STRUCTURE_SAMPLE_ROWS
+- [X] T003 [P] Add SecurityError exception class to `services/ml-analyze/src/utils/errors.py`
+- [X] T004 Verify shared volume mount at `/shared/uploads` in `docker-compose.yml`
 
 **Completion Criteria:**
 - Environment variables documented
@@ -50,11 +50,11 @@ Data models and schemas shared across all user stories. Must complete before use
 
 ### Tasks
 
-- [ ] T005 Add ColumnMapping Pydantic model to `services/ml-analyze/src/schemas/domain.py`
-- [ ] T006 [P] Add StructureAnalysis Pydantic model to `services/ml-analyze/src/schemas/domain.py`
-- [ ] T007 [P] Add ParsingMetrics Pydantic model to `services/ml-analyze/src/schemas/domain.py`
-- [ ] T008 Extend NormalizedRow with retail_price, wholesale_price, currency_code, category_path, raw_composite in `services/ml-analyze/src/schemas/domain.py`
-- [ ] T009 Add model_validator to NormalizedRow for backward compatibility sync in `services/ml-analyze/src/schemas/domain.py`
+- [X] T005 Add ColumnMapping Pydantic model to `services/ml-analyze/src/schemas/domain.py`
+- [X] T006 [P] Add StructureAnalysis Pydantic model to `services/ml-analyze/src/schemas/domain.py`
+- [X] T007 [P] Add ParsingMetrics Pydantic model to `services/ml-analyze/src/schemas/domain.py`
+- [X] T008 Extend NormalizedRow with retail_price, wholesale_price, currency_code, category_path, raw_composite in `services/ml-analyze/src/schemas/domain.py`
+- [X] T009 Add model_validator to NormalizedRow for backward compatibility sync in `services/ml-analyze/src/schemas/domain.py`
 
 **Completion Criteria:**
 - All Pydantic models pass validation tests
@@ -79,11 +79,11 @@ Data models and schemas shared across all user stories. Must complete before use
 
 ### Tasks
 
-- [ ] T010 [US1] Create secure file reader module `services/ml-analyze/src/utils/file_reader.py` with validate_and_read_file function
-- [ ] T011 [US1] Implement path traversal prevention using pathlib.resolve() in `services/ml-analyze/src/utils/file_reader.py`
-- [ ] T012 [US1] Add file size validation to `services/ml-analyze/src/utils/file_reader.py`
-- [ ] T013 [US1] Extend FileAnalysisRequest with file_path, default_currency, composite_delimiter in `services/ml-analyze/src/schemas/requests.py`
-- [ ] T014 [US1] Update analyze_file route to handle file_path parameter in `services/ml-analyze/src/api/routes/analyze.py`
+- [X] T010 [US1] Create secure file reader module `services/ml-analyze/src/utils/file_reader.py` with validate_and_read_file function
+- [X] T011 [US1] Implement path traversal prevention using pathlib.resolve() in `services/ml-analyze/src/utils/file_reader.py`
+- [X] T012 [US1] Add file size validation to `services/ml-analyze/src/utils/file_reader.py`
+- [X] T013 [US1] Extend FileAnalysisRequest with file_path, default_currency, composite_delimiter in `services/ml-analyze/src/schemas/requests.py`
+- [X] T014 [US1] Update analyze_file route to handle file_path parameter in `services/ml-analyze/src/api/routes/analyze.py`
 
 **Independent Test Criteria:**
 ```bash
@@ -115,12 +115,12 @@ curl -X POST http://localhost:8001/analyze/file \
 
 ### Tasks
 
-- [ ] T015 [US2] Add STRUCTURE_ANALYSIS_SYSTEM and STRUCTURE_ANALYSIS_USER prompts to `services/ml-analyze/src/rag/prompt_templates.py`
-- [ ] T016 [P] [US2] Add EXTRACTION_SYSTEM and EXTRACTION_USER prompts to `services/ml-analyze/src/rag/prompt_templates.py`
-- [ ] T017 [P] [US2] Add STRUCTURE_ANALYSIS_PROMPT ChatPromptTemplate to `services/ml-analyze/src/rag/prompt_templates.py`
-- [ ] T018 [US2] Add EXTRACTION_PROMPT ChatPromptTemplate to `services/ml-analyze/src/rag/prompt_templates.py`
-- [ ] T019 [US2] Create TwoStageParsingService class in `services/ml-analyze/src/services/two_stage_parser.py`
-- [ ] T020 [US2] Implement run_structure_analysis and run_extraction async methods in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T015 [US2] Add STRUCTURE_ANALYSIS_SYSTEM and STRUCTURE_ANALYSIS_USER prompts to `services/ml-analyze/src/rag/prompt_templates.py`
+- [X] T016 [P] [US2] Add EXTRACTION_SYSTEM and EXTRACTION_USER prompts to `services/ml-analyze/src/rag/prompt_templates.py`
+- [X] T017 [P] [US2] Add STRUCTURE_ANALYSIS_PROMPT ChatPromptTemplate to `services/ml-analyze/src/rag/prompt_templates.py`
+- [X] T018 [US2] Add EXTRACTION_PROMPT ChatPromptTemplate to `services/ml-analyze/src/rag/prompt_templates.py`
+- [X] T019 [US2] Create TwoStageParsingService class in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T020 [US2] Implement run_structure_analysis and run_extraction async methods in `services/ml-analyze/src/services/two_stage_parser.py`
 
 **Independent Test Criteria:**
 ```bash
@@ -150,10 +150,10 @@ pytest tests/test_two_stage_parser.py -v
 
 ### Tasks
 
-- [ ] T021 [US3] Create CompositeNameResult dataclass in `services/ml-analyze/src/utils/name_parser.py`
-- [ ] T022 [US3] Implement parse_composite_name function in `services/ml-analyze/src/utils/name_parser.py`
-- [ ] T023 [US3] Add category hierarchy parsing (split on "/" and ">") in `services/ml-analyze/src/utils/name_parser.py`
-- [ ] T024 [US3] Integrate name parser into TwoStageParsingService post-processing in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T021 [US3] Create CompositeNameResult dataclass in `services/ml-analyze/src/utils/name_parser.py`
+- [X] T022 [US3] Implement parse_composite_name function in `services/ml-analyze/src/utils/name_parser.py`
+- [X] T023 [US3] Add category hierarchy parsing (split on "/" and ">") in `services/ml-analyze/src/utils/name_parser.py`
+- [X] T024 [US3] Integrate name parser into TwoStageParsingService post-processing in `services/ml-analyze/src/services/two_stage_parser.py`
 
 **Independent Test Criteria:**
 ```bash
@@ -186,11 +186,11 @@ print('PASS')
 
 ### Tasks
 
-- [ ] T025 [US4] Create PriceResult dataclass in `services/ml-analyze/src/utils/price_parser.py`
-- [ ] T026 [US4] Define CURRENCY_MAP dictionary with symbol/text → ISO code mappings in `services/ml-analyze/src/utils/price_parser.py`
-- [ ] T027 [US4] Implement extract_price function with regex pattern in `services/ml-analyze/src/utils/price_parser.py`
-- [ ] T028 [US4] Add classify_price_column function for retail/wholesale detection in `services/ml-analyze/src/utils/price_parser.py`
-- [ ] T029 [US4] Integrate price parser into TwoStageParsingService post-processing in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T025 [US4] Create PriceResult dataclass in `services/ml-analyze/src/utils/price_parser.py`
+- [X] T026 [US4] Define CURRENCY_MAP dictionary with symbol/text → ISO code mappings in `services/ml-analyze/src/utils/price_parser.py`
+- [X] T027 [US4] Implement extract_price function with regex pattern in `services/ml-analyze/src/utils/price_parser.py`
+- [X] T028 [US4] Add classify_price_column function for retail/wholesale detection in `services/ml-analyze/src/utils/price_parser.py`
+- [X] T029 [US4] Integrate price parser into TwoStageParsingService post-processing in `services/ml-analyze/src/services/two_stage_parser.py`
 
 **Independent Test Criteria:**
 ```bash
@@ -232,10 +232,10 @@ print('PASS')
 
 ### Tasks
 
-- [ ] T030 [US5] Add metrics collection to TwoStageParsingService in `services/ml-analyze/src/services/two_stage_parser.py`
-- [ ] T031 [US5] Track token usage from LLM responses in `services/ml-analyze/src/services/two_stage_parser.py`
-- [ ] T032 [US5] Extend FileAnalysisResponse with metrics field in `services/ml-analyze/src/schemas/responses.py`
-- [ ] T033 [US5] Update job status response to include metrics in `services/ml-analyze/src/api/routes/status.py`
+- [X] T030 [US5] Add metrics collection to TwoStageParsingService in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T031 [US5] Track token usage from LLM responses in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T032 [US5] Extend FileAnalysisResponse with metrics field in `services/ml-analyze/src/schemas/responses.py`
+- [X] T033 [US5] Update job status response to include metrics in `services/ml-analyze/src/api/routes/status.py`
 
 **Independent Test Criteria:**
 ```bash
@@ -263,9 +263,9 @@ Final integration, fallback logic, and cleanup.
 
 ### Tasks
 
-- [ ] T034 Implement fallback to single-pass parsing when Stage A confidence < threshold in `services/ml-analyze/src/services/two_stage_parser.py`
-- [ ] T035 Add LLM JSON retry logic (max 3 attempts) in `services/ml-analyze/src/services/two_stage_parser.py`
-- [ ] T036 Integrate TwoStageParsingService into IngestionService in `services/ml-analyze/src/services/ingestion_service.py`
+- [X] T034 Implement fallback to single-pass parsing when Stage A confidence < threshold in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T035 Add LLM JSON retry logic (max 3 attempts) in `services/ml-analyze/src/services/two_stage_parser.py`
+- [X] T036 Integrate TwoStageParsingService into IngestionService in `services/ml-analyze/src/services/ingestion_service.py`
 
 **Completion Criteria:**
 - Full pipeline works end-to-end

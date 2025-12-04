@@ -10,6 +10,11 @@ Endpoints:
 - POST /analyze/vision - Vision analysis stub (501)
 
 All endpoints return job IDs for async status tracking.
+
+Phase 10 Updates:
+- /analyze/file now accepts file_path parameter for shared volume access
+- Path traversal prevention via secure file reader
+- New parameters: default_currency, composite_delimiter
 """
 
 from typing import Annotated
@@ -33,6 +38,12 @@ from src.services.job_service import (
     JobType,
     get_job_service,
 )
+from src.utils.errors import (
+    FileNotFoundError as MLFileNotFoundError,
+    FileSizeError,
+    SecurityError,
+)
+from src.utils.file_reader import validate_and_read_file
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -48,11 +59,15 @@ router = APIRouter()
     description=(
         "Submit a file for analysis. The file will be parsed, items extracted, "
         "embeddings generated, and products matched asynchronously. "
-        "Returns a job_id for tracking progress via GET /analyze/status/{job_id}."
+        "Returns a job_id for tracking progress via GET /analyze/status/{job_id}.\n\n"
+        "**Preferred:** Use `file_path` for files already in shared volume.\n"
+        "**Deprecated:** `file_url` still supported for backward compatibility."
     ),
     responses={
         202: {"description": "Job accepted and enqueued"},
-        400: {"description": "Invalid request"},
+        400: {"description": "Invalid request - validation error or path traversal"},
+        404: {"description": "File not found at specified path"},
+        413: {"description": "File exceeds maximum size limit"},
         500: {"description": "Internal server error"},
     },
 )
@@ -63,36 +78,106 @@ async def analyze_file(
     """
     Trigger file analysis job.
 
-    Validates the request, creates a job in Redis, and enqueues
-    the file processing task for background execution.
+    Validates the request, performs security checks on file_path (if provided),
+    creates a job in Redis, and enqueues the file processing task for
+    background execution.
+
+    Phase 10 Updates:
+    - Accepts file_path for shared volume access (preferred)
+    - Path traversal prevention for file_path parameter
+    - New parameters: default_currency, composite_delimiter
 
     Args:
-        request: File analysis request with file_url, supplier_id, file_type
+        request: File analysis request with file_path/file_url, supplier_id, file_type
         job_service: Job service dependency
 
     Returns:
         FileAnalysisResponse with job_id for status tracking
 
     Raises:
-        HTTPException: On validation or server errors
+        HTTPException: 400 on validation/security errors, 404 file not found, 413 file too large
     """
+    # Determine file source (prefer file_path over file_url)
+    file_source = request.effective_file_source
+    is_local_path = request.file_path is not None
+
     logger.info(
         "File analysis requested",
-        file_url=str(request.file_url),
+        file_source=file_source,
+        is_local_path=is_local_path,
         supplier_id=str(request.supplier_id),
         file_type=request.file_type,
+        default_currency=request.default_currency,
+        composite_delimiter=request.composite_delimiter,
     )
 
+    # Phase 10: Validate file_path if provided (security check)
+    validated_file_size: int | None = None
+    if is_local_path:
+        try:
+            validated_path, validated_file_size = validate_and_read_file(
+                file_path=request.file_path,  # type: ignore[arg-type]
+            )
+            logger.info(
+                "File path validated",
+                file_path=str(validated_path),
+                file_size_bytes=validated_file_size,
+            )
+        except SecurityError as e:
+            logger.warning(
+                "Security error: path traversal blocked",
+                file_path=request.file_path,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "SecurityError",
+                    "message": e.message,
+                },
+            ) from e
+        except MLFileNotFoundError as e:
+            logger.warning(
+                "File not found",
+                file_path=request.file_path,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "FileNotFoundError",
+                    "message": e.message,
+                },
+            ) from e
+        except FileSizeError as e:
+            logger.warning(
+                "File too large",
+                file_path=request.file_path,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail={
+                    "error": "FileSizeError",
+                    "message": e.message,
+                    "details": e.details,
+                },
+            ) from e
+
     try:
-        # Create job in Redis
+        # Create job in Redis with extended metadata
         job_id = await job_service.create_job(
             job_type=JobType.FILE_ANALYSIS,
             supplier_id=request.supplier_id,
-            file_url=str(request.file_url),
+            file_url=file_source,
             file_type=request.file_type,
             metadata={
                 "source": "api",
                 "file_type": request.file_type,
+                "is_local_path": is_local_path,
+                "default_currency": request.default_currency,
+                "composite_delimiter": request.composite_delimiter,
+                "file_size_bytes": validated_file_size,
             },
         )
 
@@ -102,13 +187,23 @@ async def analyze_file(
         try:
             from src.tasks.file_analysis_task import enqueue_file_analysis
 
+            # Phase 10: Enable ML parsing by default for file_path requests
+            use_ml_parsing = is_local_path  # Use ML parsing when file is local
+
             await enqueue_file_analysis(
                 job_id=job_id,
-                file_url=str(request.file_url),
+                file_url=file_source,
                 supplier_id=request.supplier_id,
                 file_type=request.file_type,
+                use_ml_parsing=use_ml_parsing,
+                default_currency=request.default_currency,
+                composite_delimiter=request.composite_delimiter,
             )
-            logger.info("File analysis task enqueued", job_id=str(job_id))
+            logger.info(
+                "File analysis task enqueued",
+                job_id=str(job_id),
+                use_ml_parsing=use_ml_parsing,
+            )
         except ImportError:
             # Task module not yet implemented - job created but not processed
             logger.warning(

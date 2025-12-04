@@ -10,6 +10,8 @@ Follows:
 - Single Responsibility: Only handles prompt construction
 """
 
+from typing import Any
+
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 
 # =============================================================================
@@ -63,7 +65,7 @@ MATCH_PROMPT = ChatPromptTemplate.from_messages([
 # Helper function to format candidates
 # =============================================================================
 
-def format_candidates_text(candidates: list[dict]) -> str:
+def format_candidates_text(candidates: list[dict[str, Any]]) -> str:
     """
     Format candidate products for the prompt.
 
@@ -101,7 +103,7 @@ def format_item_for_prompt(
     sku: str | None = None,
     category: str | None = None,
     brand: str | None = None,
-    characteristics: dict | None = None,
+    characteristics: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     """
     Format supplier item data for prompt variables.
@@ -170,4 +172,211 @@ Provide a brief explanation for why no match was found."""
 
 NO_MATCH_PROMPT = PromptTemplate.from_template(NO_MATCH_EXPLANATION_TEMPLATE)
 
+
+# =============================================================================
+# Phase 10: Two-Stage Parsing Prompts
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage A: Structure Analysis
+# -----------------------------------------------------------------------------
+
+STRUCTURE_ANALYSIS_SYSTEM = """You are a document structure analyzer for supplier price lists.
+Your task is to analyze tabular data and identify the document structure.
+
+IMPORTANT RULES:
+1. Identify header rows (may be single or multi-row headers)
+2. Find where product data starts and ends
+3. Map columns to their purpose (name, price, SKU, category, etc.)
+4. Detect currency symbols or indicators if present
+5. Return valid JSON only - no markdown, no explanations outside JSON
+6. All row indices are 0-based (first row = 0)
+7. Use -1 for data_end_row if data continues to the end of document
+8. Confidence should reflect certainty: 0.9+ = clear structure, 0.7-0.9 = likely correct, <0.7 = uncertain"""
+
+STRUCTURE_ANALYSIS_USER = """Analyze the structure of this document sample.
+
+## Document Sample (first {sample_rows} rows):
+{document_sample}
+
+## Instructions:
+Identify the document structure and return JSON:
+{{
+  "header_rows": [<list of header row indices, 0-based>],
+  "data_start_row": <first row with product data, 0-based>,
+  "data_end_row": <last row with product data, -1 if until end>,
+  "column_mapping": {{
+    "name_column": <column index for product name or null>,
+    "sku_column": <column index for SKU/article or null>,
+    "retail_price_column": <column index for retail price or null>,
+    "wholesale_price_column": <column index for wholesale/dealer price or null>,
+    "category_column": <column index for category or null>,
+    "unit_column": <column index for unit of measure or null>,
+    "description_column": <column index for description or null>,
+    "brand_column": <column index for brand or null>
+  }},
+  "confidence": <0.0-1.0>,
+  "detected_currency": "<ISO 4217 code or null>",
+  "has_merged_cells": <true/false>,
+  "notes": "<optional notes about structure>"
+}}
+
+Look for:
+- Headers often contain: "Наименование", "Артикул", "Цена", "Name", "SKU", "Price", "Опт", "Розница"
+- Price columns may have currency symbols (₽, $, €) or text (руб, USD)
+- Wholesale indicators: "опт", "дилер", "wholesale", "dealer"
+- Retail indicators: "розница", "retail", "RRP", "цена"
+
+Respond ONLY with valid JSON, no other text."""
+
+# -----------------------------------------------------------------------------
+# Stage B: Data Extraction
+# -----------------------------------------------------------------------------
+
+EXTRACTION_SYSTEM = """You are a data extractor for supplier price lists.
+Your task is to extract product data from rows using a known column structure.
+
+IMPORTANT RULES:
+1. Extract only the fields that have column mappings
+2. Clean and normalize values (trim whitespace, remove extra characters)
+3. Preserve numeric precision for prices
+4. Return valid JSON array only - no markdown, no explanations
+5. Each row becomes one object in the array
+6. Skip rows that appear to be totals, subtotals, or empty
+7. For composite names (with | delimiter), keep the full string - post-processing will split it"""
+
+EXTRACTION_USER = """Extract product data from these rows using the column structure.
+
+## Column Structure (from structure analysis):
+{column_mapping}
+
+## Rows to Extract (indices {start_row} to {end_row}):
+{data_rows}
+
+## Instructions:
+For each row, extract fields based on column mapping and return JSON array:
+[
+  {{
+    "row_index": <original row index>,
+    "name": "<product name>",
+    "sku": "<SKU/article or null>",
+    "retail_price": "<retail price as string or null>",
+    "wholesale_price": "<wholesale price as string or null>",
+    "category": "<category or null>",
+    "unit": "<unit of measure or null>",
+    "description": "<description or null>",
+    "brand": "<brand or null>",
+    "raw_data": {{<original cell values keyed by column index>}}
+  }},
+  ...
+]
+
+Guidelines:
+- Extract price as string to preserve formatting (post-processing will parse)
+- Include currency symbols if present in the cell
+- Skip obviously empty or total rows
+- If a cell has composite data ("|" separated), keep it as-is
+
+Respond ONLY with valid JSON array, no other text."""
+
+
+# =============================================================================
+# Phase 10: ChatPromptTemplates
+# =============================================================================
+
+STRUCTURE_ANALYSIS_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", STRUCTURE_ANALYSIS_SYSTEM),
+    ("human", STRUCTURE_ANALYSIS_USER),
+])
+
+EXTRACTION_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", EXTRACTION_SYSTEM),
+    ("human", EXTRACTION_USER),
+])
+
+
+# =============================================================================
+# Phase 10: Helper Functions for Two-Stage Parsing
+# =============================================================================
+
+def format_document_sample(rows: list[list[str]], max_rows: int = 20) -> str:
+    """
+    Format document rows for the structure analysis prompt.
+
+    Args:
+        rows: Raw table data as list of lists
+        max_rows: Maximum rows to include in sample
+
+    Returns:
+        Formatted text representation of rows
+    """
+    if not rows:
+        return "No data available."
+
+    sample = rows[:max_rows]
+    lines = []
+
+    for idx, row in enumerate(sample):
+        # Format each cell, truncate long values
+        cells = []
+        for col_idx, cell in enumerate(row):
+            cell_str = str(cell).strip() if cell else ""
+            if len(cell_str) > 50:
+                cell_str = cell_str[:47] + "..."
+            cells.append(f"[{col_idx}]{cell_str}")
+
+        lines.append(f"Row {idx}: {' | '.join(cells)}")
+
+    return "\n".join(lines)
+
+
+def format_column_mapping_for_prompt(column_mapping: dict[str, int | None]) -> str:
+    """
+    Format column mapping for the extraction prompt.
+
+    Args:
+        column_mapping: Dict of field names to column indices
+
+    Returns:
+        Formatted text representation
+    """
+    lines = []
+    for field, col_idx in column_mapping.items():
+        if col_idx is not None:
+            lines.append(f"- {field}: Column {col_idx}")
+
+    return "\n".join(lines) if lines else "No columns mapped."
+
+
+def format_data_rows_for_prompt(
+    rows: list[list[str]],
+    start_row: int,
+    end_row: int,
+) -> str:
+    """
+    Format data rows for the extraction prompt.
+
+    Args:
+        rows: Full table data as list of lists
+        start_row: Starting row index (inclusive)
+        end_row: Ending row index (inclusive, or -1 for end)
+
+    Returns:
+        Formatted text representation of data rows
+    """
+    if not rows:
+        return "No data available."
+
+    # Handle -1 as end of document
+    actual_end = len(rows) if end_row == -1 else min(end_row + 1, len(rows))
+    data_slice = rows[start_row:actual_end]
+
+    lines = []
+    for rel_idx, row in enumerate(data_slice):
+        abs_idx = start_row + rel_idx
+        # Format row with cell indices
+        cells = [f"[{i}]{str(cell).strip() if cell else ''}" for i, cell in enumerate(row)]
+        lines.append(f"Row {abs_idx}: {' | '.join(cells)}")
+
+    return "\n".join(lines)
 
