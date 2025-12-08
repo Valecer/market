@@ -86,7 +86,21 @@
     "suppliersLinked_plural": "{{count}} suppliers linked",
     "priceRange": "{{min}} - {{max}}",
     "outOfStock": "Out of Stock",
-    "inStock": "In Stock"
+    "inStock": "In Stock",
+    "selectedVariant": "Selected variant",
+    "selectVariant": "Select variant",
+    "variants": {
+      "title": "Product Options",
+      "voltage": "Voltage",
+      "capacity": "Capacity",
+      "power": "Power",
+      "storage": "Storage",
+      "ram": "RAM",
+      "color": "Color",
+      "size": "Size",
+      "model": "Model",
+      "year": "Year"
+    }
   },
 
   "cart": {
@@ -300,8 +314,11 @@
     "phase": {
       "downloading": "Downloading",
       "analyzing": "Analyzing",
+      "extracting": "Extracting",
+      "normalizing": "Normalizing",
       "matching": "Matching",
       "complete": "Complete",
+      "completed_with_errors": "Completed with Errors",
       "failed": "Failed"
     },
     "activeJobs": "Active Ingestion Jobs",
@@ -320,6 +337,7 @@
     "processingErrors": "{{count}} errors",
     "matched": "matched",
     "inReview": "in review",
+    "errors": "errors",
     "retryAttempt": "Retry {{current}} of {{max}}",
     "retryJob": "Retry job",
     "maxRetriesReached": "Maximum retries reached. Please investigate the issue."

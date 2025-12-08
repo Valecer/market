@@ -26,19 +26,22 @@ export type SyncState = 'idle' | 'syncing_master' | 'processing_suppliers'
 export type SupplierSyncStatus = 'success' | 'error' | 'pending' | 'inactive'
 
 /**
- * Job processing phases for multi-phase status display (Phase 8)
+ * Job processing phases for multi-phase status display (Phase 8 + Phase 9)
  * - downloading: File is being fetched from source
  * - analyzing: ML service is parsing the file
+ * - extracting: LLM-based product extraction (Phase 9)
+ * - normalizing: Category normalization (Phase 9)
  * - matching: ML service is matching items to products
  * - complete: Processing finished successfully
+ * - completed_with_errors: Partial success (80-99% success rate, Phase 9)
  * - failed: Processing failed (may be retryable)
  */
-export type JobPhase = 'downloading' | 'analyzing' | 'matching' | 'complete' | 'failed'
+export type JobPhase = 'downloading' | 'analyzing' | 'extracting' | 'normalizing' | 'matching' | 'complete' | 'completed_with_errors' | 'failed'
 
 /**
- * Job status from ML service
+ * Job status from ML service (Phase 9: added completed_with_errors)
  */
-export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'completed_with_errors' | 'failed'
 
 /**
  * Supported file types for ML processing
@@ -84,6 +87,7 @@ export interface AnalysisProgress {
 
 /**
  * Ingestion job with multi-phase status tracking
+ * T84/T85: Extended with retry_summary and error_formatted
  */
 export interface IngestionJob {
   job_id: string
@@ -96,9 +100,11 @@ export interface IngestionJob {
   file_type: FileType
   error: string | null
   error_details: string[]
+  error_formatted: string | null
   can_retry: boolean
   retry_count: number
   max_retries: number
+  retry_summary: string | null
   created_at: string
   started_at: string | null
   completed_at: string | null

@@ -257,8 +257,8 @@ class TestExtractionResult:
         )
         assert result.success_rate == 0.0
 
-    def test_status_success(self) -> None:
-        """Test status property returns 'success' at 100%."""
+    def test_status_complete(self) -> None:
+        """Test status property returns 'complete' at 100%."""
         result = ExtractionResult(
             products=[],
             sheet_name="Test",
@@ -266,7 +266,7 @@ class TestExtractionResult:
             successful_extractions=100,
             failed_extractions=0,
         )
-        assert result.status == "success"
+        assert result.status == "complete"
 
     def test_status_completed_with_errors(self) -> None:
         """Test status property returns 'completed_with_errors' at 80-99%."""

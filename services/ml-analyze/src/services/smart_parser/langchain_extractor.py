@@ -32,7 +32,12 @@ from src.schemas.extraction import (
     ExtractionError,
     ExtractionResult,
 )
-from src.services.smart_parser.prompts import get_extraction_prompt
+from src.services.smart_parser.prompts import get_extraction_messages
+from src.services.smart_parser.llm_callbacks import (
+    StreamingCallback,
+    VerboseCallback,
+    MetricsCallback,
+)
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -138,6 +143,16 @@ DEBUG_SEMANTIC_ETL = os.environ.get("DEBUG_SEMANTIC_ETL", "false").lower() in (
     "true", "1", "yes", "on"
 )
 
+# Streaming mode - see LLM tokens in real-time
+STREAM_SEMANTIC_ETL = os.environ.get("STREAM_SEMANTIC_ETL", "false").lower() in (
+    "true", "1", "yes", "on"
+)
+
+# Verbose mode - log full prompts and responses
+VERBOSE_SEMANTIC_ETL = os.environ.get("VERBOSE_SEMANTIC_ETL", "false").lower() in (
+    "true", "1", "yes", "on"
+)
+
 
 class LLMExtractionError(Exception):
     """Exception raised when LLM extraction fails."""
@@ -178,6 +193,8 @@ class LangChainExtractor:
         request_timeout: int = 120,
         debug_mode: Optional[bool] = None,
         enable_profiling: bool = True,
+        enable_streaming: Optional[bool] = None,
+        enable_verbose: Optional[bool] = None,
     ):
         """
         Initialize LangChainExtractor.
@@ -191,6 +208,8 @@ class LangChainExtractor:
             request_timeout: Timeout for LLM requests in seconds
             debug_mode: Enable debug logging (default from DEBUG_SEMANTIC_ETL env)
             enable_profiling: T86: Enable performance profiling (default True)
+            enable_streaming: Stream LLM output to stdout (default from STREAM_SEMANTIC_ETL env)
+            enable_verbose: Log full prompts/responses (default from VERBOSE_SEMANTIC_ETL env)
         """
         settings = Settings()
         
@@ -204,10 +223,29 @@ class LangChainExtractor:
         # T82: Debug mode for logging prompts and responses
         self.debug_mode = debug_mode if debug_mode is not None else DEBUG_SEMANTIC_ETL
         
+        # Streaming mode - see tokens in real-time
+        self.enable_streaming = enable_streaming if enable_streaming is not None else STREAM_SEMANTIC_ETL
+        
+        # Verbose mode - log full prompts and responses
+        self.enable_verbose = enable_verbose if enable_verbose is not None else VERBOSE_SEMANTIC_ETL
+        
         # T86: Performance profiling
         self.enable_profiling = enable_profiling
         self._performance_stats = ExtractionPerformanceStats()
         self._retry_count = 0  # Track retries for current chunk
+        
+        # Setup callbacks based on configuration
+        self._callbacks: list = []
+        self._streaming_callback: Optional[StreamingCallback] = None
+        self._metrics_callback = MetricsCallback()
+        self._callbacks.append(self._metrics_callback)
+        
+        if self.enable_streaming:
+            self._streaming_callback = StreamingCallback(print_to_stdout=True, collect_tokens=True)
+            self._callbacks.append(self._streaming_callback)
+        
+        if self.enable_verbose:
+            self._callbacks.append(VerboseCallback(log_prompts=True, log_responses=True))
         
         # Initialize ChatOllama
         self.llm = ChatOllama(
@@ -216,6 +254,7 @@ class LangChainExtractor:
             temperature=self.temperature,
             request_timeout=self.request_timeout,
             format="json",  # Request JSON output
+            callbacks=self._callbacks if self._callbacks else None,
         )
         
         logger.info(
@@ -227,6 +266,8 @@ class LangChainExtractor:
             chunk_overlap=self.chunk_overlap,
             debug_mode=self.debug_mode,
             profiling_enabled=self.enable_profiling,
+            streaming_enabled=self.enable_streaming,
+            verbose_enabled=self.enable_verbose,
         )
     
     def get_performance_summary(self) -> dict:
@@ -521,8 +562,11 @@ class LangChainExtractor:
             input_chars=len(markdown_table),
         )
         
-        # Build prompt
-        prompt = get_extraction_prompt(markdown_table, complex_layout)
+        # Build messages (v2 prompt architecture)
+        messages = get_extraction_messages(markdown_table, complex_layout)
+        
+        # Calculate total prompt length for metrics
+        total_prompt_length = sum(len(msg.content) for msg in messages)
         
         # T82: Debug logging for markdown chunks and prompts
         if self.debug_mode:
@@ -532,8 +576,9 @@ class LangChainExtractor:
                 start_row=start_row,
                 end_row=end_row,
                 markdown_length=len(markdown_table),
-                prompt_length=len(prompt),
+                prompt_length=total_prompt_length,
                 complex_layout=complex_layout,
+                message_count=len(messages),
             )
             # Log first 2000 chars of markdown (truncated for large chunks)
             markdown_preview = markdown_table[:2000] + "..." if len(markdown_table) > 2000 else markdown_table
@@ -542,16 +587,26 @@ class LangChainExtractor:
                 chunk_id=chunk_id,
                 markdown_preview=markdown_preview,
             )
-            logger.debug(
-                "llm_extractor.prompt_sent",
-                chunk_id=chunk_id,
-                prompt=prompt[:3000] + "..." if len(prompt) > 3000 else prompt,
-            )
+            # Log messages separately for clarity
+            for i, msg in enumerate(messages):
+                msg_preview = msg.content[:2000] + "..." if len(msg.content) > 2000 else msg.content
+                logger.debug(
+                    "llm_extractor.message_sent",
+                    chunk_id=chunk_id,
+                    message_index=i,
+                    message_type=type(msg).__name__,
+                    content_length=len(msg.content),
+                    content_preview=msg_preview,
+                )
         
         try:
-            # Call LLM
+            # Set chunk context for streaming callback
+            if self._streaming_callback:
+                self._streaming_callback.set_chunk_id(chunk_id)
+            
+            # Call LLM with messages (v2 architecture)
             llm_start = time.time()
-            response = await self.llm.ainvoke(prompt)
+            response = await self.llm.ainvoke(messages)
             llm_duration = time.time() - llm_start
             chunk_metrics.llm_request_time = llm_duration
             

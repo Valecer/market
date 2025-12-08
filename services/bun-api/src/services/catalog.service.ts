@@ -1,5 +1,5 @@
-import { productRepository, type IProductRepository } from '../db/repositories/product.repository'
-import type { CatalogQuery, CatalogResponse } from '../types/catalog.types'
+import { productRepository, type IProductRepository, ProductRepository } from '../db/repositories/product.repository'
+import type { CatalogQuery, CatalogResponse, CatalogProductDetail } from '../types/catalog.types'
 
 /**
  * Catalog Service
@@ -7,7 +7,7 @@ import type { CatalogQuery, CatalogResponse } from '../types/catalog.types'
  * Handles business logic for catalog operations
  */
 export class CatalogService {
-  constructor(private readonly productRepo: IProductRepository = productRepository) {}
+  constructor(private readonly productRepo: ProductRepository = productRepository) {}
 
   /**
    * Get paginated catalog products with filters
@@ -34,6 +34,16 @@ export class CatalogService {
       limit,
       data,
     }
+  }
+
+  /**
+   * Get a single product by ID with variants
+   * Phase 10: Product Variants
+   * @param id - Product UUID
+   * @returns Product detail with variants or null
+   */
+  async getProductById(id: string): Promise<CatalogProductDetail | null> {
+    return this.productRepo.findByIdWithVariants(id)
   }
 }
 

@@ -590,16 +590,25 @@ async def _enqueue_supplier_parse(
     # ML pipeline: download file and trigger ml-analyze
     job_id = str(uuid4())
     
-    # Extract original filename from URL or use supplier name
-    original_filename = None
-    if source_url.startswith(("http://", "https://")):
-        url_path = source_url.split("?")[0]  # Remove query params
-        original_filename = Path(url_path).name or None
-    
-    # Default filename if not extractable
-    if not original_filename:
-        ext = ".xlsx" if source_type == "google_sheets" else f".{source_type}"
-        original_filename = f"{supplier.name}_export{ext}"
+    # Determine original filename
+    # For Google Sheets, always use a proper .xlsx filename since URL paths like
+    # "/view" or "/edit" don't represent actual filenames
+    if source_type == "google_sheets":
+        original_filename = f"{supplier.name}_export.xlsx"
+    else:
+        # For other types, try to extract from URL
+        original_filename = None
+        if source_url.startswith(("http://", "https://")):
+            url_path = source_url.split("?")[0]  # Remove query params
+            extracted_name = Path(url_path).name
+            # Only use if it has a valid file extension
+            if extracted_name and "." in extracted_name:
+                original_filename = extracted_name
+        
+        # Default filename if not extractable
+        if not original_filename:
+            ext = f".{source_type}" if source_type in ("csv", "excel") else ".xlsx"
+            original_filename = f"{supplier.name}_export{ext}"
     
     # Get sheet name for Google Sheets
     sheet_name = meta.get("sheet_name") if source_type == "google_sheets" else None
@@ -687,9 +696,14 @@ async def poll_parse_triggers(
             job_id = str(uuid4())
             
             # Determine original filename
+            # For Google Sheets, always use .xlsx extension
             original_filename = source_config.get("original_filename")
-            if not original_filename:
-                ext = ".xlsx" if source_type == "google_sheets" else f".{source_type}"
+            if source_type == "google_sheets":
+                # Ensure Google Sheets always has .xlsx extension
+                if not original_filename or not original_filename.lower().endswith(".xlsx"):
+                    original_filename = f"{supplier_name}_export.xlsx"
+            elif not original_filename:
+                ext = f".{source_type}" if source_type in ("csv", "excel") else ".xlsx"
                 original_filename = f"{supplier_name}_export{ext}"
             
             # Get sheet name for Google Sheets

@@ -1,8 +1,8 @@
 import { eq, and, sql, asc, inArray, ilike } from 'drizzle-orm'
 import { db } from '../client'
-import { products, supplierItems, suppliers } from '../schema/schema'
+import { products, supplierItems, suppliers, productVariants } from '../schema/schema'
 import type { Product, NewProduct } from '../schema/types'
-import type { CatalogQuery, CatalogProduct } from '../../types/catalog.types'
+import type { CatalogQuery, CatalogProduct, CatalogProductDetail, ProductVariant } from '../../types/catalog.types'
 import type { AdminQuery, AdminProduct, SupplierItemDetail } from '../../types/admin.types'
 
 /**
@@ -577,6 +577,79 @@ export class ProductRepository implements IProductRepository {
     const orphanedIds = await this.findOrphaned()
     if (orphanedIds.length === 0) return 0
     return this.deleteByIds(orphanedIds)
+  }
+
+  /**
+   * Find a single product by ID with variants and aggregated prices
+   * Phase 10: Product Variants
+   * @param id - Product UUID
+   * @returns Product detail with variants or null if not found
+   */
+  async findByIdWithVariants(id: string): Promise<CatalogProductDetail | null> {
+    // Fetch product with aggregated prices
+    const productResult = await db
+      .select({
+        id: products.id,
+        internal_sku: products.internalSku,
+        name: products.name,
+        category_id: products.categoryId,
+        has_variants: products.hasVariants,
+        variant_schema: products.variantSchema,
+        min_price: sql<string>`COALESCE(MIN(${supplierItems.currentPrice})::text, '0.00')`,
+        max_price: sql<string>`COALESCE(MAX(${supplierItems.currentPrice})::text, '0.00')`,
+        supplier_count: sql<number>`COUNT(DISTINCT ${supplierItems.supplierId})`,
+      })
+      .from(products)
+      .leftJoin(supplierItems, eq(products.id, supplierItems.productId))
+      .where(eq(products.id, id))
+      .groupBy(products.id, products.internalSku, products.name, products.categoryId, products.hasVariants, products.variantSchema)
+      .limit(1)
+
+    if (!productResult[0]) {
+      return null
+    }
+
+    const product = productResult[0]
+
+    // Fetch variants with their prices
+    const variantRows = await db
+      .select({
+        id: productVariants.id,
+        variant_key: productVariants.variantKey,
+        variant_attributes: productVariants.variantAttributes,
+        display_order: productVariants.displayOrder,
+        min_price: sql<string>`COALESCE(MIN(${supplierItems.currentPrice})::text, '0.00')`,
+        max_price: sql<string>`COALESCE(MAX(${supplierItems.currentPrice})::text, '0.00')`,
+        supplier_count: sql<number>`COUNT(DISTINCT ${supplierItems.supplierId})`,
+      })
+      .from(productVariants)
+      .leftJoin(supplierItems, eq(productVariants.id, supplierItems.variantId))
+      .where(eq(productVariants.productId, id))
+      .groupBy(productVariants.id, productVariants.variantKey, productVariants.variantAttributes, productVariants.displayOrder)
+      .orderBy(asc(productVariants.displayOrder))
+
+    const variants: ProductVariant[] = variantRows.map((v) => ({
+      id: v.id,
+      variant_key: v.variant_key,
+      variant_attributes: (v.variant_attributes as Record<string, string | number>) || {},
+      min_price: parseFloat(v.min_price || '0').toFixed(2),
+      max_price: parseFloat(v.max_price || '0').toFixed(2),
+      supplier_count: Number(v.supplier_count) || 0,
+      display_order: v.display_order,
+    }))
+
+    return {
+      id: product.id,
+      internal_sku: product.internal_sku,
+      name: product.name,
+      category_id: product.category_id,
+      min_price: parseFloat(product.min_price || '0').toFixed(2),
+      max_price: parseFloat(product.max_price || '0').toFixed(2),
+      supplier_count: Number(product.supplier_count) || 0,
+      has_variants: product.has_variants,
+      variant_schema: (product.variant_schema as Record<string, string[]>) || undefined,
+      variants,
+    }
   }
 }
 

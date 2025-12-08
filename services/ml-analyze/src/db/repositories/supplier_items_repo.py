@@ -8,6 +8,7 @@ Provides CRUD operations for supplier items created by ml-analyze.
 Follows Repository Pattern: Abstracts database operations.
 """
 
+import hashlib
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -21,6 +22,46 @@ from src.schemas.domain import NormalizedRow
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+def generate_deterministic_sku(
+    supplier_id: UUID, 
+    name: str, 
+    price: float | None = None,
+) -> str:
+    """
+    Generate a deterministic SKU from supplier ID, product name, and price.
+    
+    Uses MD5 hash to ensure:
+    - Same product (name + price) always gets the same SKU
+    - SKU is unique per supplier
+    - SKU is stable across Python process restarts
+    - Products with same name but different prices get different SKUs
+      (aligns with DeduplicationService behavior)
+    
+    Args:
+        supplier_id: Supplier UUID
+        name: Product name
+        price: Product price (used to distinguish variants with same name)
+    
+    Returns:
+        Deterministic SKU in format: ML-{supplier_short}-{hash}
+    """
+    # Normalize name: lowercase, strip, collapse whitespace
+    normalized_name = " ".join(name.strip().lower().split())
+    
+    # Include price in hash to distinguish variants with same name but different prices
+    # Round to 2 decimal places for consistency
+    price_str = f"{price:.2f}" if price is not None else "0.00"
+    
+    # Create stable hash from supplier_id + normalized_name + price
+    hash_input = f"{supplier_id}:{normalized_name}:{price_str}".encode("utf-8")
+    content_hash = hashlib.md5(hash_input, usedforsecurity=False).hexdigest()[:12]
+    
+    # Use first 8 chars of supplier_id for readability
+    supplier_short = str(supplier_id)[:8]
+    
+    return f"ML-{supplier_short}-{content_hash}"
 
 
 class SupplierItemsRepository:
@@ -99,15 +140,20 @@ class SupplierItemsRepository:
 
         import json
 
-        # Generate SKU if not provided (required field)
-        sku = row.sku or f"ML-{supplier_id}-{hash(row.name) % 10000000:07d}"
+        # Get price for SKU generation
+        price = float(row.price) if row.price else 0.0
+
+        # Generate deterministic SKU if not provided (required field)
+        # Uses normalized name + price hash for stable UPSERT behavior across syncs
+        # Price is included to distinguish variants with same name but different prices
+        sku = row.sku or generate_deterministic_sku(supplier_id, row.name, price)
 
         result = await self._session.execute(
             query,
             {
                 "supplier_id": str(supplier_id),
                 "name": row.name,
-                "price": float(row.price) if row.price else 0.0,
+                "price": price,
                 "sku": sku,
                 "characteristics": json.dumps(characteristics),
             },
@@ -124,9 +170,17 @@ class SupplierItemsRepository:
         source_type: str = "ml_analyzed",
     ) -> list[UUID]:
         """
-        Create multiple supplier items in a batch.
+        Create or update multiple supplier items in a batch (UPSERT).
 
-        Uses PostgreSQL's multi-row INSERT for efficiency.
+        Uses PostgreSQL's INSERT...ON CONFLICT DO UPDATE for efficiency.
+        On re-sync, existing items are updated while preserving:
+        - created_at (original creation timestamp)
+        - match_status (user curation state)
+        - product_id (matched product reference)
+
+        Note: Deduplicates by SKU before insert to prevent PostgreSQL's
+        "ON CONFLICT DO UPDATE command cannot affect row a second time" error.
+        Last occurrence wins (fresher data in batch processing).
 
         Args:
             supplier_id: Reference to suppliers table
@@ -134,15 +188,19 @@ class SupplierItemsRepository:
             source_type: Source identifier (stored in characteristics._source_type)
 
         Returns:
-            List of created item UUIDs
+            List of created/updated item UUIDs
         """
         if not rows:
             return []
 
         import json
 
-        values = []
-        for idx, row in enumerate(rows):
+        # Build values with SKU-based deduplication
+        # Use dict keyed by SKU to keep last occurrence (fresher data wins)
+        values_by_sku: dict[str, dict] = {}
+        duplicates_skipped = 0
+        
+        for row in rows:
             characteristics = row.characteristics.copy() if row.characteristics else {}
             if row.category:
                 characteristics["_category"] = row.category
@@ -155,18 +213,45 @@ class SupplierItemsRepository:
             # Store source_type in characteristics since column doesn't exist
             characteristics["_source_type"] = source_type
 
-            # Generate SKU if not provided (required field)
-            sku = row.sku or f"ML-{supplier_id}-{idx:05d}-{hash(row.name) % 10000:04d}"
+            # Get price for SKU generation
+            price = float(row.price) if row.price else 0.0
 
-            values.append({
+            # Generate deterministic SKU if not provided (required field)
+            # Uses normalized name + price hash for stable UPSERT behavior across syncs
+            # Price is included to distinguish variants with same name but different prices
+            sku = row.sku or generate_deterministic_sku(supplier_id, row.name, price)
+
+            # Track if we're replacing an existing SKU
+            if sku in values_by_sku:
+                duplicates_skipped += 1
+                logger.debug(
+                    "Duplicate SKU in batch, keeping last occurrence",
+                    sku=sku,
+                    name=row.name[:50],
+                )
+            
+            values_by_sku[sku] = {
                 "supplier_id": str(supplier_id),
                 "name": row.name,
-                "price": float(row.price) if row.price else 0.0,
+                "price": price,
                 "sku": sku,
                 "characteristics": json.dumps(characteristics),
-            })
+            }
+        
+        values = list(values_by_sku.values())
+        
+        if duplicates_skipped > 0:
+            logger.info(
+                "Deduplicated batch by SKU before insert",
+                original_count=len(rows),
+                unique_count=len(values),
+                duplicates_skipped=duplicates_skipped,
+                supplier_id=str(supplier_id),
+            )
 
-        # Build multi-row INSERT
+        # Build multi-row UPSERT (INSERT...ON CONFLICT DO UPDATE)
+        # On conflict (same supplier_id + supplier_sku), update the item
+        # but preserve: created_at, match_status, product_id (user curation)
         query = text("""
             INSERT INTO supplier_items (
                 supplier_id, name, current_price, supplier_sku, characteristics,
@@ -183,13 +268,19 @@ class SupplierItemsRepository:
                 NOW(),
                 NOW()
             FROM jsonb_array_elements(CAST(:values AS jsonb)) AS v
+            ON CONFLICT (supplier_id, supplier_sku) DO UPDATE SET
+                name = EXCLUDED.name,
+                current_price = EXCLUDED.current_price,
+                characteristics = EXCLUDED.characteristics,
+                last_ingested_at = NOW(),
+                updated_at = NOW()
             RETURNING id
         """)
 
         result = await self._session.execute(query, {"values": json.dumps(values)})
         ids = [row[0] for row in result.fetchall()]
 
-        logger.info("Batch created", count=len(ids), supplier_id=str(supplier_id))
+        logger.info("Batch upserted", count=len(ids), supplier_id=str(supplier_id))
         return ids
 
     async def update_product_id(

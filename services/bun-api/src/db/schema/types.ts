@@ -7,6 +7,7 @@
 
 import type {
   products,
+  productVariants,
   supplierItems,
   suppliers,
   categories,
@@ -18,6 +19,15 @@ import type {
 // Product types
 export type Product = typeof products.$inferSelect
 export type NewProduct = typeof products.$inferInsert
+
+// Phase 10: Product Variant types
+export type ProductVariant = typeof productVariants.$inferSelect
+export type NewProductVariant = typeof productVariants.$inferInsert
+
+// Variant attributes structure
+export interface VariantAttributes {
+  [key: string]: string | number
+}
 
 // Supplier Item types
 export type SupplierItem = typeof supplierItems.$inferSelect

@@ -9,6 +9,7 @@ state back to Redis for frontend display.
 """
 
 import asyncio
+import os
 import structlog
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -30,6 +31,10 @@ from src.services.job_state import (
 )
 
 logger = structlog.get_logger(__name__)
+
+# Stale job timeout (default 30 minutes)
+# Jobs stuck in processing without progress for longer than this are marked as failed
+STALE_JOB_TIMEOUT_SECONDS = int(os.getenv("STALE_JOB_TIMEOUT_SECONDS", "1800"))
 
 # =============================================================================
 # Constants
@@ -74,6 +79,53 @@ def _calculate_backoff(retry_count: int) -> float:
 # =============================================================================
 
 
+def _is_job_stale(job: Dict[str, Any]) -> tuple[bool, str]:
+    """
+    Check if a job is stale (stuck without progress for too long).
+    
+    Args:
+        job: Job data from Redis
+    
+    Returns:
+        Tuple of (is_stale, reason)
+    """
+    started_at = job.get("started_at")
+    if not started_at:
+        return False, ""
+    
+    # Parse started_at timestamp
+    try:
+        if isinstance(started_at, str):
+            # Handle ISO format with or without timezone
+            if started_at.endswith("Z"):
+                started_at = started_at[:-1] + "+00:00"
+            start_time = datetime.fromisoformat(started_at)
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+        else:
+            return False, ""
+    except (ValueError, TypeError):
+        return False, ""
+    
+    now = datetime.now(timezone.utc)
+    elapsed_seconds = (now - start_time).total_seconds()
+    
+    # Check if job has been processing for too long without completion
+    if elapsed_seconds > STALE_JOB_TIMEOUT_SECONDS:
+        progress = job.get("progress_percentage", 0)
+        items_processed = job.get("items_processed", 0)
+        
+        # If no progress has been made, mark as stale
+        if progress == 0 and items_processed == 0:
+            return True, f"Job stuck for {int(elapsed_seconds / 60)} minutes without progress"
+        
+        # If some progress was made but not completed, still timeout after 2x the limit
+        if elapsed_seconds > STALE_JOB_TIMEOUT_SECONDS * 2:
+            return True, f"Job timed out after {int(elapsed_seconds / 60)} minutes (progress: {progress}%)"
+    
+    return False, ""
+
+
 async def _sync_ml_job_status(
     redis: ArqRedis,
     ml_client: MLClient,
@@ -100,8 +152,47 @@ async def _sync_ml_job_status(
     if not ml_job_id or not ml_job_id.strip():
         return False
 
-    if current_phase in ("complete", "failed"):
+    # Skip terminal phases (including Phase 9 completed_with_errors)
+    if current_phase in ("complete", "completed_with_errors", "failed"):
         return False
+    
+    # Check for stale jobs before fetching ML status
+    is_stale, stale_reason = _is_job_stale(job)
+    if is_stale:
+        supplier_id = job.get("supplier_id")
+        supplier_name = job.get("supplier_name", "Unknown")
+        supplier_id_uuid = UUID(supplier_id) if supplier_id else None
+        
+        log.warning(
+            "job_stale_timeout",
+            job_id=job_id,
+            ml_job_id=ml_job_id,
+            phase=current_phase,
+            reason=stale_reason,
+        )
+        
+        await update_job_phase(
+            redis=redis,
+            job_id=job_id,
+            phase="failed",
+            status="failed",
+            error=f"Job timed out: {stale_reason}",
+            error_details=[
+                stale_reason,
+                "The background processing task may have crashed.",
+                "Please retry the sync operation.",
+            ],
+        )
+        
+        # Log to parsing_logs for UI visibility
+        await log_parsing_event(
+            task_id=str(job_id),
+            supplier_id=supplier_id_uuid,
+            error_type="ERROR",
+            message=f"Job timed out for {supplier_name}: {stale_reason}. Please retry.",
+        )
+        
+        return True
 
     try:
         # Get status from ML service
@@ -133,6 +224,7 @@ async def _sync_ml_job_status(
                 job_id=job_id,
                 items_processed=ml_status.items_processed,
                 items_total=ml_status.items_total,
+                progress_percentage=ml_status.progress_percentage,
                 matches_found=0,  # Will be populated by ML service
                 review_queue_count=0,
                 error_count=len(ml_status.errors),
@@ -167,6 +259,7 @@ async def _sync_ml_job_status(
                 job_id=job_id,
                 items_processed=ml_status.items_processed,
                 items_total=ml_status.items_total,
+                progress_percentage=ml_status.progress_percentage,
                 matches_found=0,
                 review_queue_count=0,
                 error_count=len(ml_status.errors),
@@ -210,23 +303,36 @@ async def _sync_ml_job_status(
             return True
 
         elif ml_status.status in ("pending", "processing"):
-            # Phase 9: Map semantic ETL phases from ml-analyze
-            # Possible phases: analyzing, extracting, normalizing
-            ml_phase = getattr(ml_status, 'current_phase', None) or getattr(ml_status, 'phase', None)
+            # Phase 9: Use phase directly from ml-analyze response
+            # The phase field is now included in MLJobStatus model
+            ml_phase = ml_status.phase
             
-            if ml_phase in ("extracting", "normalizing"):
-                new_phase = ml_phase  # Use semantic ETL phases directly
+            if ml_phase in ("extracting", "normalizing", "analyzing"):
+                new_phase = ml_phase  # Use semantic ETL phase directly from ml-analyze
             elif ml_status.items_total > 0 and ml_status.items_processed > 0:
-                new_phase = "extracting"  # Has started processing items (semantic ETL)
+                new_phase = "extracting"  # Fallback: has started processing items
             else:
-                new_phase = "analyzing"  # Still in initial analysis
+                new_phase = "analyzing"  # Fallback: still in initial analysis
 
-            # Update progress
+            # Update progress - use items_total from ml-analyze if available,
+            # otherwise estimate from progress_percentage
+            items_total = ml_status.items_total
+            items_processed = ml_status.items_processed
+            progress_percentage = ml_status.progress_percentage
+            
+            # If ml-analyze hasn't set items_total yet but has progress,
+            # use progress_percentage to estimate for UI display
+            if items_total == 0 and progress_percentage > 0:
+                # Scale to show meaningful progress (assuming ~100 items as estimate)
+                items_total = 100
+                items_processed = progress_percentage
+            
             await update_analysis_progress(
                 redis=redis,
                 job_id=job_id,
-                items_processed=ml_status.items_processed,
-                items_total=ml_status.items_total,
+                items_processed=items_processed,
+                items_total=items_total,
+                progress_percentage=progress_percentage,
             )
 
             # Update phase if changed
@@ -242,6 +348,7 @@ async def _sync_ml_job_status(
                     job_id=job_id,
                     old_phase=current_phase,
                     new_phase=new_phase,
+                    ml_progress=ml_status.progress_percentage,
                 )
 
             return True
@@ -304,9 +411,13 @@ async def poll_ml_job_status_task(
         )
 
         # Filter to jobs with ML job IDs in active phases
+        # Phase 9: Added "extracting", "normalizing" for semantic ETL pipeline
         active_jobs = [
             job for job in jobs
-            if job.get("ml_job_id") and job.get("phase") in ("analyzing", "matching", "downloading")
+            if job.get("ml_job_id") and job.get("phase") in (
+                "analyzing", "matching", "downloading",
+                "extracting", "normalizing",  # Semantic ETL phases
+            )
         ]
 
         if not active_jobs:

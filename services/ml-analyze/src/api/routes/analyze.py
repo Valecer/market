@@ -22,6 +22,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
+from src.config.settings import get_settings
 from src.db.connection import get_session
 from src.schemas.requests import (
     BatchMatchRequest,
@@ -64,19 +65,21 @@ async def _run_smart_parser(
         job_service: Job service for updates
     """
     try:
+        # Load settings for chunk configuration
+        settings = get_settings()
+        
         async with get_session() as session:
             service = SmartParserService(
                 session=session,
                 job_service=job_service,
+                chunk_size=settings.chunk_size_rows,
+                chunk_overlap=settings.chunk_overlap_rows,
+                similarity_threshold=float(settings.fuzzy_match_threshold),
             )
-            
-            # Convert UUID to int for supplier_id (SmartParserService expects int)
-            # Use hash of UUID for stable int conversion
-            supplier_id_int = hash(str(supplier_id)) % (2**31)
             
             result = await service.parse_file(
                 file_path=file_path,
-                supplier_id=supplier_id_int,
+                supplier_id=supplier_id,
                 job_id=str(job_id),
             )
             

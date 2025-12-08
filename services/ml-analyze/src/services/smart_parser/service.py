@@ -30,7 +30,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.settings import Settings
 from src.db.repositories.parsing_logs_repo import ParsingLogsRepository
-from src.schemas.extraction import ExtractionResult
+from src.db.repositories.supplier_items_repo import SupplierItemsRepository
+from src.schemas.domain import NormalizedRow
+from src.schemas.extraction import ExtractedProduct, ExtractionResult
 from src.services.category_normalizer import CategoryNormalizer
 from src.services.deduplication_service import DeduplicationService
 from src.services.job_service import JobService
@@ -211,7 +213,7 @@ class ETLMetrics:
     """
     
     job_id: str
-    supplier_id: int
+    supplier_id: UUID | str | int  # Accept UUID, str, or int for flexibility
     file_path: str
     start_time: float = field(default_factory=time.time)
     end_time: float | None = None
@@ -375,12 +377,15 @@ class SmartParserService:
         # Initialize parsing logs repository (T039)
         self.parsing_logs_repo = ParsingLogsRepository(session)
         
+        # Initialize supplier items repository for product persistence
+        self.supplier_items_repo = SupplierItemsRepository(session)
+        
         self.settings = Settings()
     
     async def parse_file(
         self,
         file_path: str,
-        supplier_id: int,
+        supplier_id: UUID,
         job_id: str,
     ) -> ExtractionResult:
         """
@@ -460,17 +465,29 @@ class SmartParserService:
             })
             
             # T80: Log sheet selection with structured data
+            # Note: selected_sheets and skipped_sheets are already in phase_analyzing.context
             logger.info(
                 "semantic_etl.sheets_selected",
                 job_id=job_id,
                 selected_count=len(sheets),
-                selected_sheets=sheets,
-                skipped_sheets=selection_result.skipped_sheets,
                 **phase_analyzing.to_log_dict(),
             )
             
-            # Update progress
-            await self._update_job_phase(job_id, "extracting", 10)
+            # Calculate total rows across all selected sheets for progress tracking
+            all_sheets_info = self.markdown_converter.get_sheet_info(path)
+            total_sheet_rows = 0
+            for sheet_name in sheets:
+                sheet_info = next(
+                    (s for s in all_sheets_info if s["name"] == sheet_name),
+                    {"row_count": 0}
+                )
+                total_sheet_rows += max(0, sheet_info.get("row_count", 0) - 1)  # Exclude header
+            
+            # Update progress with total rows for accurate percentage display
+            await self._update_job_phase(
+                job_id, "extracting", 10,
+                total_rows=total_sheet_rows,
+            )
             
             # Phase 2: Extract products from each sheet
             phase_extracting = etl_metrics.start_phase("extracting", sheets_to_process=sheets)
@@ -480,7 +497,10 @@ class SmartParserService:
             
             for i, sheet_name in enumerate(sheets):
                 progress = 10 + int((i / len(sheets)) * 60)  # 10-70%
-                await self._update_job_phase(job_id, "extracting", progress)
+                await self._update_job_phase(
+                    job_id, "extracting", progress,
+                    successful_extractions=total_extracted,
+                )
                 
                 sheet_start_time = time.time()
                 result = await self._process_sheet(
@@ -492,6 +512,14 @@ class SmartParserService:
                 
                 total_extracted += result.successful_extractions
                 total_errors += result.failed_extractions
+                
+                # Update progress after each sheet completes with actual counts
+                sheet_progress = 10 + int(((i + 1) / len(sheets)) * 60)  # Progress after this sheet
+                await self._update_job_phase(
+                    job_id, "extracting", sheet_progress,
+                    successful_extractions=total_extracted,
+                    failed_extractions=total_errors,
+                )
                 
                 # T80: Log per-sheet extraction metrics
                 logger.info(
@@ -561,6 +589,38 @@ class SmartParserService:
             
             # Update successful extractions after dedup
             aggregated.successful_extractions = len(aggregated.products)
+            
+            # Phase 4: Persist products to database
+            await self._update_job_phase(job_id, "normalizing", 90)
+            
+            if aggregated.products:
+                try:
+                    item_ids = await self._save_products_to_database(
+                        products=aggregated.products,
+                        supplier_id=supplier_id,
+                    )
+                    logger.info(
+                        "semantic_etl.products_saved",
+                        job_id=job_id,
+                        products_saved=len(item_ids),
+                        supplier_id=supplier_id,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "semantic_etl.products_save_failed",
+                        job_id=job_id,
+                        error=str(e),
+                        exc_info=True,
+                    )
+                    # Don't fail the entire job - products were extracted successfully
+                    # Just log the error
+                    await self._log_extraction_error(
+                        supplier_id=supplier_id,
+                        job_id=job_id,
+                        error_type="database",
+                        message=f"Failed to save products to database: {e}",
+                        extraction_phase="persistence",
+                    )
             
             # Determine final status
             final_status = aggregated.status
@@ -659,7 +719,7 @@ class SmartParserService:
         self,
         file_path: Path,
         sheet_name: str,
-        supplier_id: int,
+        supplier_id: UUID,
     ) -> ExtractionResult:
         """
         Process a single sheet: convert to markdown and extract products.
@@ -707,7 +767,7 @@ class SmartParserService:
     async def _normalize_categories(
         self,
         products: list,
-        supplier_id: int,
+        supplier_id: UUID,
     ) -> None:
         """
         Normalize categories for all products.
@@ -836,6 +896,111 @@ class SmartParserService:
             extraction_errors=all_errors,
         )
     
+    def _convert_to_normalized_rows(
+        self,
+        products: list[ExtractedProduct],
+    ) -> list[NormalizedRow]:
+        """
+        Convert ExtractedProduct objects to NormalizedRow for database insertion.
+        
+        Maps semantic ETL output to the standard format expected by
+        SupplierItemsRepository.
+        
+        Price handling:
+        - price_rrc (retail) → current_price column
+        - price_opt (wholesale/cost) → characteristics._price_opt
+        
+        Args:
+            products: List of extracted products from LLM
+        
+        Returns:
+            List of NormalizedRow objects ready for database insertion
+        """
+        normalized_rows = []
+        
+        for product in products:
+            # Build category string from path
+            category = " > ".join(product.category_path) if product.category_path else None
+            
+            # Build characteristics from raw_data
+            characteristics = {}
+            if product.raw_data:
+                # Preserve category matching info
+                if "category_id" in product.raw_data:
+                    characteristics["_category_id"] = str(product.raw_data["category_id"])
+                if "category_match_results" in product.raw_data:
+                    characteristics["_category_matches"] = product.raw_data["category_match_results"]
+                # Preserve original data
+                characteristics["_original_row"] = {
+                    k: v for k, v in product.raw_data.items()
+                    if k not in ("category_id", "category_match_results")
+                }
+            
+            # Store both prices:
+            # - price_rrc (retail) goes to current_price column
+            # - price_opt (wholesale/cost) stored in characteristics for display
+            price = product.price_rrc or product.price_opt
+            
+            # Store wholesale/cost price in characteristics for UI display
+            if product.price_opt is not None:
+                characteristics["_price_opt"] = float(product.price_opt)
+            
+            # Also store retail price explicitly for clarity
+            if product.price_rrc is not None:
+                characteristics["_price_rrc"] = float(product.price_rrc)
+            
+            normalized_rows.append(
+                NormalizedRow(
+                    name=product.name,
+                    description=product.description,
+                    price=price,
+                    sku=None,  # Will be auto-generated by repository
+                    category=category,
+                    unit=None,  # Not extracted in current schema
+                    brand=None,  # Not extracted in current schema
+                    characteristics=characteristics,
+                    raw_data=product.raw_data,
+                )
+            )
+        
+        return normalized_rows
+    
+    async def _save_products_to_database(
+        self,
+        products: list[ExtractedProduct],
+        supplier_id: UUID,
+    ) -> list[UUID]:
+        """
+        Save extracted products to the supplier_items table.
+        
+        Converts ExtractedProduct objects to NormalizedRow format
+        and uses SupplierItemsRepository for batch insertion.
+        
+        Args:
+            products: List of extracted products
+            supplier_id: Supplier ID for the items
+        
+        Returns:
+            List of created supplier_item UUIDs
+        """
+        if not products:
+            return []
+        
+        # Convert to NormalizedRow format
+        normalized_rows = self._convert_to_normalized_rows(products)
+        
+        # Insert into database
+        item_ids = await self.supplier_items_repo.create_batch(
+            supplier_id=supplier_id,
+            rows=normalized_rows,
+            source_type="semantic_etl",  # Mark source for Phase 9
+        )
+        
+        # Commit the transaction
+        await self.session.commit()
+        
+        return item_ids
+    
     async def _update_job_phase(
         self,
         job_id: str,
@@ -880,7 +1045,7 @@ class SmartParserService:
 
     async def _log_extraction_error(
         self,
-        supplier_id: int,
+        supplier_id: UUID,
         job_id: str,
         error_type: str,
         message: str,
@@ -895,7 +1060,7 @@ class SmartParserService:
         Task T039: Error logging for semantic ETL pipeline.
         
         Args:
-            supplier_id: Supplier ID
+            supplier_id: Supplier UUID
             job_id: Job identifier
             error_type: Type of error (validation, parsing, llm_error, timeout)
             message: Human-readable error message
@@ -916,19 +1081,8 @@ class SmartParserService:
             if row_number is not None:
                 error_context["row_number"] = row_number
             
-            # Convert supplier_id to UUID format for repo
-            supplier_uuid = UUID(int=supplier_id) if isinstance(supplier_id, int) and supplier_id < 2**128 else None
-            if supplier_uuid is None:
-                # Use job_id as fallback reference
-                logger.warning(f"Cannot convert supplier_id {supplier_id} to UUID, using job reference")
-                error_context["supplier_id_int"] = supplier_id
-                # Create a deterministic UUID from supplier_id
-                import hashlib
-                hash_bytes = hashlib.md5(str(supplier_id).encode()).digest()
-                supplier_uuid = UUID(bytes=hash_bytes)
-            
             await self.parsing_logs_repo.log_error(
-                supplier_id=supplier_uuid,
+                supplier_id=supplier_id,
                 error_type=error_type,  # type: ignore[arg-type]
                 message=f"[{extraction_phase}] {message}",
                 severity="error",
@@ -938,7 +1092,7 @@ class SmartParserService:
             
             logger.debug(
                 f"Error logged to parsing_logs: {error_type} in {extraction_phase}",
-                extra={"job_id": job_id, "supplier_id": supplier_id}
+                extra={"job_id": job_id, "supplier_id": str(supplier_id)}
             )
             
         except Exception as e:
@@ -947,7 +1101,7 @@ class SmartParserService:
 
     async def _log_extraction_errors_batch(
         self,
-        supplier_id: int,
+        supplier_id: UUID,
         job_id: str,
         errors: list[dict[str, Any]],
     ) -> None:
@@ -955,7 +1109,7 @@ class SmartParserService:
         Log multiple extraction errors in batch.
         
         Args:
-            supplier_id: Supplier ID
+            supplier_id: Supplier UUID
             job_id: Job identifier
             errors: List of error dicts from ExtractionResult.extraction_errors
         """

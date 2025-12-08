@@ -88,7 +88,21 @@
     "suppliersLinked_many": "{{count}} поставщиков привязано",
     "priceRange": "{{min}} - {{max}}",
     "outOfStock": "Нет в наличии",
-    "inStock": "В наличии"
+    "inStock": "В наличии",
+    "selectedVariant": "Выбранный вариант",
+    "selectVariant": "Выберите вариант",
+    "variants": {
+      "title": "Характеристики",
+      "voltage": "Напряжение",
+      "capacity": "Ёмкость",
+      "power": "Мощность",
+      "storage": "Память",
+      "ram": "ОЗУ",
+      "color": "Цвет",
+      "size": "Размер",
+      "model": "Модель",
+      "year": "Год"
+    }
   },
 
   "cart": {
@@ -309,8 +323,11 @@
     "phase": {
       "downloading": "Загрузка файла",
       "analyzing": "Анализ данных",
+      "extracting": "Извлечение данных",
+      "normalizing": "Нормализация категорий",
       "matching": "Сопоставление товаров",
       "complete": "Завершено",
+      "completed_with_errors": "Завершено с ошибками",
       "failed": "Ошибка"
     },
     "phaseProgress": {
@@ -328,6 +345,7 @@
     "processingErrors": "{{count}} ошибок",
     "matched": "совпало",
     "inReview": "на проверке",
+    "errors": "ошибок",
     "retryAttempt": "Попытка {{current}} из {{max}}",
     "retryJob": "Повторить задачу",
     "maxRetriesReached": "Достигнуто максимальное количество попыток. Требуется расследование проблемы."

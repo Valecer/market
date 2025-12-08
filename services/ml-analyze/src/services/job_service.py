@@ -534,8 +534,10 @@ class JobService:
             job.duplicates_removed = duplicates_removed
         
         # Update status based on phase
+        # Note: "success" is legacy, prefer "complete" (matches JobPhase enum)
         if phase in ("complete", "success"):
             job.status = JobStatus.COMPLETED
+            job.phase = JobPhase.COMPLETE  # Ensure phase is set correctly
             job.completed_at = datetime.now(timezone.utc)
         elif phase == "completed_with_errors":
             job.status = JobStatus.COMPLETED_WITH_ERRORS

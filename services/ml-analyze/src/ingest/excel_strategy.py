@@ -64,7 +64,7 @@ class ExcelStrategy(TableNormalizer):
 
     # Column name patterns for automatic field detection (Russian + English)
     FIELD_PATTERNS = {
-        "name": ["название", "наименование", "товар", "модель", "name", "product", "item", "description"],
+        "name": ["название", "наименование", "товар", "модель", "name", "product", "item", "description", "Модель"],
         "price": ["цена", "стоимость", "price", "cost", "amount", "сток"],
         "sku": ["артикул", "код", "sku", "code", "product_id", "item_id"],
         "category": ["категория", "раздел", "group", "category", "section"],

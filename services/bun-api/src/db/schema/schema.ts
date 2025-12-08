@@ -36,6 +36,9 @@ export const products = pgTable("products", {
 	name: varchar({ length: 500 }).notNull(),
 	categoryId: uuid("category_id"),
 	status: productStatus().default('draft').notNull(),
+	// Phase 10: Product Variants
+	hasVariants: boolean("has_variants").notNull().default(false),
+	variantSchema: jsonb("variant_schema"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
@@ -43,12 +46,33 @@ export const products = pgTable("products", {
 	index("idx_products_name").using("btree", table.name.asc().nullsLast().op("varchar_pattern_ops")),
 	index("idx_products_sku").using("btree", table.internalSku.asc().nullsLast().op("text_ops")),
 	index("idx_products_status").using("btree", table.status.asc().nullsLast().op("enum_ops")),
+	index("idx_products_has_variants").using("btree", table.hasVariants.asc().nullsLast()),
 	foreignKey({
 			columns: [table.categoryId],
 			foreignColumns: [categories.id],
 			name: "products_category_id_fkey"
 		}).onDelete("set null"),
 	unique("products_internal_sku_key").on(table.internalSku),
+]);
+
+// Phase 10: Product Variants
+export const productVariants = pgTable("product_variants", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	productId: uuid("product_id").notNull(),
+	variantKey: varchar("variant_key", { length: 255 }).notNull(),
+	variantAttributes: jsonb("variant_attributes").default({}).notNull(),
+	displayOrder: integer("display_order").default(0).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_product_variants_product").using("btree", table.productId.asc().nullsLast().op("uuid_ops")),
+	index("idx_product_variants_attributes").using("gin", table.variantAttributes.asc().nullsLast().op("jsonb_ops")),
+	foreignKey({
+			columns: [table.productId],
+			foreignColumns: [products.id],
+			name: "product_variants_product_id_fkey"
+		}).onDelete("cascade"),
+	unique("uq_product_variant_key").on(table.productId, table.variantKey),
 ]);
 
 export const suppliers = pgTable("suppliers", {
@@ -69,6 +93,8 @@ export const supplierItems = pgTable("supplier_items", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	supplierId: uuid("supplier_id").notNull(),
 	productId: uuid("product_id"),
+	// Phase 10: Product Variants
+	variantId: uuid("variant_id"),
 	supplierSku: varchar("supplier_sku", { length: 255 }).notNull(),
 	name: varchar({ length: 500 }).notNull(),
 	currentPrice: numeric("current_price", { precision: 10, scale:  2 }).notNull(),
@@ -82,6 +108,7 @@ export const supplierItems = pgTable("supplier_items", {
 	index("idx_supplier_items_price").using("btree", table.currentPrice.asc().nullsLast().op("numeric_ops")),
 	index("idx_supplier_items_product").using("btree", table.productId.asc().nullsLast().op("uuid_ops")),
 	index("idx_supplier_items_supplier").using("btree", table.supplierId.asc().nullsLast().op("uuid_ops")),
+	index("idx_supplier_items_variant").using("btree", table.variantId.asc().nullsLast().op("uuid_ops")),
 	foreignKey({
 			columns: [table.supplierId],
 			foreignColumns: [suppliers.id],
@@ -91,6 +118,11 @@ export const supplierItems = pgTable("supplier_items", {
 			columns: [table.productId],
 			foreignColumns: [products.id],
 			name: "supplier_items_product_id_fkey"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.variantId],
+			foreignColumns: [productVariants.id],
+			name: "supplier_items_variant_id_fkey"
 		}).onDelete("set null"),
 	unique("unique_supplier_sku").on(table.supplierId, table.supplierSku),
 	check("check_positive_price", sql`current_price >= (0)::numeric`),

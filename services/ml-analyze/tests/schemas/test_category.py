@@ -9,6 +9,7 @@ Phase 9: Semantic ETL Pipeline Refactoring
 """
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -24,6 +25,13 @@ from src.schemas.category import (
 )
 
 
+# Test UUIDs - defined once for consistency
+TEST_UUID_1 = uuid4()
+TEST_UUID_5 = uuid4()
+TEST_UUID_10 = uuid4()
+TEST_UUID_42 = uuid4()
+
+
 class TestCategoryMatchResult:
     """Tests for CategoryMatchResult model."""
 
@@ -31,14 +39,14 @@ class TestCategoryMatchResult:
         """Test creating a valid matched result."""
         result = CategoryMatchResult(
             extracted_name="Electronics",
-            matched_id=5,
+            matched_id=TEST_UUID_5,
             matched_name="Electronics & Gadgets",
             similarity_score=92.5,
             action="matched",
             needs_review=False,
         )
         assert result.extracted_name == "Electronics"
-        assert result.matched_id == 5
+        assert result.matched_id == TEST_UUID_5
         assert result.matched_name == "Electronics & Gadgets"
         assert result.similarity_score == 92.5
         assert result.action == "matched"
@@ -51,14 +59,14 @@ class TestCategoryMatchResult:
             similarity_score=70.0,
             action="created",
             needs_review=True,
-            parent_id=5,
-            created_category_id=42,
+            parent_id=TEST_UUID_5,
+            created_category_id=TEST_UUID_42,
         )
         assert result.extracted_name == "Gaming Laptops"
         assert result.matched_id is None
         assert result.action == "created"
         assert result.needs_review is True
-        assert result.created_category_id == 42
+        assert result.created_category_id == TEST_UUID_42
 
     def test_similarity_score_bounds(self) -> None:
         """Test that similarity_score must be between 0 and 100."""
@@ -124,19 +132,19 @@ class TestCategoryMatchResult:
         """Test final_category_id property."""
         matched = CategoryMatchResult(
             extracted_name="Test",
-            matched_id=5,
+            matched_id=TEST_UUID_5,
             similarity_score=90.0,
             action="matched",
         )
-        assert matched.final_category_id == 5
+        assert matched.final_category_id == TEST_UUID_5
 
         created = CategoryMatchResult(
             extracted_name="Test",
             similarity_score=50.0,
             action="created",
-            created_category_id=42,
+            created_category_id=TEST_UUID_42,
         )
-        assert created.final_category_id == 42
+        assert created.final_category_id == TEST_UUID_42
 
         skipped = CategoryMatchResult(
             extracted_name="",
@@ -156,13 +164,13 @@ class TestCategoryHierarchyResult:
             match_results=[
                 CategoryMatchResult(
                     extracted_name="Electronics",
-                    matched_id=1,
+                    matched_id=TEST_UUID_1,
                     similarity_score=100.0,
                     action="matched",
                 ),
                 CategoryMatchResult(
                     extracted_name="Laptops",
-                    matched_id=5,
+                    matched_id=TEST_UUID_5,
                     similarity_score=95.0,
                     action="matched",
                 ),
@@ -171,14 +179,14 @@ class TestCategoryHierarchyResult:
                     similarity_score=60.0,
                     action="created",
                     needs_review=True,
-                    created_category_id=42,
+                    created_category_id=TEST_UUID_42,
                 ),
             ],
-            leaf_category_id=42,
+            leaf_category_id=TEST_UUID_42,
         )
         assert result.original_path == ["Electronics", "Laptops", "Gaming"]
         assert len(result.match_results) == 3
-        assert result.leaf_category_id == 42
+        assert result.leaf_category_id == TEST_UUID_42
 
     def test_all_matched_property(self) -> None:
         """Test all_matched property."""
@@ -282,16 +290,16 @@ class TestCategoryDTO:
         """Test creating a valid CategoryDTO."""
         now = datetime.now(timezone.utc)
         dto = CategoryDTO(
-            id=1,
+            id=TEST_UUID_1,
             name="Electronics",
             parent_id=None,
             needs_review=False,
             is_active=True,
-            supplier_id=5,
+            supplier_id=TEST_UUID_5,
             created_at=now,
             updated_at=now,
         )
-        assert dto.id == 1
+        assert dto.id == TEST_UUID_1
         assert dto.name == "Electronics"
         assert dto.parent_id is None
         assert dto.needs_review is False
@@ -304,19 +312,19 @@ class TestCategoryReviewItem:
         """Test creating a valid review item."""
         now = datetime.now(timezone.utc)
         item = CategoryReviewItem(
-            id=42,
+            id=TEST_UUID_42,
             name="Gaming Laptops",
-            parent_id=5,
+            parent_id=TEST_UUID_5,
             parent_name="Laptops",
             needs_review=True,
             is_active=True,
-            supplier_id=10,
+            supplier_id=TEST_UUID_10,
             supplier_name="Tech Supplier",
             product_count=15,
             created_at=now,
             updated_at=now,
         )
-        assert item.id == 42
+        assert item.id == TEST_UUID_42
         assert item.name == "Gaming Laptops"
         assert item.parent_name == "Laptops"
         assert item.supplier_name == "Tech Supplier"
@@ -329,29 +337,29 @@ class TestCategoryApprovalRequest:
     def test_valid_approve_request(self) -> None:
         """Test creating a valid approve request."""
         request = CategoryApprovalRequest(
-            category_id=42,
+            category_id=TEST_UUID_42,
             action="approve",
         )
-        assert request.category_id == 42
+        assert request.category_id == TEST_UUID_42
         assert request.action == "approve"
         assert request.merge_with_id is None
 
     def test_valid_merge_request(self) -> None:
         """Test creating a valid merge request."""
         request = CategoryApprovalRequest(
-            category_id=42,
+            category_id=TEST_UUID_42,
             action="merge",
-            merge_with_id=5,
+            merge_with_id=TEST_UUID_5,
         )
-        assert request.category_id == 42
+        assert request.category_id == TEST_UUID_42
         assert request.action == "merge"
-        assert request.merge_with_id == 5
+        assert request.merge_with_id == TEST_UUID_5
 
     def test_action_validation(self) -> None:
         """Test that action must be 'approve' or 'merge'."""
         with pytest.raises(ValidationError) as exc_info:
             CategoryApprovalRequest(
-                category_id=42,
+                category_id=TEST_UUID_42,
                 action="delete",
             )
         assert "action must be one of" in str(exc_info.value)
@@ -365,7 +373,7 @@ class TestCategoryApprovalResponse:
         response = CategoryApprovalResponse(
             success=True,
             message="Category approved successfully",
-            category_id=42,
+            category_id=TEST_UUID_42,
             action="approve",
             affected_products=0,
         )

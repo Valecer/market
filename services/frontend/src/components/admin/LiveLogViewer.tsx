@@ -161,27 +161,27 @@ function LogEntry({ log }: LogEntryProps) {
       }`}
     >
       {/* Timestamp */}
-      <span className="flex-shrink-0 text-xs font-mono text-slate-400 pt-0.5 w-20">
+      <span className="shrink-0 text-xs font-mono text-slate-400 pt-0.5 w-20">
         {formatLogTimestamp(log.created_at)}
       </span>
 
       {/* Level Badge */}
       <span
-        className={`flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-semibold uppercase ${levelConfig.bgColor} ${levelConfig.textColor}`}
+        className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-semibold uppercase ${levelConfig.bgColor} ${levelConfig.textColor}`}
       >
         {levelConfig.label}
       </span>
 
       {/* Supplier Badge (if available) */}
       {log.supplier_name && (
-        <span className="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 max-w-[120px] truncate">
+        <span className="shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 max-w-[120px] truncate">
           {log.supplier_name}
         </span>
       )}
 
       {/* Message */}
       <span
-        className={`flex-1 text-sm break-words ${
+        className={`flex-1 text-sm wrap-break-word ${
           isError ? 'text-red-800 font-medium' : 'text-slate-700'
         }`}
       >
@@ -205,17 +205,38 @@ export function LiveLogViewer({ logs, isLoading }: LiveLogViewerProps) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to top when new logs arrive
+  // Scroll to bottom helper
+  const scrollToBottom = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight
+    }
+  }
+
+  // Auto-scroll to bottom when new logs arrive (terminal behavior)
   useEffect(() => {
-    if (containerRef.current && logs.length > 0) {
-      containerRef.current.scrollTop = 0
+    if (logs.length > 0) {
+      scrollToBottom()
     }
   }, [logs])
+
+  // Auto-scroll to bottom when container resizes (e.g., "How it works" expands/collapses)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const resizeObserver = new ResizeObserver(() => {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(scrollToBottom)
+    })
+
+    resizeObserver.observe(container)
+    return () => resizeObserver.disconnect()
+  }, [])
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-border overflow-hidden flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-border bg-slate-50 flex items-center justify-between flex-shrink-0">
+      <div className="px-6 py-4 border-b border-border bg-slate-50 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-slate-200 rounded-lg text-slate-600">
             <TerminalIcon />
@@ -236,10 +257,10 @@ export function LiveLogViewer({ logs, isLoading }: LiveLogViewerProps) {
         </span>
       </div>
 
-      {/* Log Stream */}
+      {/* Log Stream - scrollbar hidden for cleaner UI */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-1 min-h-[200px] max-h-[400px] bg-slate-50/50"
+        className="flex-1 overflow-y-auto p-4 space-y-1 min-h-0 bg-slate-50/50 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="log"
         aria-live="polite"
         aria-label={t('ingestion.logs.ariaLabel', 'Live parsing log stream')}
@@ -261,12 +282,12 @@ export function LiveLogViewer({ logs, isLoading }: LiveLogViewerProps) {
             </p>
           </div>
         ) : (
-          logs.map((log) => <LogEntry key={log.id} log={log} />)
+          [...logs].reverse().map((log) => <LogEntry key={log.id} log={log} />)
         )}
       </div>
 
       {/* Footer with legend */}
-      <div className="px-4 py-2 border-t border-border bg-slate-50/80 flex items-center gap-4 text-xs flex-shrink-0">
+      <div className="px-4 py-2 border-t border-border bg-slate-50/80 flex items-center gap-4 text-xs shrink-0">
         <span className="text-slate-400 font-medium">
           {t('ingestion.logs.legend', 'Legend:')}
         </span>

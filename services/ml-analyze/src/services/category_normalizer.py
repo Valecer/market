@@ -10,10 +10,10 @@ Phase 9: Semantic ETL Pipeline Refactoring
 - T88: Optimized fuzzy matching for large category sets (>1000 categories)
 """
 
-import logging
 import time
 from dataclasses import dataclass, field
 from typing import Optional
+from uuid import UUID
 
 from rapidfuzz import fuzz, process
 from rapidfuzz.distance import Levenshtein
@@ -26,8 +26,9 @@ from src.schemas.category import (
     CategoryMatchResult,
     CategoryNormalizationStats,
 )
+from src.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # =============================================================================
@@ -125,7 +126,7 @@ class CategoryNormalizer:
         self.auto_refresh = auto_refresh
         
         # In-memory cache: {normalized_name: (id, name, parent_id)}
-        self._cache: dict[str, tuple[int, str, Optional[int]]] = {}
+        self._cache: dict[str, tuple[UUID, str, Optional[UUID]]] = {}
         self._cache_loaded = False
         
         # T87: Cache metrics tracking
@@ -133,7 +134,7 @@ class CategoryNormalizer:
         
         # T88: Level-wise cache for optimized matching
         # {parent_id: [(id, name, normalized_name), ...]}
-        self._level_cache: dict[Optional[int], list[tuple[int, str, str]]] = {}
+        self._level_cache: dict[Optional[UUID], list[tuple[UUID, str, str]]] = {}
         
         # Stats tracking
         self.stats = CategoryNormalizationStats()
@@ -209,7 +210,7 @@ class CategoryNormalizer:
     async def process_category_path(
         self,
         category_path: list[str],
-        supplier_id: Optional[int] = None,
+        supplier_id: Optional[UUID] = None,
     ) -> CategoryHierarchyResult:
         """
         Process a category hierarchy path (e.g., ["Electronics", "Laptops"]).
@@ -240,7 +241,7 @@ class CategoryNormalizer:
         self.stats.total_categories_processed += 1
         
         match_results: list[CategoryMatchResult] = []
-        parent_id: Optional[int] = None
+        parent_id: Optional[UUID] = None
         
         for level, category_name in enumerate(category_path):
             # Skip empty names
@@ -272,14 +273,15 @@ class CategoryNormalizer:
     async def _process_single_category(
         self,
         name: str,
-        parent_id: Optional[int],
-        supplier_id: Optional[int],
+        parent_id: Optional[UUID],
+        supplier_id: Optional[UUID],
     ) -> CategoryMatchResult:
         """
         Process a single category at one hierarchy level.
         
         T87: Checks for auto-refresh before processing.
         T88: Uses optimized matching for large candidate sets.
+        T89: Cross-level duplicate detection for root categories.
         
         Args:
             name: Category name to match/create
@@ -299,6 +301,48 @@ class CategoryNormalizer:
         
         # Normalize name for comparison
         normalized_name = Category.normalize_name(name)
+        
+        # T89: For ROOT categories, also check if similar name exists ANYWHERE in tree
+        # This prevents duplicate root categories like "Shtenli" appearing at multiple levels
+        if parent_id is None:
+            cross_level_match = self._find_cross_level_match(normalized_name)
+            if cross_level_match and cross_level_match[1] >= self.similarity_threshold:
+                matched_id, matched_name, matched_parent_id = cross_level_match[0]
+                similarity = cross_level_match[1]
+                
+                # If exact match exists at different level, reuse it to prevent duplicates
+                if similarity >= 95.0:
+                    self._cache_metrics.hits += 1
+                    self.stats.matched_count += 1
+                    
+                    logger.info(
+                        "category_normalizer.cross_level_match_reused",
+                        extracted_name=name,
+                        matched_name=matched_name,
+                        matched_id=matched_id,
+                        matched_parent_id=matched_parent_id,
+                        similarity=similarity,
+                        message="Reusing existing category to prevent duplicate root category",
+                    )
+                    
+                    return CategoryMatchResult(
+                        extracted_name=name,
+                        matched_id=matched_id,
+                        matched_name=matched_name,
+                        similarity_score=similarity,
+                        action="matched",
+                        needs_review=True,  # Flag for admin review
+                        parent_id=matched_parent_id,  # Use the existing parent
+                    )
+                else:
+                    # Log warning for potential duplicate
+                    logger.warning(
+                        "category_normalizer.potential_duplicate_root",
+                        extracted_name=name,
+                        similar_category=matched_name,
+                        similarity=similarity,
+                        message="Similar category exists at different level - may be duplicate",
+                    )
         
         # T88: Use level cache for faster lookup
         candidates = self._get_candidates_at_level_fast(parent_id)
@@ -356,8 +400,8 @@ class CategoryNormalizer:
     
     async def _get_candidates_at_level(
         self,
-        parent_id: Optional[int],
-    ) -> list[tuple[tuple[int, str], str]]:
+        parent_id: Optional[UUID],
+    ) -> list[tuple[tuple[UUID, str], str]]:
         """
         Get candidate categories at a specific hierarchy level.
         
@@ -392,8 +436,8 @@ class CategoryNormalizer:
     
     def _get_candidates_at_level_fast(
         self,
-        parent_id: Optional[int],
-    ) -> list[tuple[tuple[int, str], str]]:
+        parent_id: Optional[UUID],
+    ) -> list[tuple[tuple[UUID, str], str]]:
         """
         T88: Get candidates using pre-indexed level cache.
         
@@ -420,8 +464,8 @@ class CategoryNormalizer:
     def _fuzzy_match(
         self,
         query: str,
-        candidates: list[tuple[tuple[int, str], str]],
-    ) -> Optional[tuple[tuple[int, str], float]]:
+        candidates: list[tuple[tuple[UUID, str], str]],
+    ) -> Optional[tuple[tuple[UUID, str], float]]:
         """
         Find best fuzzy match among candidates.
         
@@ -456,8 +500,8 @@ class CategoryNormalizer:
     def _fuzzy_match_optimized(
         self,
         query: str,
-        candidates: list[tuple[tuple[int, str], str]],
-    ) -> Optional[tuple[tuple[int, str], float]]:
+        candidates: list[tuple[tuple[UUID, str], str]],
+    ) -> Optional[tuple[tuple[UUID, str], float]]:
         """
         T88: Optimized fuzzy matching for large category sets (>1000).
         
@@ -523,11 +567,57 @@ class CategoryNormalizer:
         
         return (choices[best_match], best_score)
     
+    def _find_cross_level_match(
+        self,
+        query: str,
+    ) -> Optional[tuple[tuple[UUID, str, Optional[UUID]], float]]:
+        """
+        T89: Find matching category across ALL levels (regardless of parent).
+        
+        Used to detect potential duplicate root categories that already
+        exist elsewhere in the hierarchy. This prevents brand names like
+        "Shtenli" from being created as both root and child categories.
+        
+        Args:
+            query: Normalized query string
+        
+        Returns:
+            ((id, name, parent_id), similarity_score) or None if no match
+        """
+        if not self.cache_enabled or not self._cache_loaded:
+            return None
+        
+        if not self._cache:
+            return None
+        
+        # Build choices dict from ALL categories (regardless of parent)
+        # normalized_name -> (id, name, parent_id)
+        choices: dict[str, tuple[UUID, str, Optional[UUID]]] = {}
+        
+        for norm_name, (cat_id, cat_name, cat_parent) in self._cache.items():
+            choices[norm_name] = (cat_id, cat_name, cat_parent)
+        
+        if not choices:
+            return None
+        
+        # Find best match using token_set_ratio
+        result = process.extractOne(
+            query,
+            choices.keys(),
+            scorer=fuzz.token_set_ratio,
+        )
+        
+        if result is None:
+            return None
+        
+        matched_norm, score, _ = result
+        return (choices[matched_norm], score)
+    
     async def _create_new_category(
         self,
         name: str,
-        parent_id: Optional[int],
-        supplier_id: Optional[int],
+        parent_id: Optional[UUID],
+        supplier_id: Optional[UUID],
         best_match_score: float = 0.0,
     ) -> CategoryMatchResult:
         """

@@ -287,6 +287,37 @@ class TestSheetSelectorAsync:
         
         assert result.selected_sheets == []
         assert len(result.skipped_sheets) == 3
+    
+    @pytest.mark.asyncio
+    async def test_select_sheets_default_name_fallback_russian(self):
+        """select_sheets rescues default-named sheets like 'Лист1' when they have data."""
+        selector = SheetSelector()
+        # This mimics a real Russian supplier file with default sheet name
+        sheets_info = [
+            {"name": "Лист1", "row_count": 50, "col_count": 8, "is_empty": False},
+        ]
+        
+        result = await selector.select_sheets(sheets_info)
+        
+        # Should be rescued by last-resort fallback despite "лист1" being in SKIP_SHEET_NAMES
+        assert result.selected_sheets == ["Лист1"]
+        assert result.skipped_sheets == []
+        assert "Last resort" in result.reasoning
+    
+    @pytest.mark.asyncio
+    async def test_select_sheets_default_name_fallback_english(self):
+        """select_sheets rescues default-named sheets like 'Sheet1' when they have data."""
+        selector = SheetSelector()
+        sheets_info = [
+            {"name": "Sheet1", "row_count": 100, "col_count": 5, "is_empty": False},
+        ]
+        
+        result = await selector.select_sheets(sheets_info)
+        
+        # Should be rescued by last-resort fallback
+        assert result.selected_sheets == ["Sheet1"]
+        assert result.skipped_sheets == []
+        assert "Last resort" in result.reasoning
 
 
 class TestSheetSelectorLLM:

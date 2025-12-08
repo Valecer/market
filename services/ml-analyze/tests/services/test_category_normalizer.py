@@ -9,11 +9,17 @@ Phase 9: Semantic ETL Pipeline Refactoring
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
 from src.schemas.category import CategoryMatchResult, CategoryNormalizationStats
 from src.services.category_normalizer import CategoryNormalizer
+
+
+# Test UUIDs - defined once for consistency
+TEST_UUID_1 = uuid4()
+TEST_UUID_42 = uuid4()
 
 
 @pytest.fixture
@@ -197,7 +203,7 @@ class TestCategoryMatchResult:
             similarity_score=50.0,
             action="created",
             needs_review=True,
-            created_category_id=42,
+            created_category_id=TEST_UUID_42,
         )
         
         assert result.is_new_category is True
@@ -206,7 +212,7 @@ class TestCategoryMatchResult:
         """Test is_new_category for matched action."""
         result = CategoryMatchResult(
             extracted_name="Electronics",
-            matched_id=1,
+            matched_id=TEST_UUID_1,
             matched_name="Electronics",
             similarity_score=100.0,
             action="matched",
@@ -218,7 +224,7 @@ class TestCategoryMatchResult:
         """Test is_confident_match property."""
         high_confidence = CategoryMatchResult(
             extracted_name="Electronics",
-            matched_id=1,
+            matched_id=TEST_UUID_1,
             matched_name="Electronics",
             similarity_score=95.0,
             action="matched",
@@ -226,7 +232,7 @@ class TestCategoryMatchResult:
         
         low_confidence = CategoryMatchResult(
             extracted_name="Elektronics",
-            matched_id=1,
+            matched_id=TEST_UUID_1,
             matched_name="Electronics",
             similarity_score=85.0,
             action="matched",
@@ -239,13 +245,13 @@ class TestCategoryMatchResult:
         """Test final_category_id for matched category."""
         result = CategoryMatchResult(
             extracted_name="Electronics",
-            matched_id=1,
+            matched_id=TEST_UUID_1,
             matched_name="Electronics",
             similarity_score=100.0,
             action="matched",
         )
         
-        assert result.final_category_id == 1
+        assert result.final_category_id == TEST_UUID_1
     
     def test_final_category_id_created(self) -> None:
         """Test final_category_id for created category."""
@@ -254,10 +260,10 @@ class TestCategoryMatchResult:
             similarity_score=50.0,
             action="created",
             needs_review=True,
-            created_category_id=42,
+            created_category_id=TEST_UUID_42,
         )
         
-        assert result.final_category_id == 42
+        assert result.final_category_id == TEST_UUID_42
     
     def test_final_category_id_skipped(self) -> None:
         """Test final_category_id for skipped category."""
@@ -299,4 +305,69 @@ class TestCategoryNormalizationStats:
         )
         
         assert stats.match_rate == 100.0
+
+
+class TestCrossLevelMatching:
+    """Tests for T89: Cross-level duplicate detection for root categories."""
+    
+    def test_find_cross_level_match_exact(self, mock_session: AsyncMock) -> None:
+        """Test finding exact cross-level match."""
+        from uuid import uuid4
+        
+        normalizer = CategoryNormalizer(mock_session)
+        normalizer._cache_loaded = True
+        
+        # Set up cache with category under different parent
+        cat_id = uuid4()
+        parent_id = uuid4()
+        normalizer._cache = {
+            "shtenli": (cat_id, "Shtenli", parent_id),
+            "электро транспорт": (parent_id, "Электро транспорт", None),
+        }
+        
+        # Search for "Shtenli" - should find it even though it has a parent
+        result = normalizer._find_cross_level_match("shtenli")
+        
+        assert result is not None
+        assert result[0] == (cat_id, "Shtenli", parent_id)
+        assert result[1] == 100.0  # Exact match
+    
+    def test_find_cross_level_match_fuzzy(self, mock_session: AsyncMock) -> None:
+        """Test finding fuzzy cross-level match."""
+        from uuid import uuid4
+        
+        normalizer = CategoryNormalizer(mock_session)
+        normalizer._cache_loaded = True
+        
+        cat_id = uuid4()
+        parent_id = uuid4()
+        normalizer._cache = {
+            "shtenli": (cat_id, "Shtenli", parent_id),
+        }
+        
+        # Search for "Shtenlli" (typo) - should still match
+        result = normalizer._find_cross_level_match("shtenlli")
+        
+        assert result is not None
+        assert result[0][0] == cat_id
+        assert result[1] > 85.0  # High similarity
+    
+    def test_find_cross_level_match_no_cache(self, mock_session: AsyncMock) -> None:
+        """Test cross-level match returns None when cache not loaded."""
+        normalizer = CategoryNormalizer(mock_session)
+        normalizer._cache_loaded = False
+        
+        result = normalizer._find_cross_level_match("shtenli")
+        
+        assert result is None
+    
+    def test_find_cross_level_match_empty_cache(self, mock_session: AsyncMock) -> None:
+        """Test cross-level match returns None with empty cache."""
+        normalizer = CategoryNormalizer(mock_session)
+        normalizer._cache_loaded = True
+        normalizer._cache = {}
+        
+        result = normalizer._find_cross_level_match("shtenli")
+        
+        assert result is None
 

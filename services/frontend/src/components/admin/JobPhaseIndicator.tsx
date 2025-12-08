@@ -4,7 +4,8 @@
  * Displays multi-phase progress indicator for ML ingestion jobs.
  * Shows phase-specific icons, colors, and progress information.
  *
- * Phases: Downloading → Analyzing → Matching → Complete/Failed
+ * Phase 8 (Legacy): Downloading → Analyzing → Matching → Complete/Failed
+ * Phase 9 (Semantic ETL): Downloading → Analyzing → Extracting → Normalizing → Complete/CompletedWithErrors/Failed
  *
  * Design System: Tailwind CSS v4.1
  * Accessibility: WCAG 2.1 Level AA
@@ -29,7 +30,8 @@ interface JobPhaseIndicatorProps {
 // Constants
 // =============================================================================
 
-const PHASES: JobPhase[] = ['downloading', 'analyzing', 'matching', 'complete']
+// Phase 9: Extended pipeline phases (semantic ETL replaces matching with extracting + normalizing)
+const PHASES: JobPhase[] = ['downloading', 'analyzing', 'extracting', 'normalizing', 'complete']
 
 const PHASE_CONFIG: Record<
   JobPhase,
@@ -55,6 +57,20 @@ const PHASE_CONFIG: Record<
     textColor: 'text-amber-700',
     borderColor: 'border-amber-200',
   },
+  extracting: {
+    icon: ExtractIcon,
+    color: 'bg-indigo-500',
+    bgColor: 'bg-indigo-50',
+    textColor: 'text-indigo-700',
+    borderColor: 'border-indigo-200',
+  },
+  normalizing: {
+    icon: NormalizeIcon,
+    color: 'bg-cyan-500',
+    bgColor: 'bg-cyan-50',
+    textColor: 'text-cyan-700',
+    borderColor: 'border-cyan-200',
+  },
   matching: {
     icon: MatchIcon,
     color: 'bg-violet-500',
@@ -68,6 +84,13 @@ const PHASE_CONFIG: Record<
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-700',
     borderColor: 'border-emerald-200',
+  },
+  completed_with_errors: {
+    icon: WarningCheckIcon,
+    color: 'bg-amber-500',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-700',
+    borderColor: 'border-amber-200',
   },
   failed: {
     icon: ErrorIcon,
@@ -177,6 +200,63 @@ function ErrorIcon({ className = '' }: { className?: string }) {
   )
 }
 
+function ExtractIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  )
+}
+
+function NormalizeIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+      />
+    </svg>
+  )
+}
+
+function WarningCheckIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+      />
+    </svg>
+  )
+}
+
 function SpinnerIcon({ className = '' }: { className?: string }) {
   return (
     <svg
@@ -226,7 +306,9 @@ function RetryIcon({ className = '' }: { className?: string }) {
 // =============================================================================
 
 function getPhaseIndex(phase: JobPhase): number {
-  if (phase === 'failed') return -1
+  if (phase === 'failed' || phase === 'completed_with_errors') return -1
+  // Handle legacy 'matching' phase by mapping to 'normalizing' position
+  if (phase === 'matching') return PHASES.indexOf('normalizing')
   return PHASES.indexOf(phase)
 }
 
@@ -234,10 +316,11 @@ function getProgressPercent(job: IngestionJob): number {
   if (job.phase === 'downloading' && job.download_progress) {
     return job.download_progress.percentage
   }
-  if ((job.phase === 'analyzing' || job.phase === 'matching') && job.analysis_progress) {
+  // Phase 9: extracting and normalizing use analysis_progress
+  if ((job.phase === 'analyzing' || job.phase === 'matching' || job.phase === 'extracting' || job.phase === 'normalizing') && job.analysis_progress) {
     return job.analysis_progress.percentage
   }
-  if (job.phase === 'complete') return 100
+  if (job.phase === 'complete' || job.phase === 'completed_with_errors') return 100
   return 0
 }
 
@@ -428,7 +511,7 @@ export function JobPhaseIndicator({
           </p>
         )}
 
-        {(job.phase === 'analyzing' || job.phase === 'matching') && job.analysis_progress && (
+        {(job.phase === 'analyzing' || job.phase === 'matching' || job.phase === 'extracting' || job.phase === 'normalizing') && job.analysis_progress && (
           <>
             <p>
               {t('ingestion.itemsProcessed', {
@@ -454,10 +537,10 @@ export function JobPhaseIndicator({
           </>
         )}
 
-        {job.phase === 'complete' && job.analysis_progress && (
-          <div className="flex items-center gap-4">
-            <span className="text-emerald-600">
-              ✓ {job.analysis_progress.items_processed} {t('ingestion.itemsProcessedTotal')}
+        {(job.phase === 'complete' || job.phase === 'completed_with_errors') && job.analysis_progress && (
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className={job.phase === 'completed_with_errors' ? 'text-amber-600' : 'text-emerald-600'}>
+              {job.phase === 'completed_with_errors' ? '⚠' : '✓'} {job.analysis_progress.items_processed} {t('ingestion.itemsProcessedTotal')}
             </span>
             {job.analysis_progress.matches_found > 0 && (
               <span>{job.analysis_progress.matches_found} {t('ingestion.matched')}</span>
@@ -465,6 +548,11 @@ export function JobPhaseIndicator({
             {job.analysis_progress.review_queue > 0 && (
               <span className="text-amber-600">
                 {job.analysis_progress.review_queue} {t('ingestion.inReview')}
+              </span>
+            )}
+            {job.phase === 'completed_with_errors' && job.analysis_progress.errors > 0 && (
+              <span className="text-rose-600">
+                {job.analysis_progress.errors} {t('ingestion.errors')}
               </span>
             )}
           </div>
@@ -515,5 +603,5 @@ export function JobPhaseIndicator({
 }
 
 // Also export individual icons for reuse
-export { DownloadIcon, AnalyzeIcon, MatchIcon, CheckIcon, ErrorIcon, SpinnerIcon, RetryIcon }
+export { DownloadIcon, AnalyzeIcon, MatchIcon, CheckIcon, ErrorIcon, SpinnerIcon, RetryIcon, ExtractIcon, NormalizeIcon, WarningCheckIcon }
 

@@ -103,3 +103,38 @@ export const CatalogResponseSchema = Type.Object(
 
 export type CatalogResponse = Static<typeof CatalogResponseSchema>
 
+// Phase 10: Product Variants - Single product response with variants
+export const ProductVariantSchema = Type.Object({
+  id: Type.String({ format: 'uuid', description: 'Variant UUID' }),
+  variant_key: Type.String({ description: 'Human-readable variant identifier (e.g., "48V/20A")' }),
+  variant_attributes: Type.Record(Type.String(), Type.Union([Type.String(), Type.Number()]), {
+    description: 'Variant-specific attributes (e.g., { voltage: "48V", capacity: "20A" })',
+  }),
+  min_price: Type.String({ pattern: '^\\d+\\.\\d{2}$', description: 'Lowest price for this variant' }),
+  max_price: Type.String({ pattern: '^\\d+\\.\\d{2}$', description: 'Highest price for this variant' }),
+  supplier_count: Type.Integer({ minimum: 0, description: 'Number of suppliers for this variant' }),
+  display_order: Type.Integer({ description: 'Display order for UI' }),
+})
+
+export type ProductVariant = Static<typeof ProductVariantSchema>
+
+export const CatalogProductDetailSchema = Type.Object({
+  id: Type.String({ format: 'uuid', description: 'Product UUID' }),
+  internal_sku: Type.String({ maxLength: 100, description: 'Internal SKU code' }),
+  name: Type.String({ maxLength: 500, description: 'Product name' }),
+  category_id: Type.Union([Type.String({ format: 'uuid' }), Type.Null()], {
+    description: 'Category UUID or null',
+  }),
+  min_price: Type.String({ pattern: '^\\d+\\.\\d{2}$', description: 'Lowest supplier price' }),
+  max_price: Type.String({ pattern: '^\\d+\\.\\d{2}$', description: 'Highest supplier price' }),
+  supplier_count: Type.Integer({ minimum: 0, description: 'Number of suppliers' }),
+  // Phase 10: Variants
+  has_variants: Type.Boolean({ description: 'Whether product has variants' }),
+  variant_schema: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String()), {
+    description: 'Schema of available variant attributes (e.g., { voltage: ["48V", "60V"] })',
+  })),
+  variants: Type.Array(ProductVariantSchema, { description: 'Product variants if has_variants is true' }),
+})
+
+export type CatalogProductDetail = Static<typeof CatalogProductDetailSchema>
+

@@ -84,6 +84,24 @@ Database Schema: Data Ingestion Infrastructure
 │ created_at (TIMESTAMP, NOT NULL, INDEX DESC)                 │
 └─────────────────────────────────────────────────────────────┘
 
+┌─────────────────────────────────────────────────────────────┐
+│                   PRODUCT_VARIANTS (Phase 10)               │
+├─────────────────────────────────────────────────────────────┤
+│ id (UUID, PK)                                               │
+│ product_id (UUID, FK → products.id, NOT NULL, INDEX)        │
+│   ON DELETE CASCADE                                         │
+│ variant_key (VARCHAR(255), NOT NULL)                        │
+│   e.g., "48V/20A", "256GB/Black"                           │
+│ variant_attributes (JSONB, NOT NULL, GIN INDEX)             │
+│   e.g., {"voltage": "48V", "capacity": "20A"}              │
+│ display_order (INTEGER, NOT NULL, DEFAULT 0)                │
+│ created_at (TIMESTAMP, NOT NULL)                            │
+│ updated_at (TIMESTAMP, NOT NULL)                            │
+│ UNIQUE(product_id, variant_key)                             │
+└─────────────────────────────────────────────────────────────┘
+
+Note: supplier_items.variant_id references product_variants.id
+
 Key Relationships:
 ------------------
 1. Supplier → SupplierItems (1:N, CASCADE DELETE)
@@ -103,6 +121,12 @@ Key Relationships:
 
 6. Supplier → ParsingLogs (1:N, SET NULL)
    - Deleting a supplier sets parsing_logs.supplier_id to NULL
+
+7. Product → ProductVariants (1:N, CASCADE DELETE) [Phase 10]
+   - Deleting a product deletes all its variants
+
+8. ProductVariant → SupplierItems (1:N, SET NULL) [Phase 10]
+   - Deleting a variant sets supplier_items.variant_id to NULL
 
 Key Indexes:
 ------------

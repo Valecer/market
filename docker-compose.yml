@@ -64,6 +64,8 @@ services:
       ML_POLL_INTERVAL_SECONDS: ${ML_POLL_INTERVAL_SECONDS:-5}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
       FILE_CLEANUP_TTL_HOURS: ${FILE_CLEANUP_TTL_HOURS:-24}
+      # Stale job timeout (seconds) - jobs stuck without progress for longer are marked as failed
+      STALE_JOB_TIMEOUT_SECONDS: ${STALE_JOB_TIMEOUT_SECONDS:-1800}
     volumes:
       - ./services/python-ingestion:/app
       - ./credentials:/app/credentials:ro
@@ -181,6 +183,10 @@ services:
       CHUNK_SIZE_ROWS: ${CHUNK_SIZE_ROWS:-250}
       CHUNK_OVERLAP_ROWS: ${CHUNK_OVERLAP_ROWS:-40}
       OLLAMA_TEMPERATURE: ${OLLAMA_TEMPERATURE:-0.2}
+      # LLM Debug/Streaming (set to "true" to enable)
+      DEBUG_SEMANTIC_ETL: ${DEBUG_SEMANTIC_ETL:-false}
+      STREAM_SEMANTIC_ETL: ${STREAM_SEMANTIC_ETL:-false}
+      VERBOSE_SEMANTIC_ETL: ${VERBOSE_SEMANTIC_ETL:-false}
     volumes:
       - ./uploads:/shared/uploads
     ports:

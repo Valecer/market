@@ -334,19 +334,32 @@ export class IngestionService {
       // Build analysis progress
       const itemsProcessed = parseInt(data.items_processed || '0', 10)
       const itemsTotal = parseInt(data.items_total || '0', 10)
+      const progressPercentage = parseInt(data.progress_percentage || '0', 10)
       const matchesFound = parseInt(data.matches_found || '0', 10)
       const reviewQueue = parseInt(data.review_queue_count || '0', 10)
       const errorCount = parseInt(data.error_count || '0', 10)
-      const analysisProgress = itemsTotal > 0 || itemsProcessed > 0
+      // Use progress_percentage from ml-analyze directly, fall back to calculated
+      const calculatedPercentage = itemsTotal > 0 ? Math.round((itemsProcessed / itemsTotal) * 100) : 0
+      const analysisProgress = itemsTotal > 0 || itemsProcessed > 0 || progressPercentage > 0
         ? {
             items_processed: itemsProcessed,
             items_total: itemsTotal,
             matches_found: matchesFound,
             review_queue: reviewQueue,
             errors: errorCount,
-            percentage: itemsTotal > 0 ? Math.round((itemsProcessed / itemsTotal) * 100) : 0,
+            percentage: progressPercentage > 0 ? progressPercentage : calculatedPercentage,
           }
         : null
+
+      // Build retry summary (T84/T85)
+      const retryCount = parseInt(data.retry_count || '0', 10)
+      const maxRetries = parseInt(data.max_retries || '3', 10)
+      let retrySummary: string | null = null
+      if (status === 'failed' && retryCount > 0) {
+        retrySummary = `Retried ${retryCount}/${maxRetries} times`
+      } else if (status === 'failed' && retryCount === 0) {
+        retrySummary = `${maxRetries} retries remaining`
+      }
 
       return {
         job_id: data.job_id || '',
@@ -359,9 +372,11 @@ export class IngestionService {
         file_type: fileType,
         error: data.error || null,
         error_details: errorDetails,
+        error_formatted: data.error_formatted || null,
         can_retry: data.can_retry === 'true',
-        retry_count: parseInt(data.retry_count || '0', 10),
-        max_retries: parseInt(data.max_retries || '3', 10),
+        retry_count: retryCount,
+        max_retries: maxRetries,
+        retry_summary: retrySummary,
         created_at: data.created_at || new Date().toISOString(),
         started_at: data.started_at || null,
         completed_at: data.completed_at || null,

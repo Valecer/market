@@ -21,11 +21,10 @@ from pathlib import Path
 from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from src.config.settings import Settings
-from src.services.smart_parser.prompts import get_sheet_analysis_prompt
+from src.services.smart_parser.prompts import get_sheet_analysis_messages
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +183,60 @@ class SheetSelector:
         
         # Step 2: Filter using heuristics
         candidates, skipped = self._filter_by_heuristics(sheets_info)
+        
+        # Step 2b: Fallback - if no candidates, check for non-metadata sheets with data
+        # This only applies when sheets weren't explicitly filtered as metadata
+        if not candidates and sheets_info:
+            # Get sheets that weren't skipped (not in skipped list)
+            skipped_names = {s["name"] for s in skipped}
+            remaining_sheets = [
+                s for s in sheets_info 
+                if s["name"] not in skipped_names
+                and not s.get("is_empty", False) 
+                and s.get("row_count", 0) >= self.min_rows
+            ]
+            if remaining_sheets:
+                largest_sheet = max(remaining_sheets, key=lambda s: s.get("row_count", 0))
+                logger.info(
+                    f"No candidates from heuristics, using largest sheet: '{largest_sheet['name']}' "
+                    f"({largest_sheet.get('row_count', 0)} rows)"
+                )
+                return SheetSelectionResult(
+                    selected_sheets=[largest_sheet["name"]],
+                    skipped_sheets=[s["name"] for s in sheets_info if s["name"] != largest_sheet["name"]],
+                    reasoning=f"Fallback: selected largest sheet '{largest_sheet['name']}' with {largest_sheet.get('row_count', 0)} rows",
+                    used_llm=False,
+                )
+        
+        # Step 2c: LAST RESORT - if still no candidates, check for default-named sheets
+        # This specifically handles files where the only sheet has a default name
+        # like "Sheet1"/"Лист1" but contains valid product data
+        if not candidates and sheets_info:
+            # Only rescue sheets with default/generic names, not explicit metadata names
+            default_name_patterns = ["sheet", "лист", "page", "страница", "data", "данные"]
+            
+            rescuable_sheets = [
+                s for s in sheets_info
+                if not s.get("is_empty", False)
+                and s.get("row_count", 0) >= self.min_rows
+                and any(
+                    pattern in s["name"].lower().strip()
+                    for pattern in default_name_patterns
+                )
+            ]
+            
+            if rescuable_sheets:
+                largest_sheet = max(rescuable_sheets, key=lambda s: s.get("row_count", 0))
+                logger.info(
+                    f"Last resort fallback: using '{largest_sheet['name']}' "
+                    f"({largest_sheet.get('row_count', 0)} rows) - default sheet name but contains data"
+                )
+                return SheetSelectionResult(
+                    selected_sheets=[largest_sheet["name"]],
+                    skipped_sheets=[s["name"] for s in sheets_info if s["name"] != largest_sheet["name"]],
+                    reasoning=f"Last resort: selected '{largest_sheet['name']}' ({largest_sheet.get('row_count', 0)} rows) - default sheet name but contains data",
+                    used_llm=False,
+                )
         
         # Step 3: If single candidate or no LLM, return heuristic result
         if len(candidates) <= 1 or not use_llm:
@@ -346,14 +399,8 @@ class SheetSelector:
             raise ValueError("LLM not configured for sheet selection")
         
         try:
-            # Build prompt
-            prompt = get_sheet_analysis_prompt(sheets_info)
-            
-            # Create messages
-            messages = [
-                SystemMessage(content="You are an expert at analyzing Excel file structures."),
-                HumanMessage(content=prompt),
-            ]
+            # Build messages (v2 prompt architecture)
+            messages = get_sheet_analysis_messages(sheets_info)
             
             # Try structured output first
             try:

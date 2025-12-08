@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { categories, products, suppliers, supplierItems, priceHistory, parsingLogs } from "./schema";
+import { categories, products, productVariants, suppliers, supplierItems, priceHistory, parsingLogs } from "./schema";
 
 export const categoriesRelations = relations(categories, ({one, many}) => ({
 	category: one(categories, {
@@ -19,6 +19,17 @@ export const productsRelations = relations(products, ({one, many}) => ({
 		references: [categories.id]
 	}),
 	supplierItems: many(supplierItems),
+	// Phase 10: Product Variants
+	variants: many(productVariants),
+}));
+
+// Phase 10: Product Variants
+export const productVariantsRelations = relations(productVariants, ({one, many}) => ({
+	product: one(products, {
+		fields: [productVariants.productId],
+		references: [products.id]
+	}),
+	supplierItems: many(supplierItems),
 }));
 
 export const supplierItemsRelations = relations(supplierItems, ({one, many}) => ({
@@ -29,6 +40,11 @@ export const supplierItemsRelations = relations(supplierItems, ({one, many}) => 
 	product: one(products, {
 		fields: [supplierItems.productId],
 		references: [products.id]
+	}),
+	// Phase 10: Product Variants
+	variant: one(productVariants, {
+		fields: [supplierItems.variantId],
+		references: [productVariants.id]
 	}),
 	priceHistories: many(priceHistory),
 }));

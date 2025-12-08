@@ -6,12 +6,31 @@ Pydantic models for LLM-based product extraction.
 Defines contracts for product data extracted from supplier files.
 
 Phase 9: Semantic ETL Pipeline Refactoring
+Phase 10: Product Variants - Added variant_attributes field
 """
 
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
+
+
+# Common variant attribute keys for different product categories
+VARIANT_ATTRIBUTE_KEYS = {
+    # Electric transport
+    "voltage": ["voltage", "вольт", "в", "v"],
+    "capacity": ["capacity", "ёмкость", "емкость", "ач", "ah", "а"],
+    "power": ["power", "мощность", "вт", "w"],
+    # Electronics
+    "storage": ["storage", "память", "гб", "gb", "тб", "tb"],
+    "ram": ["ram", "озу", "оперативная память"],
+    "color": ["color", "цвет", "colour"],
+    # Apparel
+    "size": ["size", "размер"],
+    # General
+    "model": ["model", "модель", "версия", "version"],
+    "year": ["year", "год"],
+}
 
 
 class ExtractedProduct(BaseModel):
@@ -27,6 +46,7 @@ class ExtractedProduct(BaseModel):
         price_opt: Wholesale/optimal price in BYN (optional)
         price_rrc: Retail/recommended price in BYN (required)
         category_path: Category hierarchy as array of strings
+        variant_attributes: Structured specs for variant grouping (Phase 10)
         raw_data: Original row data for debugging
     """
     
@@ -55,6 +75,15 @@ class ExtractedProduct(BaseModel):
         default_factory=list,
         description="Category hierarchy, e.g., ['Electronics', 'Laptops']"
     )
+    # Phase 10: Product Variants
+    variant_attributes: dict[str, Union[str, int, float]] = Field(
+        default_factory=dict,
+        description=(
+            "Structured variant attributes extracted from product name/specs. "
+            "Keys: voltage, capacity, storage, color, size, etc. "
+            "Example: {'voltage': '48V', 'capacity': '20Ah'}"
+        )
+    )
     raw_data: dict = Field(
         default_factory=dict,
         description="Original row data for debugging"
@@ -81,6 +110,28 @@ class ExtractedProduct(BaseModel):
             return v if v else None
         return None
 
+    @field_validator("variant_attributes")
+    @classmethod
+    def normalize_variant_attributes(
+        cls, v: dict[str, Union[str, int, float]]
+    ) -> dict[str, Union[str, int, float]]:
+        """
+        Normalize variant attribute keys and values.
+        
+        - Lowercase keys
+        - Strip string values
+        - Filter empty values
+        """
+        normalized = {}
+        for key, value in v.items():
+            key = key.lower().strip()
+            if isinstance(value, str):
+                value = value.strip()
+                if not value:
+                    continue
+            normalized[key] = value
+        return normalized
+
     def to_dict(self) -> dict:
         """Convert to dictionary for database insertion."""
         return {
@@ -89,6 +140,7 @@ class ExtractedProduct(BaseModel):
             "price_opt": float(self.price_opt) if self.price_opt else None,
             "price_rrc": float(self.price_rrc),
             "category_path": self.category_path,
+            "variant_attributes": self.variant_attributes,
             "raw_data": self.raw_data,
         }
     
@@ -100,6 +152,44 @@ class ExtractedProduct(BaseModel):
         Used with price tolerance (1%) for duplicate detection.
         """
         return self.name.lower().strip()
+    
+    def get_variant_key(self) -> str:
+        """
+        Generate variant key from variant_attributes.
+        
+        Combines attribute values in a consistent order for grouping.
+        Example: "48V/20Ah" or "256GB/Black"
+        
+        Returns:
+            Slash-separated variant key, or empty string if no attributes
+        """
+        if not self.variant_attributes:
+            return ""
+        # Sort by key for consistent ordering
+        values = [
+            str(self.variant_attributes[k])
+            for k in sorted(self.variant_attributes.keys())
+        ]
+        return "/".join(values)
+    
+    def get_base_product_name(self) -> str:
+        """
+        Extract base product name without variant specifications.
+        
+        Attempts to remove variant-specific text like "(48V/20A)" from the name.
+        Used for grouping products with different variants.
+        
+        Returns:
+            Normalized base product name
+        """
+        import re
+        name = self.name
+        # Remove common variant patterns from name
+        # Pattern: (48V/20A), (256GB), [Black], etc.
+        name = re.sub(r'\s*[\(\[]\s*[\d\w/]+[VvAaHhGgBb]*\s*[\)\]]', '', name)
+        # Pattern: 48V20A at end of name
+        name = re.sub(r'\s+\d+[VvАа]\s*/?\s*\d+[AaАа][Hh]?\s*$', '', name)
+        return " ".join(name.strip().split())
 
 
 class ExtractionError(BaseModel):
@@ -187,14 +277,18 @@ class ExtractionResult(BaseModel):
     @property
     def success_rate(self) -> float:
         """
-        Calculate success rate as percentage.
+        Calculate success rate as percentage of processed rows.
+        
+        Uses (successful / (successful + failed)) to ignore skipped rows
+        (empty/metadata rows) that were not extraction failures.
         
         Returns:
             Percentage of successful extractions (0.0 - 100.0)
         """
-        if self.total_rows == 0:
+        total_processed = self.successful_extractions + self.failed_extractions
+        if total_processed == 0:
             return 0.0
-        return (self.successful_extractions / self.total_rows) * 100
+        return (self.successful_extractions / total_processed) * 100
 
     @property
     def status(self) -> str:
@@ -202,13 +296,15 @@ class ExtractionResult(BaseModel):
         Determine job status based on success rate.
         
         Returns:
-            - 'success': 100% extraction rate
+            - 'complete': 100% extraction rate
             - 'completed_with_errors': 80-99% extraction rate
             - 'failed': <80% extraction rate
+        
+        Note: Returns 'complete' (not 'success') to match JobPhase enum.
         """
         rate = self.success_rate
         if rate == 100:
-            return "success"
+            return "complete"
         elif rate >= 80:
             return "completed_with_errors"
         else:

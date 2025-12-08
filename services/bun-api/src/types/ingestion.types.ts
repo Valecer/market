@@ -38,23 +38,28 @@ export const SupplierSyncStatusEnum = Type.Union([
 ])
 
 /**
- * Job processing phases for multi-phase status display (Phase 8)
+ * Job processing phases for multi-phase status display (Phase 8 + Phase 9)
+ * Phase 9 additions: extracting, normalizing, completed_with_errors
  */
 export const JobPhaseEnum = Type.Union([
   Type.Literal('downloading'),
   Type.Literal('analyzing'),
+  Type.Literal('extracting'),
+  Type.Literal('normalizing'),
   Type.Literal('matching'),
   Type.Literal('complete'),
+  Type.Literal('completed_with_errors'),
   Type.Literal('failed'),
 ])
 
 /**
- * Job status from ML service
+ * Job status from ML service (Phase 9: added completed_with_errors)
  */
 export const JobStatusEnum = Type.Union([
   Type.Literal('pending'),
   Type.Literal('processing'),
   Type.Literal('completed'),
+  Type.Literal('completed_with_errors'),
   Type.Literal('failed'),
 ])
 

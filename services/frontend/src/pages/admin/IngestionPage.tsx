@@ -35,6 +35,23 @@ const PlusIcon = () => (
   </svg>
 )
 
+const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
+  <svg 
+    className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+    fill="none" 
+    stroke="currentColor" 
+    viewBox="0 0 24 24"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+)
+
+const InfoIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -48,6 +65,9 @@ export function IngestionPage() {
 
   // Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  
+  // Collapsible "How it works" state
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false)
 
   // Fetch ingestion status with polling
   const {
@@ -123,9 +143,10 @@ export function IngestionPage() {
       {/* Master Sheet URL Configuration */}
       <MasterSheetUrlConfig />
 
-      {/* Control & Info Cards Row */}
+      {/* Main Grid: Sync Control (left) | How It Works + Logs (right) */}
+      {/* Left column determines row height; right column is constrained to match */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sync Control Card */}
+        {/* Left Column: Sync Control Card - determines the row height */}
         <SyncControlCard
           syncState={status?.sync_state || 'idle'}
           progress={status?.progress || null}
@@ -140,50 +161,79 @@ export function IngestionPage() {
           error={errorMessage}
         />
 
-        {/* Info Card */}
-        <div className="bg-white rounded-xl shadow-md border border-border p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-3">
-            {t('ingestion.howItWorks')}
-          </h3>
-          <div className="space-y-4 text-sm text-slate-600">
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
-                1
-              </span>
-              <p>{t('ingestion.step1')}</p>
+        {/* Right Column: Constrained to left column's height on desktop */}
+        {/* Mobile: auto height with min-height; Desktop: match left column */}
+        <div className="min-h-[400px] lg:h-0 lg:min-h-full flex flex-col gap-4 overflow-hidden">
+          {/* Collapsible How It Works */}
+          <div className="shrink-0 bg-white rounded-xl shadow-md border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsHowItWorksOpen(!isHowItWorksOpen)}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-inset"
+              aria-expanded={isHowItWorksOpen}
+              aria-controls="how-it-works-content"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-primary">
+                  <InfoIcon />
+                </span>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {t('ingestion.howItWorks')}
+                </h3>
+              </div>
+              <ChevronIcon isOpen={isHowItWorksOpen} />
+            </button>
+            
+            <div
+              id="how-it-works-content"
+              className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                isHowItWorksOpen 
+                  ? 'grid-rows-[1fr]' 
+                  : 'grid-rows-[0fr]'
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="px-6 pb-6 space-y-4 text-sm text-slate-600 border-t border-border pt-4">
+                  <div className="flex items-start gap-3">
+                    <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      1
+                    </span>
+                    <p>{t('ingestion.step1')}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      2
+                    </span>
+                    <p>{t('ingestion.step2')}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      3
+                    </span>
+                    <p>{t('ingestion.step3')}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
-                2
-              </span>
-              <p>{t('ingestion.step2')}</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
-                3
-              </span>
-              <p>{t('ingestion.step3')}</p>
-            </div>
+          </div>
+
+          {/* Parsing Logs - fills remaining space */}
+          <div className="flex-1 min-h-0">
+            <LiveLogViewer
+              logs={status?.recent_logs || []}
+              isLoading={isStatusLoading}
+            />
           </div>
         </div>
       </div>
 
-      {/* Supplier Table & Logs Row - Responsive 2-column layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Supplier Status Table */}
-        <SupplierStatusTable
-          suppliers={status?.suppliers || []}
-          isLoading={isStatusLoading}
-          onDeleteSupplier={handleDeleteSupplier}
-          isDeletingSupplier={isDeletePending}
-        />
-
-        {/* Live Log Viewer */}
-        <LiveLogViewer
-          logs={status?.recent_logs || []}
-          isLoading={isStatusLoading}
-        />
-      </div>
+      {/* Supplier Status Table - Full Width */}
+      <SupplierStatusTable
+        suppliers={status?.suppliers || []}
+        isLoading={isStatusLoading}
+        onDeleteSupplier={handleDeleteSupplier}
+        isDeletingSupplier={isDeletePending}
+      />
 
       {/* Add Supplier Modal */}
       <SupplierAddModal

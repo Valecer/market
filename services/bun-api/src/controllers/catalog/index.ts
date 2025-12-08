@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { catalogService } from '../../services/catalog.service'
-import { CatalogResponseSchema } from '../../types/catalog.types'
+import { CatalogResponseSchema, CatalogProductDetailSchema } from '../../types/catalog.types'
 import { createErrorResponse } from '../../types/errors'
 import { isValidUUID, parseNum } from '../../utils/error-helpers'
 
@@ -113,6 +113,49 @@ export const catalogController = (app: Elysia) =>
           summary: 'Get paginated catalog of active products',
           description:
             'Returns a paginated list of active products with optional filtering by category, price range, and search query. No authentication required.',
+        },
+      }
+    )
+    // Phase 10: Get single product with variants
+    .get(
+      '/:id',
+      async ({ params, set }) => {
+        const { id } = params
+
+        if (!isValidUUID(id)) {
+          set.status = 400
+          return createErrorResponse('VALIDATION_ERROR', 'id must be a valid UUID')
+        }
+
+        const product = await catalogService.getProductById(id)
+
+        if (!product) {
+          set.status = 404
+          return createErrorResponse('NOT_FOUND', 'Product not found')
+        }
+
+        return product
+      },
+      {
+        params: t.Object({
+          id: t.String(),
+        }),
+        response: {
+          200: CatalogProductDetailSchema,
+          400: ErrorSchemas.validation,
+          404: t.Object({
+            error: t.Object({
+              code: t.Literal('NOT_FOUND'),
+              message: t.String(),
+            }),
+          }),
+          500: ErrorSchemas.internal,
+        },
+        detail: {
+          tags: ['catalog'],
+          summary: 'Get a single product by ID with variants',
+          description:
+            'Returns detailed product information including variants and prices. No authentication required.',
         },
       }
     )

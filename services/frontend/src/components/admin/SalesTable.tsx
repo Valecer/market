@@ -66,13 +66,43 @@ interface SalesTableProps {
 // =============================================================================
 
 /**
- * Get the lowest price from supplier items
+ * Get the lowest retail price from supplier items (selling price)
  */
 function getLowestPrice(product: AdminProduct): number {
   if (!product.supplier_items || product.supplier_items.length === 0) {
     return 0
   }
   const prices = product.supplier_items.map(item => parseFloat(item.current_price))
+  return Math.min(...prices)
+}
+
+/**
+ * Get the lowest cost/wholesale price from supplier items
+ * Reads from characteristics._price_opt (wholesale price stored by ml-analyze)
+ * Falls back to current_price if not available
+ */
+function getLowestCostPrice(product: AdminProduct): number {
+  if (!product.supplier_items || product.supplier_items.length === 0) {
+    return 0
+  }
+  
+  const prices = product.supplier_items.map(item => {
+    // Try to get wholesale price from characteristics
+    const characteristics = item.characteristics as Record<string, unknown> | undefined
+    const priceOpt = characteristics?._price_opt
+    
+    if (typeof priceOpt === 'number') {
+      return priceOpt
+    }
+    if (typeof priceOpt === 'string') {
+      const parsed = parseFloat(priceOpt)
+      if (!isNaN(parsed)) return parsed
+    }
+    
+    // Fall back to retail price if no wholesale price
+    return parseFloat(item.current_price)
+  })
+  
   return Math.min(...prices)
 }
 
@@ -194,9 +224,9 @@ export function SalesTable({
       {
         id: 'cost_price',
         header: t('admin.sales.costPrice'),
-        accessorFn: (row) => getLowestPrice(row),
+        accessorFn: (row) => getLowestCostPrice(row),
         cell: ({ row }) => {
-          const price = getLowestPrice(row.original)
+          const price = getLowestCostPrice(row.original)
           return (
             <span className="text-slate-600">
               {price > 0 ? formatCurrency(price) : '—'}

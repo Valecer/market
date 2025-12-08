@@ -10,6 +10,7 @@ Phase 9: Semantic ETL Pipeline Refactoring
 
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -35,7 +36,7 @@ class CategoryMatchResult(BaseModel):
         ...,
         description="Original category name from LLM extraction"
     )
-    matched_id: Optional[int] = Field(
+    matched_id: Optional[UUID] = Field(
         None,
         description="ID of matched existing category (if found)"
     )
@@ -57,11 +58,11 @@ class CategoryMatchResult(BaseModel):
         default=False,
         description="Flag indicating if category needs admin review"
     )
-    parent_id: Optional[int] = Field(
+    parent_id: Optional[UUID] = Field(
         None,
         description="Parent category ID in hierarchy"
     )
-    created_category_id: Optional[int] = Field(
+    created_category_id: Optional[UUID] = Field(
         None,
         description="ID of newly created category (if action='created')"
     )
@@ -86,7 +87,7 @@ class CategoryMatchResult(BaseModel):
         return self.similarity_score > 90.0
 
     @property
-    def final_category_id(self) -> Optional[int]:
+    def final_category_id(self) -> Optional[UUID]:
         """Get the final category ID (matched or created)."""
         if self.action == "matched":
             return self.matched_id
@@ -111,7 +112,7 @@ class CategoryHierarchyResult(BaseModel):
         default_factory=list,
         description="Match result for each level of hierarchy"
     )
-    leaf_category_id: Optional[int] = Field(
+    leaf_category_id: Optional[UUID] = Field(
         None,
         description="ID of the leaf (most specific) category"
     )
@@ -140,12 +141,12 @@ class CategoryDTO(BaseModel):
     and internal transfers.
     """
     
-    id: int = Field(..., description="Category ID")
+    id: UUID = Field(..., description="Category ID")
     name: str = Field(..., description="Category name")
-    parent_id: Optional[int] = Field(None, description="Parent category ID")
+    parent_id: Optional[UUID] = Field(None, description="Parent category ID")
     needs_review: bool = Field(default=False, description="Admin review flag")
     is_active: bool = Field(default=True, description="Active status")
-    supplier_id: Optional[int] = Field(
+    supplier_id: Optional[UUID] = Field(
         None,
         description="Supplier that introduced this category"
     )
@@ -161,16 +162,16 @@ class CategoryReviewItem(BaseModel):
     supplier name, and product count for review UI.
     """
     
-    id: int = Field(..., description="Category ID")
+    id: UUID = Field(..., description="Category ID")
     name: str = Field(..., description="Category name")
-    parent_id: Optional[int] = Field(None, description="Parent category ID")
+    parent_id: Optional[UUID] = Field(None, description="Parent category ID")
     parent_name: Optional[str] = Field(
         None,
         description="Parent category name (joined)"
     )
     needs_review: bool = Field(..., description="Admin review flag")
     is_active: bool = Field(..., description="Active status")
-    supplier_id: Optional[int] = Field(None, description="Original supplier ID")
+    supplier_id: Optional[UUID] = Field(None, description="Original supplier ID")
     supplier_name: Optional[str] = Field(
         None,
         description="Supplier name (joined)"
@@ -191,12 +192,12 @@ class CategoryApprovalRequest(BaseModel):
     Used by admin to resolve categories with needs_review=true.
     """
     
-    category_id: int = Field(..., description="Category ID to approve/merge")
+    category_id: UUID = Field(..., description="Category ID to approve/merge")
     action: str = Field(
         ...,
         description="Action: 'approve' (keep as-is) or 'merge' (combine with existing)"
     )
-    merge_with_id: Optional[int] = Field(
+    merge_with_id: Optional[UUID] = Field(
         None,
         description="Target category ID for merge (required if action='merge')"
     )
@@ -218,7 +219,7 @@ class CategoryApprovalResponse(BaseModel):
     
     success: bool = Field(..., description="Operation success status")
     message: str = Field(..., description="Human-readable result message")
-    category_id: int = Field(..., description="Affected category ID")
+    category_id: UUID = Field(..., description="Affected category ID")
     action: str = Field(..., description="Action performed")
     affected_products: int = Field(
         default=0,

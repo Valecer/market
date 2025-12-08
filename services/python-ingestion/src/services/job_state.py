@@ -74,7 +74,7 @@ def _deserialize_job_data(data: dict) -> dict:
             result[key] = value.lower() == "true"
         elif key in ("retry_count", "max_retries", "items_processed", "items_total",
                      "download_bytes", "download_total", "matches_found",
-                     "review_queue_count", "error_count"):
+                     "review_queue_count", "error_count", "progress_percentage"):
             try:
                 result[key] = int(value)
             except (ValueError, TypeError):
@@ -127,6 +127,7 @@ async def create_job(
         # Analysis progress
         "items_processed": 0,
         "items_total": 0,
+        "progress_percentage": 0,
         "matches_found": 0,
         "review_queue_count": 0,
         "error_count": 0,
@@ -196,9 +197,9 @@ async def update_job(
     # Refresh TTL
     await redis.expire(key, JOB_TTL_SECONDS)
 
-    # Handle completion states
+    # Handle completion states (including Phase 9 completed_with_errors)
     phase = updates.get("phase")
-    if phase in ("complete", "failed"):
+    if phase in ("complete", "completed_with_errors", "failed"):
         # Remove from active jobs
         await redis.srem(JOB_LIST_KEY, str(job_id))
 
@@ -358,7 +359,8 @@ async def update_job_phase(
     if phase == "downloading" and "started_at" not in progress_updates:
         updates["started_at"] = datetime.now(timezone.utc).isoformat()
 
-    if phase in ("complete", "failed"):
+    # Set completion timestamp for all terminal phases (including Phase 9)
+    if phase in ("complete", "completed_with_errors", "failed"):
         updates["completed_at"] = datetime.now(timezone.utc).isoformat()
 
     updates.update(progress_updates)
@@ -399,6 +401,7 @@ async def update_analysis_progress(
     job_id: str | UUID,
     items_processed: int,
     items_total: int,
+    progress_percentage: int = 0,
     matches_found: int = 0,
     review_queue_count: int = 0,
     error_count: int = 0,
@@ -411,6 +414,7 @@ async def update_analysis_progress(
         job_id: Job identifier
         items_processed: Items processed so far
         items_total: Total items to process
+        progress_percentage: Overall progress percentage (0-100) from ml-analyze
         matches_found: Successful product matches
         review_queue_count: Items added to review queue
         error_count: Processing errors
@@ -423,6 +427,7 @@ async def update_analysis_progress(
         job_id,
         items_processed=items_processed,
         items_total=items_total,
+        progress_percentage=progress_percentage,
         matches_found=matches_found,
         review_queue_count=review_queue_count,
         error_count=error_count,

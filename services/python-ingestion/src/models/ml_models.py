@@ -20,8 +20,11 @@ from pydantic import BaseModel, Field
 
 FileType = Literal["pdf", "excel", "csv"]
 SourceType = Literal["google_sheets", "csv", "excel", "url"]
-JobStatus = Literal["pending", "processing", "completed", "failed"]
-JobPhase = Literal["downloading", "analyzing", "matching", "complete", "failed"]
+JobStatus = Literal["pending", "processing", "completed", "failed", "completed_with_errors"]
+JobPhase = Literal[
+    "downloading", "analyzing", "extracting", "normalizing",
+    "matching", "complete", "completed_with_errors", "failed"
+]
 
 
 # =============================================================================
@@ -66,10 +69,16 @@ class MLJobStatus(BaseModel):
 
     Returned from ml-analyze GET /analyze/status/{job_id} endpoint.
     Used for polling job progress until completion.
+    
+    Phase 9: Added phase field for semantic ETL pipeline tracking.
     """
 
     job_id: UUID = Field(description="ML job ID")
     status: JobStatus = Field(description="Current job status")
+    phase: JobPhase | None = Field(
+        default=None,
+        description="Current processing phase (semantic ETL: analyzing, extracting, normalizing)",
+    )
     progress_percentage: int = Field(ge=0, le=100, description="Overall progress 0-100")
     items_processed: int = Field(ge=0, description="Number of items processed so far")
     items_total: int = Field(ge=0, description="Total items to process")

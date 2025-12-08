@@ -91,6 +91,30 @@ export type CatalogFilters = {
   limit?: number
 }
 
+// Phase 10: Product Variants - manual types until API types regenerated
+export interface ProductVariant {
+  id: string
+  variant_key: string
+  variant_attributes: Record<string, string | number>
+  min_price: string
+  max_price: string
+  supplier_count: number
+  display_order: number
+}
+
+export interface CatalogProductDetail {
+  id: string
+  internal_sku: string
+  name: string
+  category_id: string | null
+  min_price: string
+  max_price: string
+  supplier_count: number
+  has_variants: boolean
+  variant_schema?: Record<string, string[]>
+  variants: ProductVariant[]
+}
+
 /** Admin products query filters */
 export type AdminProductFilters = {
   status?: ProductStatus

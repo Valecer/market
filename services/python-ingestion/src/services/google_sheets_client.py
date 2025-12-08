@@ -7,6 +7,7 @@ This is NOT a parser - it's a download/export client for the courier pattern.
 """
 
 import io
+import re
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -25,6 +26,41 @@ from src.config import settings
 from src.errors.exceptions import ParserError
 
 logger = structlog.get_logger(__name__)
+
+
+def _sanitize_sheet_name(name: str) -> str:
+    """
+    Sanitize sheet name for Excel compatibility.
+
+    Excel sheet names have the following restrictions:
+    - Maximum 31 characters
+    - Cannot contain: \\ / * ? [ ] :
+    - Cannot be empty
+    - Cannot start or end with apostrophe
+
+    Args:
+        name: Original sheet name
+
+    Returns:
+        Sanitized sheet name safe for Excel
+    """
+    if not name:
+        return "Sheet"
+
+    # Remove invalid characters: \ / * ? [ ] :
+    sanitized = re.sub(r'[\\/*?\[\]:]', '_', name)
+
+    # Remove leading/trailing apostrophes
+    sanitized = sanitized.strip("'")
+
+    # Truncate to 31 characters (Excel limit)
+    sanitized = sanitized[:31]
+
+    # If empty after sanitization, use default
+    if not sanitized.strip():
+        return "Sheet"
+
+    return sanitized
 
 
 class GoogleSheetsClient:
@@ -162,8 +198,9 @@ class GoogleSheetsClient:
                 worksheets = spreadsheet.worksheets()
 
             for ws in worksheets:
-                # Create sheet in workbook (Excel sheet name limit is 31 chars)
-                xlsx_ws = wb.create_sheet(title=ws.title[:31])
+                # Create sheet in workbook with sanitized name
+                safe_title = _sanitize_sheet_name(ws.title)
+                xlsx_ws = wb.create_sheet(title=safe_title)
 
                 # Get all values
                 all_values = ws.get_all_values()

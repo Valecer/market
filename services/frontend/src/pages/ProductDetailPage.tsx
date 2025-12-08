@@ -2,20 +2,19 @@
  * ProductDetailPage
  *
  * Public product detail page showing full product information.
- * Uses the catalog list data to display product details.
- *
- * Note: Since there's no dedicated /catalog/:id endpoint yet,
- * this page uses data from the catalog list or admin endpoint.
+ * Phase 10: Now uses dedicated /catalog/:id endpoint with variants support.
  */
 
-import { useMemo, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useCatalog } from '@/hooks/useCatalog'
+import { useProduct } from '@/hooks/useProduct'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, getPlaceholderImage, cn } from '@/lib/utils'
 import { ProductDetailSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { VariantSelector } from '@/components/catalog/VariantSelector'
 import type { CartProduct } from '@/types/cart'
+import type { ProductVariant } from '@/lib/api-client'
 
 /**
  * Product detail page component
@@ -25,15 +24,29 @@ export function ProductDetailPage() {
   const navigate = useNavigate()
   const { addItem, getItemQuantity } = useCart()
 
-  // Fetch catalog to find the product
-  // In a real app, there would be a dedicated /catalog/:id endpoint
-  const { data: catalogData, isLoading, error, refetch } = useCatalog({ limit: 200 })
+  // Phase 10: Use dedicated product endpoint with variants
+  const { data: product, isLoading, error, refetch } = useProduct(id)
 
-  // Find the product in the catalog data
-  const product = useMemo(() => {
-    if (!catalogData?.data || !id) return null
-    return catalogData.data.find((p) => p.id === id)
-  }, [catalogData?.data, id])
+  // Selected variant state (for products with variants)
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
+
+  // Current quantity in cart - MUST be called before any conditional returns
+  const quantityInCart = getItemQuantity(id ?? '')
+
+  // Handle add to cart - MUST be called before any conditional returns
+  const handleAddToCart = useCallback(() => {
+    if (!product) return
+    const cartProduct: CartProduct = {
+      id: selectedVariant ? `${product.id}:${selectedVariant.id}` : product.id,
+      name: selectedVariant 
+        ? `${product.name} (${selectedVariant.variant_key})`
+        : product.name,
+      sku: product.internal_sku,
+      price: parseFloat(selectedVariant?.min_price ?? product.min_price),
+      category: product.category_id ?? undefined,
+    }
+    addItem(cartProduct)
+  }, [product, selectedVariant, addItem])
 
   // Loading state
   if (isLoading) {
@@ -77,28 +90,20 @@ export function ProductDetailPage() {
     max_price,
     supplier_count,
     category_id,
+    has_variants,
+    variant_schema,
+    variants,
   } = product
 
-  // Current quantity in cart
-  const quantityInCart = getItemQuantity(id!)
-
-  // Handle add to cart
-  const handleAddToCart = useCallback(() => {
-    const cartProduct: CartProduct = {
-      id: product.id,
-      name: product.name,
-      sku: product.internal_sku,
-      price: typeof product.min_price === 'string' ? parseFloat(product.min_price) : product.min_price,
-      category: product.category_id ?? undefined,
-    }
-    addItem(cartProduct)
-  }, [product, addItem])
+  // Use selected variant prices if available
+  const displayMinPrice = selectedVariant?.min_price ?? min_price
+  const displayMaxPrice = selectedVariant?.max_price ?? max_price
 
   // Price display
   const priceDisplay =
-    min_price === max_price
-      ? formatPrice(min_price)
-      : `${formatPrice(min_price)} - ${formatPrice(max_price)}`
+    displayMinPrice === displayMaxPrice
+      ? formatPrice(displayMinPrice)
+      : `${formatPrice(displayMinPrice)} - ${formatPrice(displayMaxPrice)}`
 
   return (
     <div className="min-h-screen bg-surface">
@@ -195,9 +200,21 @@ export function ProductDetailPage() {
               {/* SKU */}
               <p className="text-slate-500 font-mono">SKU: {internal_sku}</p>
 
+              {/* Phase 10: Variant Selector */}
+              {has_variants && variants.length > 0 && (
+                <VariantSelector
+                  variants={variants}
+                  variantSchema={variant_schema}
+                  selectedVariant={selectedVariant}
+                  onSelectVariant={setSelectedVariant}
+                />
+              )}
+
               {/* Price */}
               <div className="py-4 border-y border-border">
-                <p className="text-sm text-slate-500 mb-1">Price Range</p>
+                <p className="text-sm text-slate-500 mb-1">
+                  {selectedVariant ? 'Selected Variant Price' : 'Price Range'}
+                </p>
                 <p className="text-3xl font-bold text-slate-900">{priceDisplay}</p>
               </div>
 
@@ -227,6 +244,14 @@ export function ProductDetailPage() {
                       </dd>
                     </div>
                   )}
+                  {has_variants && (
+                    <div className="col-span-2">
+                      <dt className="text-sm text-slate-500">Variants Available</dt>
+                      <dd className="text-slate-700">
+                        {variants.length} variant{variants.length !== 1 ? 's' : ''}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
 
@@ -237,9 +262,11 @@ export function ProductDetailPage() {
                     'w-full sm:w-auto inline-flex items-center justify-center gap-2',
                     'px-6 py-3 bg-primary text-white font-medium rounded-lg',
                     'hover:bg-primary/90 transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                    'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                    has_variants && !selectedVariant && 'opacity-50 cursor-not-allowed'
                   )}
                   onClick={handleAddToCart}
+                  disabled={has_variants && !selectedVariant}
                   aria-label={`Add ${name} to cart`}
                 >
                   <svg
@@ -256,7 +283,7 @@ export function ProductDetailPage() {
                       d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                     />
                   </svg>
-                  Add to Cart
+                  {has_variants && !selectedVariant ? 'Select a Variant' : 'Add to Cart'}
                 </button>
 
                 {/* Show quantity if already in cart */}
@@ -286,4 +313,3 @@ export function ProductDetailPage() {
     </div>
   )
 }
-

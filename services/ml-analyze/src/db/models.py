@@ -130,7 +130,7 @@ class ProductEmbedding(Base, UUIDMixin, TimestampMixin):
         }
 
 
-class Category(Base, IntPKMixin, TimestampMixin):
+class Category(Base, UUIDMixin, TimestampMixin):
     """
     Category model with hierarchical structure and review workflow.
     
@@ -143,7 +143,7 @@ class Category(Base, IntPKMixin, TimestampMixin):
     - Soft delete (is_active flag)
     
     Attributes:
-        id: Category ID (integer primary key)
+        id: Category ID (UUID primary key)
         name: Category name (required)
         parent_id: FK to parent category (NULL for root)
         needs_review: Flag for admin review queue
@@ -168,8 +168,8 @@ class Category(Base, IntPKMixin, TimestampMixin):
         nullable=False,
         doc="Category name",
     )
-    parent_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
+    parent_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
         ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
@@ -188,12 +188,14 @@ class Category(Base, IntPKMixin, TimestampMixin):
         server_default="true",
         doc="Soft delete flag",
     )
-    supplier_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        ForeignKey("suppliers.id", ondelete="SET NULL"),
+    # Note: Foreign key to suppliers table exists in DB (via migration)
+    # but we don't define the FK in ORM since ml-analyze doesn't own the Supplier model.
+    # The suppliers table is defined in python-ingestion service.
+    supplier_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
         nullable=True,
         index=True,
-        doc="Supplier that introduced this category",
+        doc="Supplier that introduced this category (FK enforced at DB level)",
     )
 
     # Self-referencing relationship for hierarchy
