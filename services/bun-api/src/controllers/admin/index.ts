@@ -4,6 +4,7 @@ import { ingestionService } from '../../services/ingestion.service'
 import { settingsService } from '../../services/settings.service'
 import { supplierService } from '../../services/supplier.service'
 import { categoryService } from '../../services/category.service'
+import { duplicateService } from '../../services/duplicate.service'
 import {
   AdminProductsResponseSchema,
   MatchRequestSchema,
@@ -49,7 +50,15 @@ import {
   CategoryUpdateRequestSchema,
   CategoryUpdateResponseSchema,
   CategoryDeleteResponseSchema,
+  CategoryBreadcrumbResponseSchema,
 } from '../../types/category.types'
+import {
+  DuplicateListResponseSchema,
+  MergeDuplicateRequestSchema,
+  MergeDuplicateResponseSchema,
+  DismissDuplicateResponseSchema,
+  DuplicateStatsResponseSchema,
+} from '../../types/duplicate.types'
 import { createErrorResponse } from '../../types/errors'
 import { authMiddleware } from '../../middleware/auth'
 import { rateLimiter } from '../../middleware/rate-limiter'
@@ -131,7 +140,9 @@ export const adminController = (app: Elysia) =>
     groupApp
       .use(authMiddleware)
       .guard({
-        beforeHandle({ user, set }) {
+        beforeHandle(ctx) {
+          const user = (ctx as any).user
+          const { set } = ctx
           if (!user) {
             set.status = 401
             return { error: { code: 'UNAUTHORIZED' as const, message: 'Unauthorized' } }
@@ -213,7 +224,9 @@ export const adminController = (app: Elysia) =>
       // GET /suppliers/unmatched - procurement/admin only
       .get(
         '/suppliers/unmatched',
-        async ({ query, set, user }) => {
+        async (ctx) => {
+          const { query, set } = ctx
+          const user = (ctx as any).user
           // Additional check for procurement role
           if (!user || !['procurement', 'admin'].includes(user.role)) {
             set.status = 403
@@ -320,7 +333,9 @@ export const adminController = (app: Elysia) =>
       .group('/products/:id', (productApp) =>
         productApp
           .guard({
-            beforeHandle({ user, set }) {
+            beforeHandle(ctx) {
+              const user = (ctx as any).user
+              const { set } = ctx
               if (!user) {
                 set.status = 401
                 return { error: { code: 'UNAUTHORIZED' as const, message: 'Unauthorized' } }
@@ -1382,6 +1397,265 @@ export const adminController = (app: Elysia) =>
             tags: ['admin', 'categories'],
             summary: 'Delete category',
             description: 'Delete a category. Products and child categories are reassigned to the parent category. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // GET /categories/:id/breadcrumb - Get category breadcrumb (3-level hierarchy)
+      // Phase 11 US3: Category Hierarchy Enforcement
+      .get(
+        '/categories/:id/breadcrumb',
+        async ({ params, set, user }) => {
+          // Auth required (any role)
+          if (!user) {
+            set.status = 401
+            return createErrorResponse('UNAUTHORIZED', 'Authentication required')
+          }
+
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Category ID must be a valid UUID')
+          }
+
+          return categoryService.getBreadcrumb(params.id)
+        },
+        {
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid category ID')
+            }
+            set.status = 500
+            const message = error instanceof Error ? error.message : String(error)
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: CategoryBreadcrumbResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'categories'],
+            summary: 'Get category breadcrumb',
+            description: 'Get the 3-level category breadcrumb hierarchy. Incomplete hierarchies are padded with "Uncategorized" placeholders.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // =============================================================================
+      // Duplicate Management Endpoints (Phase 11 - Pipeline Stabilization)
+      // =============================================================================
+      // GET /duplicates - List potential duplicates
+      .get(
+        '/duplicates',
+        async ({ query, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for duplicate management')
+          }
+
+          const duplicateQuery = {
+            status: ['pending', 'merged', 'dismissed'].includes(query.status as string)
+              ? (query.status as 'pending' | 'merged' | 'dismissed')
+              : 'pending',
+            limit: parseNum(query.limit) || 50,
+            offset: parseNum(query.offset) || 0,
+          }
+
+          // Validations
+          if (duplicateQuery.limit < 1 || duplicateQuery.limit > 100) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'limit must be between 1 and 100')
+          }
+          if (duplicateQuery.offset < 0) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'offset must be >= 0')
+          }
+
+          const result = await duplicateService.list(duplicateQuery)
+
+          // Transform dates to ISO strings for response
+          return {
+            duplicates: result.duplicates.map(d => ({
+              ...d,
+              createdAt: d.createdAt.toISOString(),
+            })),
+            total: result.total,
+          }
+        },
+        {
+          query: t.Object({
+            status: t.Optional(t.Any()),
+            limit: t.Optional(t.Any()),
+            offset: t.Optional(t.Any()),
+          }),
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'Invalid query parameters')
+            }
+            set.status = 500
+            const message = error instanceof Error ? error.message : String(error)
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: DuplicateListResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'duplicates'],
+            summary: 'List potential duplicates',
+            description: 'Returns paginated list of potential duplicate product pairs. Supports filtering by status. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // GET /duplicates/stats - Get duplicate queue statistics
+      .get(
+        '/duplicates/stats',
+        async ({ set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required')
+          }
+
+          return duplicateService.getStats()
+        },
+        {
+          error({ set, error }) {
+            set.status = 500
+            const message = error instanceof Error ? error.message : String(error)
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: DuplicateStatsResponseSchema,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'duplicates'],
+            summary: 'Get duplicate queue statistics',
+            description: 'Returns counts of pending, merged, and dismissed duplicates. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // PATCH /duplicates/:id/merge - Merge duplicate products
+      .patch(
+        '/duplicates/:id/merge',
+        async ({ params, body, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for duplicate management')
+          }
+
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Duplicate ID must be a valid UUID')
+          }
+          if (!isValidUUID(body.keepProductId)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'keepProductId must be a valid UUID')
+          }
+          if (!isValidUUID(body.archiveProductId)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'archiveProductId must be a valid UUID')
+          }
+
+          return duplicateService.merge(params.id, body.keepProductId, body.archiveProductId)
+        },
+        {
+          body: MergeDuplicateRequestSchema,
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', error.message || 'Invalid request body')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'NOT_FOUND') {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            if (customCode === 'VALIDATION_ERROR') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', message)
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: MergeDuplicateResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'duplicates'],
+            summary: 'Merge duplicate products',
+            description: 'Merge two duplicate products by reassigning supplier items from archived to kept product. Requires admin role.',
+            security: [{ bearerAuth: [] }],
+          },
+        }
+      )
+      // PATCH /duplicates/:id/dismiss - Dismiss duplicate (false positive)
+      .patch(
+        '/duplicates/:id/dismiss',
+        async ({ params, set, user }) => {
+          // Admin role required
+          if (!user || user.role !== 'admin') {
+            set.status = 403
+            return createErrorResponse('FORBIDDEN', 'Admin role required for duplicate management')
+          }
+
+          if (!isValidUUID(params.id)) {
+            set.status = 400
+            return createErrorResponse('VALIDATION_ERROR', 'Duplicate ID must be a valid UUID')
+          }
+
+          return duplicateService.dismiss(params.id)
+        },
+        {
+          error({ code, error, set }) {
+            if (code === 'VALIDATION') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', 'Invalid duplicate ID')
+            }
+            const customCode = (error as any)?.code as string | undefined
+            const message = error instanceof Error ? error.message : String(error)
+            if (customCode === 'NOT_FOUND') {
+              set.status = 404
+              return createErrorResponse('NOT_FOUND', message)
+            }
+            if (customCode === 'VALIDATION_ERROR') {
+              set.status = 400
+              return createErrorResponse('VALIDATION_ERROR', message)
+            }
+            set.status = 500
+            return createErrorResponse('INTERNAL_ERROR', process.env.NODE_ENV === 'production' ? 'Internal server error' : message)
+          },
+          response: {
+            200: DismissDuplicateResponseSchema,
+            400: ErrorSchemas.validation,
+            401: ErrorSchemas.unauthorized,
+            403: ErrorSchemas.forbidden,
+            404: ErrorSchemas.notFound,
+            500: ErrorSchemas.internal,
+          },
+          detail: {
+            tags: ['admin', 'duplicates'],
+            summary: 'Dismiss duplicate',
+            description: 'Mark a potential duplicate as a false positive. Products remain unchanged. Requires admin role.',
             security: [{ bearerAuth: [] }],
           },
         }

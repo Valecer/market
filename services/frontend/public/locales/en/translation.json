@@ -249,6 +249,7 @@
 
     "ingestion": "Ingestion",
     "categoriesReview": "Categories",
+    "duplicatesReview": "Duplicates",
     
     "status": {
       "draft": "Draft",
@@ -523,6 +524,89 @@
     "deleteSuccess": "Category deleted successfully. {{count}} products reassigned.",
     "editError": "Failed to rename category",
     "deleteError": "Failed to delete category"
+  },
+
+  "duplicates": {
+    "review": {
+      "title": "Duplicate Review",
+      "description": "Review and manage potential duplicate products detected by AI"
+    },
+    "table": {
+      "similarity": "Similarity",
+      "product1": "Product 1",
+      "product2": "Product 2",
+      "actions": "Actions",
+      "category": "Category",
+      "price": "Price",
+      "suppliers": "Suppliers",
+      "supplierItems": "suppliers"
+    },
+    "stats": {
+      "total": "Total",
+      "pending": "Pending",
+      "merged": "Merged",
+      "dismissed": "Dismissed"
+    },
+    "filter": {
+      "pending": "Pending Review",
+      "merged": "Merged",
+      "dismissed": "Dismissed"
+    },
+    "actions": {
+      "merge": "Merge",
+      "dismiss": "Dismiss"
+    },
+    "modal": {
+      "title": "Merge Duplicate Products",
+      "subtitle": "Select which product to keep",
+      "similarity": "Similarity",
+      "instructions": "Click on the product you want to keep. The other product will be archived and its supplier items transferred.",
+      "keep": "KEEP",
+      "archived": "Will be archived",
+      "kept": "Will be kept",
+      "preview": "Merge Preview",
+      "supplierItemsAfter": "After merge: {{count}} total supplier items",
+      "clickToSelect": "Click to select",
+      "confirmMerge": "Confirm Merge",
+      "merging": "Merging..."
+    },
+    "empty": {
+      "title": "No duplicates pending",
+      "description": "All potential duplicates have been reviewed"
+    },
+    "help": {
+      "title": "How does duplicate detection work?",
+      "whatIsThis": {
+        "title": "What is this page?",
+        "content": "This page shows product pairs that were automatically flagged as potential duplicates during ingestion. Products with 85-90% name similarity and similar prices may be the same product listed differently."
+      },
+      "merge": {
+        "title": "Merge",
+        "content": "Combines both products into one. Select which product to keep, and all supplier items will be transferred to it. The other product will be archived."
+      },
+      "dismiss": {
+        "title": "Dismiss",
+        "content": "Marks the pair as a false positive. Both products remain unchanged. Use this when products are similar but actually different (e.g., different brands, models)."
+      },
+      "tips": {
+        "title": "💡 Tips",
+        "compare": "Compare prices and supplier counts - duplicates often have similar values",
+        "category": "Check categories - products in the same category are more likely to be duplicates",
+        "keep": "When merging, keep the product with more supplier items or better data"
+      }
+    }
+  },
+
+  "category": {
+    "uncategorized": "Uncategorized",
+    "incomplete": "Incomplete",
+    "incomplete_hierarchy": "Incomplete category hierarchy",
+    "incomplete_hierarchy_tooltip": "Category hierarchy is incomplete (less than 3 levels)",
+    "needs_review": "This category needs review",
+    "review_indicator": "Needs review",
+    "level1": "Top Category",
+    "level2": "Sub-category",
+    "level3": "Brand"
   },
 
   "suppliers": {

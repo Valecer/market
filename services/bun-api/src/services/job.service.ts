@@ -156,13 +156,13 @@ export function getErrorRecommendation(errorMessage: string | null): ErrorRecomm
 
   // Special handling for specific error codes
   if (lowerError.includes('etimedout') || lowerError.includes('timed out')) {
-    return ERROR_RECOMMENDATIONS['timeout']
+    return ERROR_RECOMMENDATIONS['timeout'] ?? DEFAULT_RECOMMENDATION
   }
   if (lowerError.includes('econnrefused') || lowerError.includes('econnreset')) {
-    return ERROR_RECOMMENDATIONS['connection']
+    return ERROR_RECOMMENDATIONS['connection'] ?? DEFAULT_RECOMMENDATION
   }
   if (lowerError.includes('500') || lowerError.includes('internal server')) {
-    return ERROR_RECOMMENDATIONS['internal error']
+    return ERROR_RECOMMENDATIONS['internal error'] ?? DEFAULT_RECOMMENDATION
   }
 
   return DEFAULT_RECOMMENDATION
@@ -316,6 +316,8 @@ export class JobService {
     const errorMessage = data.error || null
     const errorInfo = formatErrorWithRecommendation(errorMessage)
 
+    const phase = data.phase ?? 'downloading'
+
     // T85: Build retry summary
     const retryCount = parseInt(data.retry_count || '0', 10)
     const maxRetries = parseInt(data.max_retries || '3', 10)
@@ -325,7 +327,7 @@ export class JobService {
         retrySummary = `Failed after ${retryCount}/${maxRetries} retry attempts`
       } else if (data.phase === 'failed') {
         retrySummary = `Failed (retried ${retryCount}/${maxRetries} times, can retry again)`
-      } else if (['processing', 'pending', 'downloading', 'analyzing', 'extracting', 'normalizing'].includes(data.phase)) {
+      } else if (['processing', 'pending', 'downloading', 'analyzing', 'extracting', 'normalizing'].includes(phase)) {
         retrySummary = `Retry attempt ${retryCount}/${maxRetries} in progress`
       } else {
         retrySummary = `Completed after ${retryCount} retry attempt(s)`
@@ -336,7 +338,7 @@ export class JobService {
       job_id: data.job_id || '',
       supplier_id: data.supplier_id || '',
       supplier_name: data.supplier_name || 'Unknown',
-      phase: (data.phase || 'downloading') as any,
+      phase: phase as any,
       status: (data.status || 'pending') as any,
       download_progress: downloadProgress,
       analysis_progress: analysisProgress,

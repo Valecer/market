@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+**/node_modules/
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+.env.*.local
+*.pem
+*.key
+secrets/
+credentials/
+
+# VCS
+.git
+.gitignore
+
+# Docker
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.tmp
+tmp/
+
+# Uploaded/generated data
+uploads/

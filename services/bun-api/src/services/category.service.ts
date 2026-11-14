@@ -22,6 +22,8 @@ import type {
   CategoryUpdateRequest,
   CategoryUpdateResponse,
   CategoryDeleteResponse,
+  CategoryBreadcrumbItem,
+  CategoryBreadcrumbResponse,
 } from '../types/category.types'
 
 /**
@@ -59,6 +61,12 @@ export interface ICategoryService {
    * Delete a category
    */
   deleteCategory(categoryId: string): Promise<CategoryDeleteResponse>
+
+  /**
+   * Get category breadcrumb (3-level hierarchy)
+   * Phase 11 US3: Category Hierarchy Enforcement
+   */
+  getBreadcrumb(categoryId: string): Promise<CategoryBreadcrumbResponse>
 }
 
 /**
@@ -466,6 +474,111 @@ export class CategoryService implements ICategoryService {
         reassigned_products,
       }
     })
+  }
+
+  /**
+   * Get category breadcrumb (3-level hierarchy)
+   *
+   * Phase 11 US3: Category Hierarchy Enforcement
+   *
+   * Always returns exactly 3 levels:
+   * - Level 1 (Top): Root category
+   * - Level 2 (Sub-category): Child of root
+   * - Level 3 (Brand): Leaf category (product assignment level)
+   *
+   * If hierarchy is incomplete (<3 levels), pads with "Uncategorized" placeholders.
+   *
+   * @param categoryId - UUID of the category to get breadcrumb for
+   */
+  async getBreadcrumb(categoryId: string): Promise<CategoryBreadcrumbResponse> {
+    const MAX_LEVELS = 3
+    const PLACEHOLDER_NAME = 'Uncategorized'
+
+    // Fetch category and build path to root
+    const pathQuery = await db.execute<{
+      id: string
+      name: string
+      parent_id: string | null
+      category_level: number
+      needs_review: boolean
+    }>(sql.raw(`
+      WITH RECURSIVE category_path AS (
+        SELECT 
+          id::text, 
+          name, 
+          parent_id::text, 
+          COALESCE(category_level, 1) as category_level,
+          needs_review
+        FROM categories 
+        WHERE id = '${categoryId}'::uuid AND is_active = true
+        
+        UNION ALL
+        
+        SELECT 
+          c.id::text, 
+          c.name, 
+          c.parent_id::text, 
+          COALESCE(c.category_level, 1) as category_level,
+          c.needs_review
+        FROM categories c
+        INNER JOIN category_path cp ON c.id::text = cp.parent_id
+        WHERE c.is_active = true
+      )
+      SELECT * FROM category_path
+      ORDER BY category_level ASC
+    `))
+
+    const categories = pathQuery.rows
+
+    // If no categories found, return all placeholders
+    if (categories.length === 0) {
+      return {
+        category_id: categoryId,
+        breadcrumb: Array.from({ length: MAX_LEVELS }, (_, i) => ({
+          id: null,
+          name: PLACEHOLDER_NAME,
+          level: i + 1,
+          needs_review: true,
+          is_placeholder: true,
+        })),
+        is_complete: false,
+      }
+    }
+
+    // Build breadcrumb from existing categories
+    const breadcrumb: CategoryBreadcrumbItem[] = []
+
+    for (let level = 1; level <= MAX_LEVELS; level++) {
+      const cat = categories.find(c => c.category_level === level)
+
+      if (cat) {
+        breadcrumb.push({
+          id: cat.id,
+          name: cat.name,
+          level: level,
+          needs_review: cat.needs_review,
+          is_placeholder: false,
+        })
+      } else {
+        // Pad with placeholder for missing levels
+        breadcrumb.push({
+          id: null,
+          name: PLACEHOLDER_NAME,
+          level: level,
+          needs_review: true,
+          is_placeholder: true,
+        })
+      }
+    }
+
+    // Check if all levels are real categories (not placeholders)
+    const is_complete = breadcrumb.every(item => !item.is_placeholder)
+
+    return {
+      category_id: categoryId,
+      breadcrumb,
+      is_complete,
+    }
   }
 }
 

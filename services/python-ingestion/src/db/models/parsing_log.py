@@ -31,7 +31,7 @@ class ParsingLog(Base, UUIDMixin):
     error_message: Mapped[str] = mapped_column(Text, nullable=False)
     row_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     row_data: Mapped[Dict[str, Any] | None] = mapped_column(
-        postgresql.JSONB(astext_type=Text),
+        postgresql.JSONB(astext_type=Text()),
         nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(

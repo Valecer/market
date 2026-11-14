@@ -22,6 +22,20 @@ const COMPRESSIBLE_TYPES = [
   'text/xml',
 ]
 
+const normalizeHeaders = (headers: Record<string, unknown> | undefined): Record<string, string> => {
+  const result: Record<string, string> = {}
+  if (!headers) return result
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      // Join multi-value headers (e.g., set-cookie) into a single string
+      result[key] = value.join(', ')
+    } else if (value !== undefined && value !== null) {
+      result[key] = String(value)
+    }
+  }
+  return result
+}
+
 export const compression = new Elysia({ name: 'compression' })
   .onAfterHandle(async ({ request, set, response }) => {
     // Skip if no response body
@@ -36,9 +50,10 @@ export const compression = new Elysia({ name: 'compression' })
     if (!supportsGzip && !supportsDeflate) return response
     
     // Get content type
-    const contentType = typeof set.headers === 'object' && set.headers !== null
-      ? (set.headers as Record<string, string>)['content-type'] || 'application/json'
-      : 'application/json'
+    const normalized = normalizeHeaders(
+      typeof set.headers === 'object' && set.headers !== null ? (set.headers as Record<string, unknown>) : undefined
+    )
+    const contentType = normalized['content-type'] || 'application/json'
     
     // Skip if content type is not compressible
     const isCompressible = COMPRESSIBLE_TYPES.some(type => contentType.includes(type))
@@ -65,9 +80,9 @@ export const compression = new Elysia({ name: 'compression' })
       if (supportsGzip) {
         const compressed = Bun.gzipSync(data)
         set.headers = {
-          ...set.headers,
+          ...normalized,
           'content-encoding': 'gzip',
-          'vary': 'accept-encoding',
+          vary: 'accept-encoding',
         }
         return new Response(compressed, {
           headers: {
@@ -79,9 +94,9 @@ export const compression = new Elysia({ name: 'compression' })
       } else if (supportsDeflate) {
         const compressed = Bun.deflateSync(data)
         set.headers = {
-          ...set.headers,
+          ...normalized,
           'content-encoding': 'deflate',
-          'vary': 'accept-encoding',
+          vary: 'accept-encoding',
         }
         return new Response(compressed, {
           headers: {

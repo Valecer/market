@@ -16,7 +16,9 @@ export const authController = (app: Elysia) =>
   app.group('/api/v1/auth', (app) =>
     app.post(
     '/login',
-    async ({ body, jwt, set }) => {
+    async (ctx) => {
+      const { body, set } = ctx
+      const jwt = (ctx as any).jwt
       try {
         // Call auth service to authenticate
         const loginResponse = await AuthService.login(body, jwt)

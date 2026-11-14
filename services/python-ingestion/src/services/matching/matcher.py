@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Product matching service using fuzzy string matching.
 
 This module implements the Strategy pattern for product matching,

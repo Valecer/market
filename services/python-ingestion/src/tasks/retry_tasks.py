@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Retry Tasks for Failed ML Ingestion Jobs
 

@@ -1,4 +1,5 @@
-import { Type, Static } from '@sinclair/typebox'
+import { Type } from '@sinclair/typebox'
+import type { Static } from '@sinclair/typebox'
 
 /**
  * Error response schemas for consistent API error handling
@@ -49,11 +50,19 @@ export type ErrorResponse = Static<typeof ErrorResponseSchema>
 /**
  * Helper function to create error responses
  */
-export function createErrorResponse(
-  code: ErrorCode,
+export type ErrorResponseFor<T extends ErrorCode> = {
+  error: {
+    code: T
+    message: string
+    details?: ErrorDetails
+  }
+}
+
+export function createErrorResponse<T extends ErrorCode>(
+  code: T,
   message: string,
   details?: ErrorDetails
-): ErrorResponse {
+): ErrorResponseFor<T> {
   return {
     error: {
       code,

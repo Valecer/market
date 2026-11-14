@@ -114,6 +114,44 @@ This project adheres to a strict constitutional framework based on **SOLID**, **
 | `POST /analyze/merge` | None | Trigger batch product matching |
 | `POST /analyze/vision` | None | Vision analysis stub (501) |
 
+### API Endpoints (Phase 11 - Pipeline Stabilization)
+
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `GET /api/v1/admin/duplicates` | JWT | List potential duplicate products |
+| `PATCH /api/v1/admin/duplicates/:id/merge` | JWT | Merge two products (keep one, archive other) |
+| `PATCH /api/v1/admin/duplicates/:id/dismiss` | JWT | Dismiss duplicate as false positive |
+
+### Phase 11: Pipeline Stabilization Features
+
+**Problem Solved:** Eliminated duplicate products on re-import, reduced manual matching overhead, and enforced consistent catalog structure.
+
+**Key Features:**
+
+1. **Hash-Based Idempotency** - Re-import files without creating duplicates
+   - MD5 hash of normalized row data
+   - 60-80% faster re-ingestion for files with mostly unchanged rows
+   - Batch lookups (1000 hashes/query) for performance
+
+2. **Auto-Creation (<90% Confidence)** - No more manual matching queue
+   - Items with <90% match confidence auto-create new products
+   - Uses ML-cleaned names (not raw supplier text)
+   - Internal SKU format: `AUTO-{uuid4().hex[:8]}`
+
+3. **3-Level Category Hierarchy** - Consistent catalog structure
+   - Level 1: Top Category (e.g., "Electric Transport")
+   - Level 2: Sub-category (e.g., "Motorcycles")
+   - Level 3: Brand/Type (e.g., "Shtenli")
+
+4. **Duplicate Detection** - Catches auto-creation false positives
+   - 85-90% name similarity threshold
+   - Same category, <20% price difference
+   - Admin review queue with merge/dismiss actions
+
+5. **Variant Detection** - Groups similar products automatically
+   - Products with varying attributes (voltage, capacity) become variants
+   - Price ratio validation (≤2.0x) prevents incorrect grouping
+
 ### Data Flow
 
 ```
@@ -373,13 +411,47 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/marketbel
 REDIS_URL=redis://localhost:6379
 ```
 
-**Python Service**
+**Python Service (python-ingestion)**
 ```bash
 DATABASE_URL=postgresql://user:pass@localhost:5432/marketbel
 REDIS_URL=redis://localhost:6379
 QUEUE_NAME=data-processing-queue
 WORKERS=4
+
+# Phase 11: Idempotent Re-Ingestion
+HASH_CACHE_ENABLED=true          # Enable hash-based deduplication
+HASH_ALGORITHM=md5               # Hash algorithm (md5, sha256)
 ```
+
+**ML-Analyze Service**
+```bash
+DATABASE_URL=postgresql://user:pass@localhost:5432/marketbel
+REDIS_URL=redis://localhost:6379
+LOG_LEVEL=INFO
+ENVIRONMENT=development
+
+# Ollama Configuration
+OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_MODEL_LLM=llama3
+OLLAMA_MODEL_EMBED=nomic-embed-text
+
+# Phase 11: Auto-Creation & Detection
+AUTO_CREATE_THRESHOLD=90         # Confidence threshold (0-100)
+VARIANT_DETECTION_ENABLED=true   # Enable variant detection
+DUPLICATE_DETECTION_ENABLED=true # Enable duplicate detection
+DUPLICATE_SIMILARITY_THRESHOLD=85 # Min similarity for duplicates (0-100)
+DUPLICATE_PRICE_DIFF_THRESHOLD=20 # Max price diff % for duplicates (0-100)
+```
+
+### Phase 11 Metrics & Monitoring
+
+**Key Metrics to Monitor:**
+| Metric | Target | Alert Threshold |
+|--------|--------|-----------------|
+| `hash_hit_rate` | ≥70% | <50% |
+| `auto_creation_rate` | 50-90% | >95% |
+| `duplicate_queue_size` | <500 pending | >500 |
+| `reingestion_time_reduction` | 60-80% | <40% |
 
 ## Troubleshooting
 

@@ -13,6 +13,8 @@ async def check_redis_connection() -> bool:
         True if Redis is accessible, False otherwise
     """
     try:
+        if settings.redis_url is None:
+            return False
         redis = Redis.from_url(
             settings.redis_url,
             decode_responses=True

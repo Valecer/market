@@ -32,7 +32,7 @@ class Supplier(Base, UUIDMixin, TimestampMixin):
     # Use 'meta' as Python attribute name, but map to 'metadata' column in database
     meta: Mapped[Dict[str, Any]] = mapped_column(
         "metadata",
-        postgresql.JSONB(astext_type=Text),
+        postgresql.JSONB(astext_type=Text()),
         nullable=False,
         server_default="{}"
     )

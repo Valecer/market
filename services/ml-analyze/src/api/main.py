@@ -13,9 +13,12 @@ from uuid import uuid4
 
 import httpx
 import redis.asyncio as aioredis
+import sentry_sdk
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from src import __version__
 from src.config.settings import get_settings
@@ -27,6 +30,68 @@ from src.utils.logger import configure_logging, get_logger
 # Configure logging at module load
 configure_logging()
 logger = get_logger(__name__)
+
+
+def init_sentry() -> None:
+    """
+    Initialize Sentry error tracking if DSN is configured.
+    
+    Sentry provides:
+    - Automatic exception capture
+    - Performance monitoring (traces)
+    - Request context enrichment
+    """
+    settings = get_settings()
+    
+    if not settings.sentry_dsn:
+        logger.info("Sentry DSN not configured, error tracking disabled")
+        return
+    
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        integrations=[
+            StarletteIntegration(
+                transaction_style="endpoint",
+                failed_request_status_codes=[range(400, 599)],
+            ),
+            FastApiIntegration(
+                transaction_style="endpoint",
+            ),
+        ],
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        environment=settings.environment,
+        release=f"ml-analyze@{__version__}",
+        send_default_pii=False,  # Don't send PII by default
+        attach_stacktrace=True,
+        # Only capture errors in production, not warnings
+        before_send=_filter_sentry_events,
+    )
+    
+    logger.info(
+        "Sentry initialized",
+        environment=settings.environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
+
+
+def _filter_sentry_events(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    Filter Sentry events before sending.
+    
+    Filters out:
+    - Health check endpoint errors (noise)
+    - Expected validation errors
+    """
+    # Skip health check errors
+    if event.get("request", {}).get("url", "").endswith("/health"):
+        return None
+    
+    return event
+
+
+# Initialize Sentry at module load
+init_sentry()
 
 # Global Redis connection for health checks
 # Note: Redis type parameter not supported in all versions

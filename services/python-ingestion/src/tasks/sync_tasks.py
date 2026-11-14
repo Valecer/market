@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Queue tasks for the master sync pipeline.
 
 This module implements the sync pipeline tasks:

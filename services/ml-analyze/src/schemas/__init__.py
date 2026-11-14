@@ -47,6 +47,11 @@ from src.schemas.category import (
     CategoryNormalizationStats,
     CategoryReviewItem,
 )
+from src.schemas.duplicate import (
+    DuplicateDetectionStats,
+    PotentialDuplicateCreate,
+    PotentialDuplicateResponse,
+)
 
 __all__ = [
     # Domain models
@@ -84,4 +89,8 @@ __all__ = [
     "CategoryApprovalRequest",
     "CategoryApprovalResponse",
     "CategoryNormalizationStats",
+    # Phase 11: Duplicate detection schemas
+    "PotentialDuplicateCreate",
+    "PotentialDuplicateResponse",
+    "DuplicateDetectionStats",
 ]

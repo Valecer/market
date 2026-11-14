@@ -32,6 +32,9 @@ redis>=5.0.0
 python-dotenv>=1.0.0
 structlog>=24.1.0
 
+# Error Monitoring (Production)
+sentry-sdk>=2.19.0
+
 # Testing (development)
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

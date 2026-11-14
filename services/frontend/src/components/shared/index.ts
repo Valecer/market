@@ -7,6 +7,7 @@
 
 export { AdminLayout } from './AdminLayout'
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button'
+export { CategoryBreadcrumb, type CategoryBreadcrumbItem, type CategoryBreadcrumbResponse } from './CategoryBreadcrumb'
 export { ErrorBoundary, type ErrorBoundaryProps, type FallbackProps } from './ErrorBoundary'
 export { ErrorState } from './ErrorState'
 export { Input, type InputProps } from './Input'

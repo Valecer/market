@@ -236,7 +236,7 @@ export class IngestionService {
 
       // Get job data for each active job
       for (const jobId of activeJobIds) {
-        const jobIdStr = typeof jobId === 'string' ? jobId : jobId.toString()
+        const jobIdStr = String(jobId)
         const jobData = await redis.hgetall(`${JOB_KEY_PREFIX}${jobIdStr}`)
 
         if (jobData && Object.keys(jobData).length > 0) {

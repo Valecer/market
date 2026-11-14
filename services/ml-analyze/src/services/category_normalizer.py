@@ -8,6 +8,12 @@ Creates new categories with needs_review flag when no match found.
 Phase 9: Semantic ETL Pipeline Refactoring
 - T87: Auto-refresh cache on insert to reduce DB queries
 - T88: Optimized fuzzy matching for large category sets (>1000 categories)
+
+Phase 11: Category Hierarchy Enforcement (US3)
+- T101: Integration with CategoryHierarchyService
+- T102: Build normalized category_path
+- T103: Enforce 3-level hierarchy for all assignments
+- T104: Return Level 3 category ID for product assignment
 """
 
 import time
@@ -26,9 +32,16 @@ from src.schemas.category import (
     CategoryMatchResult,
     CategoryNormalizationStats,
 )
+from src.services.category_hierarchy_service import (
+    CategoryHierarchyService,
+    HierarchyEnforcementResult,
+)
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# T102: Maximum hierarchy levels for enforcement
+MAX_HIERARCHY_LEVELS = 3
 
 
 # =============================================================================
@@ -89,6 +102,7 @@ class CategoryNormalizer:
     - Admin review flag for new categories
     - T87: Auto-refresh cache on insert
     - T88: Optimized matching for large category sets
+    - T101-T104: 3-level hierarchy enforcement (Phase 11 US3)
     
     Example:
         normalizer = CategoryNormalizer(session)
@@ -100,6 +114,13 @@ class CategoryNormalizer:
         )
         print(result.leaf_category_id)  # ID of "Gaming" category
         
+        # With hierarchy enforcement (Phase 11):
+        result = await normalizer.normalize_category_with_hierarchy(
+            ["Electronics", "Laptops", "Dell"],
+            supplier_id=123,
+        )
+        # result.hierarchy_result.is_complete is True (3 levels)
+        
         # Check cache metrics
         print(normalizer.get_cache_metrics())
     """
@@ -110,6 +131,8 @@ class CategoryNormalizer:
         similarity_threshold: float = 85.0,
         cache_enabled: bool = True,
         auto_refresh: bool = True,
+        task_id: Optional[str] = None,
+        enforce_hierarchy: bool = True,
     ):
         """
         Initialize CategoryNormalizer.
@@ -119,11 +142,20 @@ class CategoryNormalizer:
             similarity_threshold: Minimum similarity for match (0-100)
             cache_enabled: Whether to cache categories in memory
             auto_refresh: T87: Auto-refresh cache after threshold inserts
+            task_id: Task ID for logging (used by hierarchy service)
+            enforce_hierarchy: T101: Enable 3-level hierarchy enforcement
         """
         self.session = session
         self.similarity_threshold = similarity_threshold
         self.cache_enabled = cache_enabled
         self.auto_refresh = auto_refresh
+        self.enforce_hierarchy = enforce_hierarchy
+        
+        # T101: Initialize hierarchy service
+        self._hierarchy_service = CategoryHierarchyService(
+            session=session,
+            task_id=task_id,
+        )
         
         # In-memory cache: {normalized_name: (id, name, parent_id)}
         self._cache: dict[str, tuple[UUID, str, Optional[UUID]]] = {}
@@ -269,6 +301,108 @@ class CategoryNormalizer:
             match_results=match_results,
             leaf_category_id=leaf_id,
         )
+    
+    async def normalize_category_with_hierarchy(
+        self,
+        category_path: list[str],
+        supplier_id: Optional[UUID] = None,
+    ) -> tuple[CategoryHierarchyResult, Optional[HierarchyEnforcementResult]]:
+        """
+        T102-T104: Normalize category path with 3-level hierarchy enforcement.
+        
+        This method combines fuzzy matching with strict hierarchy enforcement:
+        1. Process the category path with fuzzy matching
+        2. Enforce 3-level hierarchy (truncate or flag incomplete)
+        3. Return the Level 3 category ID for product assignment
+        
+        Args:
+            category_path: Category names from general to specific
+                          e.g., ["Electronics", "Laptops", "Dell"]
+            supplier_id: Supplier ID for tracking new category origin
+        
+        Returns:
+            Tuple of:
+            - CategoryHierarchyResult: Fuzzy matching results
+            - HierarchyEnforcementResult: Hierarchy enforcement result (or None if disabled)
+        
+        Usage:
+            normalizer = CategoryNormalizer(session, enforce_hierarchy=True)
+            await normalizer.load_category_cache()
+            
+            match_result, hierarchy_result = await normalizer.normalize_category_with_hierarchy(
+                ["Electronics", "Laptops", "Dell"],
+                supplier_id=supplier_uuid,
+            )
+            
+            # Use hierarchy_result.leaf_category_id for product assignment
+            # This ensures products are always assigned to Level 3 categories
+            product.category_id = hierarchy_result.leaf_category_id
+        """
+        if not self.enforce_hierarchy:
+            # T103: If hierarchy enforcement is disabled, just do fuzzy matching
+            match_result = await self.process_category_path(category_path, supplier_id)
+            return match_result, None
+        
+        # T102: Build normalized category path from match results
+        # First, get fuzzy matched/created categories
+        match_result = await self.process_category_path(category_path, supplier_id)
+        
+        if not match_result.match_results:
+            # Empty or invalid path
+            return match_result, None
+        
+        # T102: Build the final category path from match results
+        # Use the matched or created category names (normalized)
+        final_path: list[str] = []
+        for result in match_result.match_results:
+            # Prefer matched name over extracted name for consistency
+            name = result.matched_name if result.matched_name else result.extracted_name
+            final_path.append(name)
+        
+        # T103: Enforce 3-level hierarchy using CategoryHierarchyService
+        hierarchy_result = await self._hierarchy_service.ensure_3_level_hierarchy(
+            category_path=final_path,
+            supplier_id=supplier_id,
+        )
+        
+        # T104: Update the leaf_category_id to point to the enforced Level 3 category
+        # This ensures products are always assigned to the correct hierarchy level
+        if hierarchy_result.leaf_category_id:
+            # Update the match_result to reflect the enforced hierarchy
+            match_result = CategoryHierarchyResult(
+                original_path=match_result.original_path,
+                match_results=match_result.match_results,
+                leaf_category_id=hierarchy_result.leaf_category_id,
+            )
+        
+        # Log if hierarchy was incomplete or truncated
+        if hierarchy_result.was_truncated:
+            logger.warning(
+                "category_normalizer.hierarchy_truncated",
+                original_path=category_path,
+                processed_path=hierarchy_result.processed_path,
+                message=hierarchy_result.warning_message,
+            )
+        elif hierarchy_result.needs_review:
+            logger.info(
+                "category_normalizer.hierarchy_incomplete",
+                original_path=category_path,
+                level_count=hierarchy_result.level_count,
+                message=hierarchy_result.warning_message,
+            )
+        
+        return match_result, hierarchy_result
+    
+    def get_hierarchy_service(self) -> CategoryHierarchyService:
+        """
+        Get the underlying CategoryHierarchyService.
+        
+        Useful for accessing hierarchy-specific methods like breadcrumb generation.
+        
+        Returns:
+            CategoryHierarchyService instance
+        """
+        return self._hierarchy_service
     
     async def _process_single_category(
         self,

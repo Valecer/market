@@ -3,15 +3,17 @@
  *
  * Public product detail page showing full product information.
  * Phase 10: Now uses dedicated /catalog/:id endpoint with variants support.
+ * Phase 11 US3: Updated breadcrumb to show 3-level category hierarchy.
  */
 
 import { useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useProduct } from '@/hooks/useProduct'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, getPlaceholderImage, cn } from '@/lib/utils'
 import { ProductDetailSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/ErrorState'
+import { CategoryBreadcrumb } from '@/components/shared/CategoryBreadcrumb'
 import { VariantSelector } from '@/components/catalog/VariantSelector'
 import type { CartProduct } from '@/types/cart'
 import type { ProductVariant } from '@/lib/api-client'
@@ -107,34 +109,14 @@ export function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      {/* Breadcrumb */}
+      {/* Breadcrumb - Phase 11 US3: 3-level category hierarchy */}
       <div className="bg-white border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <nav className="flex items-center gap-2 text-sm" aria-label="Breadcrumb">
-            <Link
-              to="/"
-              className="text-slate-500 hover:text-primary transition-colors"
-            >
-              Catalog
-            </Link>
-            <svg
-              className="w-4 h-4 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-            <span className="text-slate-900 font-medium truncate max-w-xs">
-              {name}
-            </span>
-          </nav>
+          <CategoryBreadcrumb
+            categoryId={category_id ?? undefined}
+            productName={name}
+            showCatalogLink={true}
+          />
         </div>
       </div>
 

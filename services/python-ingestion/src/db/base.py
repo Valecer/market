@@ -1,9 +1,14 @@
 """Base SQLAlchemy configuration and mixins."""
-from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import func, DateTime
 from datetime import datetime
-from typing import Optional
+from typing import Optional, AsyncGenerator
 import uuid
 
 from src.config import settings
@@ -39,25 +44,25 @@ class TimestampMixin:
     )
 
 
-# Create async engine
+# Create async engine with configurable connection pooling (T138)
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    pool_size=20,
-    max_overflow=10,
-    pool_recycle=3600,  # Recycle connections after 1 hour
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_pool_max_overflow,
+    pool_recycle=settings.db_pool_recycle_seconds,
     pool_pre_ping=True,  # Verify connection health before use
 )
 
 # Create async session factory
-async_session_maker = sessionmaker(
+async_session_maker = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
 
 
-async def get_session():
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get async database session (async generator)."""
     async with async_session_maker() as session:
         yield session

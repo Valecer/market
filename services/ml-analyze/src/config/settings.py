@@ -126,6 +126,43 @@ class Settings(BaseSettings):
         default=0.2, ge=0.0, le=2.0, description="LLM temperature for extraction"
     )
 
+    # -------------------------------------------------------------------------
+    # Error Monitoring (Sentry) Configuration
+    # -------------------------------------------------------------------------
+    sentry_dsn: str | None = Field(
+        default=None, description="Sentry DSN for error tracking (optional)"
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Sentry performance traces sample rate"
+    )
+    sentry_profiles_sample_rate: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Sentry profiling sample rate"
+    )
+
+    # -------------------------------------------------------------------------
+    # Pipeline Stabilization Configuration (Phase 11)
+    # -------------------------------------------------------------------------
+    # US2: Auto-Creation
+    auto_create_threshold: int = Field(
+        default=90, ge=0, le=100, description="Confidence threshold for auto-creating products"
+    )
+    
+    # US2: Duplicate Detection
+    duplicate_detection_enabled: bool = Field(
+        default=True, description="Enable duplicate detection"
+    )
+    duplicate_similarity_threshold: int = Field(
+        default=85, ge=0, le=100, description="Minimum similarity for flagging duplicates"
+    )
+    duplicate_price_diff_threshold: int = Field(
+        default=20, ge=0, le=100, description="Maximum price difference percentage for duplicates"
+    )
+    
+    # US4: Variant Detection
+    variant_detection_enabled: bool = Field(
+        default=True, description="Enable variant detection integration"
+    )
+
     @property
     def redis_url(self) -> str:
         """Construct Redis URL from components."""

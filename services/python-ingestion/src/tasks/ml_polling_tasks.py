@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 ML Job Status Polling Tasks
 

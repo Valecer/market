@@ -11,7 +11,9 @@ import type { JWTPayload } from '../types/auth.types'
  * See CLAUDE.md for explanation of Elysia plugin scoping.
  */
 export const authMiddleware = (app: Elysia) =>
-  app.derive(async ({ jwt, headers }) => {
+  app.derive(async (ctx) => {
+    const { headers } = ctx
+    const jwt = (ctx as any).jwt
     // Elysia normalizes headers to lowercase
     const authHeader = headers.authorization || headers['authorization']
 
@@ -72,18 +74,22 @@ export const authMiddleware = (app: Elysia) =>
  */
 export const requireAuth = (app: Elysia) =>
   app
-    .derive(({ user }) => {
+    .derive((ctx) => {
+      const user = (ctx as any).user
       // Just pass user through - we'll check in beforeHandle
       return { user }
     })
-    .onBeforeHandle(({ user, set, error }) => {
+    .onBeforeHandle((ctx) => {
+      const { set } = ctx
+      const user = (ctx as any).user
       if (!user) {
-        return error(401, {
+        set.status = 401
+        return {
           error: {
             code: 'UNAUTHORIZED',
             message: 'Unauthorized',
           },
-        })
+        }
       }
     })
 

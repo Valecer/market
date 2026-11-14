@@ -60,6 +60,16 @@ export interface IProductRepository {
    * @returns The created product
    */
   create(product: NewProduct, tx?: typeof db): Promise<Product>
+
+  /**
+   * Update a single product status
+   */
+  updateStatus(productId: string, status: 'draft' | 'active' | 'archived'): Promise<Product | null>
+
+  /**
+   * Bulk update product statuses
+   */
+  bulkUpdateStatus(productIds: string[], status: 'draft' | 'active' | 'archived'): Promise<number>
 }
 
 /**
@@ -508,7 +518,7 @@ export class ProductRepository implements IProductRepository {
   ): Promise<Product | null> {
     const result = await db
       .update(products)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, updatedAt: new Date().toISOString() })
       .where(eq(products.id, productId))
       .returning()
 
@@ -529,7 +539,7 @@ export class ProductRepository implements IProductRepository {
 
     const result = await db
       .update(products)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, updatedAt: new Date().toISOString() })
       .where(inArray(products.id, productIds))
       .returning({ id: products.id })
 

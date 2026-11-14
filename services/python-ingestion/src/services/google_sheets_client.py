@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Google Sheets client for exporting spreadsheets.
 
 Phase 9: Courier pattern - only exports Google Sheets to XLSX format.

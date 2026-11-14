@@ -31,6 +31,7 @@ import { InternalProductDetailPage } from '@/pages/admin/InternalProductDetailPa
 import { ProcurementMatchingPage } from '@/pages/admin/ProcurementMatchingPage'
 import { IngestionPage } from '@/pages/admin/IngestionPage'
 import { CategoryReviewPage } from '@/pages/admin/CategoryReviewPage'
+import { DuplicatesReviewPage } from '@/pages/admin/DuplicatesReviewPage'
 
 // =============================================================================
 // Placeholder Pages (will be replaced in later phases)
@@ -223,6 +224,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
             <CategoryReviewPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'duplicates',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DuplicatesReviewPage />
           </ProtectedRoute>
         ),
       },

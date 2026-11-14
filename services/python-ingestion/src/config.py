@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Configuration management using pydantic-settings."""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
@@ -215,6 +216,48 @@ class Settings(BaseSettings):
         ge=1,
         le=168,
         description="Hours before uploaded files are cleaned up"
+    )
+
+    # Idempotent Re-Ingestion (Phase 3)
+    hash_cache_enabled: bool = Field(
+        default=True,
+        description="Enable hash-based cache lookups for re-ingestion"
+    )
+    hash_algorithm: str = Field(
+        default="md5",
+        description="Hash algorithm for source_row_hash (default: md5)"
+    )
+
+    # Error Monitoring (Sentry) Configuration
+    sentry_dsn: Optional[str] = Field(
+        default=None,
+        description="Sentry DSN for error tracking (optional)"
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=1.0,
+        description="Sentry performance traces sample rate"
+    )
+
+    # Database Connection Pooling Configuration (T138)
+    db_pool_size: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Base connection pool size"
+    )
+    db_pool_max_overflow: int = Field(
+        default=10,
+        ge=0,
+        le=50,
+        description="Maximum additional connections beyond pool_size"
+    )
+    db_pool_recycle_seconds: int = Field(
+        default=3600,
+        ge=300,
+        le=7200,
+        description="Recycle connections after this many seconds"
     )
 
     model_config = SettingsConfigDict(

@@ -89,6 +89,7 @@ export class AdminService {
     // Execute in transaction to ensure atomicity
     try {
       return await db.transaction(async (tx) => {
+        const txDb = tx as unknown as typeof db
       // Validate product exists and not archived
       const product = await tx
         .select()
@@ -130,7 +131,7 @@ export class AdminService {
           // Already linked to this product - return current state
         } else {
           // Link the supplier item to the product
-          await this.supplierItemRepo.updateProductId(supplier_item_id, productId, tx)
+          await this.supplierItemRepo.updateProductId(supplier_item_id, productId, txDb)
         }
       } else if (action === 'unlink') {
         // Validate supplier item is linked to this product
@@ -141,7 +142,7 @@ export class AdminService {
         }
 
         // Unlink the supplier item (set product_id to NULL)
-        await this.supplierItemRepo.updateProductId(supplier_item_id, null, tx)
+        await this.supplierItemRepo.updateProductId(supplier_item_id, null, txDb)
       }
 
       // Fetch all supplier items for this product within the transaction
@@ -248,6 +249,7 @@ export class AdminService {
     // Execute in transaction to ensure atomicity
     try {
       return await db.transaction(async (tx) => {
+        const txDb = tx as unknown as typeof db
         // T127: Validate name required (1-500 chars) - already validated by TypeBox schema
         const { name, internal_sku, category_id, status, supplier_item_id } = request
 
@@ -311,13 +313,13 @@ export class AdminService {
             categoryId: category_id || null,
             status: productStatus,
           },
-          tx
+          txDb
         )
 
         // T133: Link supplier item in same transaction if supplier_item_id provided
         let linkedSupplierItem: any = null
         if (supplier_item_id) {
-          await this.supplierItemRepo.updateProductId(supplier_item_id, newProduct.id, tx)
+          await this.supplierItemRepo.updateProductId(supplier_item_id, newProduct.id, txDb)
           // Fetch the linked supplier item to include in response
           linkedSupplierItem = await this.supplierItemRepo.findById(supplier_item_id)
         }

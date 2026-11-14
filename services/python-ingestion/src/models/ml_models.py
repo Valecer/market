@@ -8,7 +8,7 @@ Used for triggering analysis, tracking job status, and file metadata.
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -45,7 +45,7 @@ class MLAnalyzeRequest(BaseModel):
     )
     supplier_id: UUID = Field(description="UUID of supplier owning the file")
     file_type: FileType = Field(description="Type of file being analyzed")
-    metadata: dict | None = Field(
+    metadata: dict[str, Any] | None = Field(
         default=None,
         description="Additional metadata to pass to ML service",
     )

@@ -120,7 +120,9 @@ export function rateLimiter(options: RateLimiterOptions = {}) {
   const windowMs = windowSeconds * 1000
 
   return (app: Elysia) =>
-    app.derive(({ user, request, set }) => {
+    app.derive((ctx) => {
+      const { request, set } = ctx
+      const user = (ctx as any).user
       // Use user ID if authenticated, otherwise fall back to IP (less reliable)
       // For sync endpoint, we always have an authenticated user
       const userId = (user as any)?.sub || 
@@ -155,9 +157,11 @@ export function rateLimiter(options: RateLimiterOptions = {}) {
               'RATE_LIMIT_EXCEEDED',
               `Rate limit exceeded. Maximum ${limit} requests per ${windowSeconds} seconds.`,
               {
-                limit,
-                window_seconds: windowSeconds,
-                retry_after: Math.ceil((resetAt - Date.now()) / 1000),
+                field: 'rate_limit',
+                issue: `Limit ${limit} requests per ${windowSeconds} seconds`,
+                value: {
+                  retry_after: Math.ceil((resetAt - Date.now()) / 1000),
+                },
               }
             )
           }

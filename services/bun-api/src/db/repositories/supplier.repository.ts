@@ -186,6 +186,9 @@ class SupplierRepository implements ISupplierRepository {
       .returning()
 
     const created = result[0]
+    if (!created) {
+      throw new Error('Failed to create supplier')
+    }
     return {
       id: created.id,
       name: created.name,

@@ -28,10 +28,13 @@ export class CatalogService {
       }),
     ])
 
+    const pageNum = Number(page)
+    const limitNum = Number(limit)
+
     return {
       total_count,
-      page,
-      limit,
+      page: pageNum,
+      limit: limitNum,
       data,
     }
   }

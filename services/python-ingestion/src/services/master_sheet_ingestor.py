@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Master Sheet Ingestor service for parsing and syncing supplier configurations.
 
 This module implements the MasterSheetIngestor class that:

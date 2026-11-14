@@ -177,3 +177,38 @@ export const users = pgTable("users", {
 	index("idx_users_username").using("btree", table.username.asc().nullsLast().op("text_ops")),
 	unique("users_username_key").on(table.username),
 ]);
+
+// Phase 11: Pipeline Stabilization - Potential Duplicates
+export const potentialDuplicates = pgTable("potential_duplicates", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	productId1: uuid("product_id_1").notNull(),
+	productId2: uuid("product_id_2").notNull(),
+	similarityScore: numeric("similarity_score", { precision: 5, scale: 2 }).notNull(),
+	detectionReason: varchar("detection_reason", { length: 100 }).notNull(),
+	status: varchar({ length: 50 }).default('pending').notNull(),
+	reviewedBy: uuid("reviewed_by"),
+	reviewedAt: timestamp("reviewed_at", { withTimezone: true, mode: 'string' }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_potential_duplicates_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	index("idx_potential_duplicates_product1").using("btree", table.productId1.asc().nullsLast().op("uuid_ops")),
+	index("idx_potential_duplicates_product2").using("btree", table.productId2.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+		columns: [table.productId1],
+		foreignColumns: [products.id],
+		name: "potential_duplicates_product_id_1_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.productId2],
+		foreignColumns: [products.id],
+		name: "potential_duplicates_product_id_2_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.reviewedBy],
+		foreignColumns: [users.id],
+		name: "potential_duplicates_reviewed_by_fkey"
+	}),
+	check("chk_different_products", sql`product_id_1 <> product_id_2`),
+	check("chk_ordered_ids", sql`product_id_1 < product_id_2`),
+	check("chk_similarity_range", sql`similarity_score >= 0 AND similarity_score <= 100`),
+]);

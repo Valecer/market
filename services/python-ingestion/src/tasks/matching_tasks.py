@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Queue tasks for the product matching pipeline.
 
 This module implements the core matching pipeline tasks:

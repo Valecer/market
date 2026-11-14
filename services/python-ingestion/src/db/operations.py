@@ -6,7 +6,7 @@ Product/item persistence now handled by ml-analyze service.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, text
 from decimal import Decimal
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, AsyncGenerator
 import uuid
 import structlog
 
@@ -205,22 +205,26 @@ async def clear_parsing_logs(
         DatabaseError: If database operation fails
     """
     try:
+        deleted_count: int = 0
         if keep_last_n > 0:
             # Keep the N most recent logs
-            subquery = text(f"""
+            subquery = text(
+                """
                 DELETE FROM parsing_logs 
                 WHERE id NOT IN (
                     SELECT id FROM parsing_logs 
                     ORDER BY created_at DESC 
-                    LIMIT {keep_last_n}
+                    LIMIT :keep_last_n
                 )
-            """)
-            result = await session.execute(subquery)
+                """
+            )
+            result = await session.execute(subquery, {"keep_last_n": keep_last_n})
+            deleted_count = int(getattr(result, "rowcount", 0) or 0)
         else:
             # Delete all logs
             result = await session.execute(delete(ParsingLog))
+            deleted_count = int(getattr(result, "rowcount", 0) or 0)
         
-        deleted_count = result.rowcount
         await session.commit()
         
         logger.info(

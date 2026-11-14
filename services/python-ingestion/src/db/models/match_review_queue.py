@@ -61,7 +61,7 @@ class MatchReviewQueue(Base, UUIDMixin):
         doc="Reference to supplier item (unique - one review per item)"
     )
     candidate_products: Mapped[Dict[str, Any]] = mapped_column(
-        postgresql.JSONB(astext_type=Text),
+        postgresql.JSONB(astext_type=Text()),
         nullable=False,
         server_default='[]',
         doc="Array of potential matches [{product_id, score, name}]"

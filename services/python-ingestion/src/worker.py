@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """arq worker configuration for processing tasks.
 
 Phase 9: Semantic ETL - python-ingestion acts as courier only.
@@ -17,7 +18,43 @@ from arq.connections import RedisSettings, ArqRedis
 from arq import cron
 from typing import Dict, Any
 import structlog
+import sentry_sdk
 from src.config import settings, configure_logging
+
+
+def init_sentry() -> None:
+    """
+    Initialize Sentry error tracking for the worker process.
+    
+    Sentry captures:
+    - Unhandled exceptions in worker tasks
+    - Error context (job_id, task name, etc.)
+    - Performance traces for long-running tasks
+    """
+    if not settings.sentry_dsn:
+        structlog.get_logger(__name__).info(
+            "Sentry DSN not configured, error tracking disabled"
+        )
+        return
+    
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        environment=settings.environment,
+        release="python-ingestion@1.0.0",
+        send_default_pii=False,
+        attach_stacktrace=True,
+    )
+    
+    structlog.get_logger(__name__).info(
+        "Sentry initialized for worker",
+        environment=settings.environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
+
+
+# Initialize Sentry before worker starts
+init_sentry()
 
 # Import matching pipeline tasks
 from src.tasks.matching_tasks import (

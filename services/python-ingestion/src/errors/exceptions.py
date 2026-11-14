@@ -1,10 +1,13 @@
 """Custom exception hierarchy for data ingestion errors."""
 
 
+from typing import Any
+
+
 class DataIngestionError(Exception):
     """Base exception for all data ingestion errors."""
     
-    def __init__(self, message: str, *args, **kwargs):
+    def __init__(self, message: str, *args: Any, **kwargs: Any):
         """Initialize error with message."""
         self.message = message
         super().__init__(message, *args, **kwargs)

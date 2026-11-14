@@ -1,5 +1,14 @@
 """Category ORM model with self-referential hierarchy and semantic ETL support."""
-from sqlalchemy import String, ForeignKey, UniqueConstraint, CheckConstraint, func, DateTime, Boolean
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base, UUIDMixin
 from datetime import datetime
@@ -26,6 +35,10 @@ class Category(Base, UUIDMixin):
     __table_args__ = (
         UniqueConstraint('name', 'parent_id', name='uq_category_name_parent'),
         CheckConstraint('id != parent_id', name='chk_no_self_reference'),
+        CheckConstraint(
+            'category_level IN (1, 2, 3)',
+            name='chk_category_level',
+        ),
     )
     
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -33,6 +46,11 @@ class Category(Base, UUIDMixin):
         ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=True,
         index=True
+    )
+    category_level: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        doc="Hierarchy level (1=Top, 2=Sub, 3=Brand)",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

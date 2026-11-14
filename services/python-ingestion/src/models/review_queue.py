@@ -4,7 +4,7 @@ This module defines the data transfer objects for managing
 potential matches that require human review.
 """
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Any
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
@@ -112,7 +112,7 @@ class ReviewAction(BaseModel):
     
     @field_validator('product_id', mode='before')
     @classmethod
-    def validate_product_id_for_approve(cls, v, info):
+    def validate_product_id_for_approve(cls, v: Any, info: Any) -> Any:
         """Ensure product_id is provided for approve action."""
         action = info.data.get('action')
         if action == 'approve' and v is None:
@@ -121,7 +121,7 @@ class ReviewAction(BaseModel):
     
     @field_validator('new_product_name', mode='before')
     @classmethod
-    def validate_name_for_create_new(cls, v, info):
+    def validate_name_for_create_new(cls, v: Any, info: Any) -> Any:
         """Ensure new_product_name is provided for create_new action."""
         action = info.data.get('action')
         if action == 'create_new' and not v:
@@ -201,7 +201,7 @@ class ReviewQueueFilter(BaseModel):
     
     @field_validator('max_score', mode='before')
     @classmethod
-    def validate_score_range(cls, v, info):
+    def validate_score_range(cls, v: Any, info: Any) -> Any:
         """Ensure max_score >= min_score if both are set."""
         min_score = info.data.get('min_score')
         if v is not None and min_score is not None and v < min_score:

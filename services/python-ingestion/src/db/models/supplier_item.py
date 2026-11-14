@@ -89,13 +89,19 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
     )
     supplier_sku: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
+    source_row_hash: Mapped[str | None] = mapped_column(
+        String(32),
+        nullable=True,
+        index=True,
+        doc="MD5 hash of normalized source row for idempotent re-ingestion",
+    )
     current_price: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False,
         index=True
     )
     characteristics: Mapped[Dict[str, Any]] = mapped_column(
-        postgresql.JSONB(astext_type=Text),
+        postgresql.JSONB(astext_type=Text()),
         nullable=False,
         server_default="{}"
     )
@@ -127,7 +133,7 @@ class SupplierItem(Base, UUIDMixin, TimestampMixin):
         doc="Confidence score of last match (0-100)"
     )
     match_candidates: Mapped[Dict[str, Any] | None] = mapped_column(
-        postgresql.JSONB(astext_type=Text),
+        postgresql.JSONB(astext_type=Text()),
         nullable=True,
         doc="Array of potential matches [{product_id, product_name, score}]"
     )

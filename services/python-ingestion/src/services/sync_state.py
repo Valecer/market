@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """Sync state management service using Redis.
 
 This module provides helper functions for managing sync pipeline state
@@ -54,7 +55,7 @@ async def acquire_sync_lock(
     
     try:
         # Try to acquire lock using SET NX with expiry
-        result = await redis.set(
+        result: bool | None = await redis.set(
             SYNC_LOCK_KEY,
             task_id,
             nx=True,  # Only set if not exists

@@ -395,3 +395,56 @@ export const CategoryDeleteResponseSchema = Type.Object({
 
 export type CategoryDeleteResponse = Static<typeof CategoryDeleteResponseSchema>
 
+// =============================================================================
+// Category Breadcrumb Schema (Phase 11 US3)
+// =============================================================================
+
+/**
+ * Single item in a category breadcrumb path
+ *
+ * Part of the 3-level hierarchy: Level 1 (Top) → Level 2 (Sub) → Level 3 (Brand)
+ */
+export const CategoryBreadcrumbItemSchema = Type.Object({
+  id: Type.Union([Type.String(), Type.Null()], {
+    description: 'Category UUID (null for placeholder)',
+  }),
+  name: Type.String({
+    description: 'Category name',
+  }),
+  level: Type.Number({
+    minimum: 1,
+    maximum: 3,
+    description: 'Hierarchy level (1=Top, 2=Sub, 3=Brand)',
+  }),
+  needs_review: Type.Boolean({
+    description: 'Flag indicating category needs admin review',
+  }),
+  is_placeholder: Type.Optional(Type.Boolean({
+    description: 'True if this is an "Uncategorized" placeholder',
+  })),
+})
+
+export type CategoryBreadcrumbItem = Static<typeof CategoryBreadcrumbItemSchema>
+
+/**
+ * Full category breadcrumb response
+ *
+ * Always returns exactly 3 levels. If category hierarchy is incomplete,
+ * missing levels are padded with "Uncategorized" placeholders.
+ */
+export const CategoryBreadcrumbResponseSchema = Type.Object({
+  category_id: Type.Union([Type.String(), Type.Null()], {
+    description: 'Original category UUID',
+  }),
+  breadcrumb: Type.Array(CategoryBreadcrumbItemSchema, {
+    description: 'Array of 3 breadcrumb items (padded if incomplete)',
+    minItems: 3,
+    maxItems: 3,
+  }),
+  is_complete: Type.Boolean({
+    description: 'True if all 3 levels are real categories (not placeholders)',
+  }),
+})
+
+export type CategoryBreadcrumbResponse = Static<typeof CategoryBreadcrumbResponseSchema>
+

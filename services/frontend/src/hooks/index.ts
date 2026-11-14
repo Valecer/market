@@ -58,3 +58,11 @@ export {
   useCategoryDelete,
 } from './useCategoryApproval'
 
+// Phase 11: Duplicate Detection hooks
+export {
+  useDuplicates,
+  useDuplicateStats,
+  useMergeDuplicate,
+  useDismissDuplicate,
+  duplicateQueryKeys,
+} from './useDuplicates'

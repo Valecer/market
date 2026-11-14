@@ -10,11 +10,22 @@ Phase 9: Category model with hierarchy and review workflow
 """
 
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -162,6 +173,12 @@ class Category(Base, UUIDMixin, TimestampMixin):
     """
 
     __tablename__ = "categories"
+    __table_args__ = (
+        CheckConstraint(
+            "category_level IN (1, 2, 3)",
+            name="chk_category_level",
+        ),
+    )
 
     name: Mapped[str] = mapped_column(
         String(255),
@@ -174,6 +191,11 @@ class Category(Base, UUIDMixin, TimestampMixin):
         nullable=True,
         index=True,
         doc="Parent category ID (NULL for root categories)",
+    )
+    category_level: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        doc="Hierarchy level (1=Top, 2=Sub, 3=Brand)",
     )
     needs_review: Mapped[bool] = mapped_column(
         Boolean,
@@ -256,4 +278,163 @@ class Category(Base, UUIDMixin, TimestampMixin):
             Normalized name (lowercase, stripped, collapsed spaces)
         """
         return " ".join(name.strip().lower().split())
+
+
+class PotentialDuplicate(Base, UUIDMixin):
+    """
+    Potential duplicate pair flagged during duplicate detection.
+
+    Mirrors 011_pipeline_stabilization migration:
+    - Ordered product IDs with check constraints
+    - Similarity score range 0-100
+    - Status workflow: pending | merged | dismissed
+    """
+
+    __tablename__ = "potential_duplicates"
+    __table_args__ = (
+        CheckConstraint(
+            "product_id_1 != product_id_2",
+            name="chk_different_products",
+        ),
+        CheckConstraint(
+            "product_id_1 < product_id_2",
+            name="chk_ordered_ids",
+        ),
+        CheckConstraint(
+            "similarity_score >= 0 AND similarity_score <= 100",
+            name="chk_similarity_range",
+        ),
+    )
+
+    product_id_1: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="First product in the suspected duplicate pair",
+    )
+    product_id_2: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="Second product in the suspected duplicate pair",
+    )
+    similarity_score: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2),
+        nullable=False,
+        doc="Name similarity score (0-100)",
+    )
+    detection_reason: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        doc="Reason why this pair was flagged",
+    )
+    status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        server_default="pending",
+        index=True,
+        doc="Workflow status: pending | merged | dismissed",
+    )
+    reviewed_by: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+        doc="Admin user who reviewed the duplicate pair",
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        doc="Timestamp when the duplicate was reviewed",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        doc="When the duplicate was detected",
+    )
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"<PotentialDuplicate("
+            f"id={self.id}, "
+            f"product_id_1={self.product_id_1}, "
+            f"product_id_2={self.product_id_2}, "
+            f"status={self.status})>"
+        )
+
+
+class ParsingLog(Base, UUIDMixin):
+    """
+    Parsing log model for error tracking.
+    
+    Phase 11: Used by CategoryHierarchyService to flag incomplete hierarchies.
+    
+    Note: The primary definition is in python-ingestion service.
+    This is a minimal ORM mapping for ml-analyze to write log entries.
+    """
+
+    __tablename__ = "parsing_logs"
+
+    task_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        index=True,
+        doc="Task/job identifier for grouping logs",
+    )
+    supplier_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        nullable=True,
+        index=True,
+        doc="Supplier ID (FK enforced at DB level)",
+    )
+    error_type: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        index=True,
+        doc="Error classification: incomplete_category_hierarchy, etc.",
+    )
+    error_message: Mapped[str] = mapped_column(
+        String(2000),
+        nullable=False,
+        doc="Human-readable error description",
+    )
+    row_number: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Row number in source file (if applicable)",
+    )
+    row_data: Mapped[Optional[dict]] = mapped_column(
+        JSONB,
+        nullable=True,
+        doc="Additional context data as JSON",
+    )
+    chunk_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Chunk identifier for sliding window extraction",
+    )
+    extraction_phase: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+        doc="Pipeline phase: category_hierarchy_enforcement, etc.",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        doc="Log entry creation timestamp",
+    )
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"<ParsingLog("
+            f"id={self.id}, "
+            f"error_type={self.error_type!r}, "
+            f"phase={self.extraction_phase!r})>"
+        )
 

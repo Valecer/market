@@ -1,0 +1,21 @@
+# Build and output
+dist/
+build/
+coverage/
+.nyc_output/
+.turbo/
+.vite/
+
+# Dependencies and tooling
+node_modules/
+**/node_modules/
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+
+# Generated/misc
+*.min.js
+*.log
+tmp/
+uploads/

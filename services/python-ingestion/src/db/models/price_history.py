@@ -5,6 +5,10 @@ from src.db.base import Base, UUIDMixin
 from decimal import Decimal
 from datetime import datetime
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.db.models.supplier_item import SupplierItem
 
 
 class PriceHistory(Base, UUIDMixin):
